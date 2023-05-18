@@ -76,7 +76,7 @@ setup(
 	install_requires=[
 		'pyasn1==0.4.8',  # version 0.5.0 is not compatible with pysnmp
 		'asab>=20.7.28',
-		'aiohttp>=3.6.2',
+		'aiohttp>=3.6.2,<4.0',
 		'requests>=2.24.0',
 		'confluent-kafka>=1.8.2',
 		'aiozk>=0.25.0',
@@ -85,8 +85,8 @@ setup(
 		'google-api-python-client>=1.7.10',
 		'numpy>=1.19.0',
 		'pika>=1.1.0',
-		'pymysql>=0.9.2,<=0.9.2',  # aiomysql 0.0.20 requires PyMySQL<=0.9.2
-		'aiomysql>=0.0.20',
+		'pymysql>1.0',
+		'aiomysql>=0.1.1',
 		'mysql-replication>=0.21',
 		'pytz>=2020.1',
 		'netaddr>=0.7.20',
@@ -100,6 +100,7 @@ setup(
 		'pandas>=0.24.2',
 		'xxhash>=1.4.4',
 		'orjson',
+ 		'urllib3<2.0',
 	],
 	extras_require={
 		'ldap': 'python-ldap',
