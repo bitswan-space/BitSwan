@@ -24,3 +24,21 @@ flake8:
     - pip3 install .
     - pip install -r requirements-dev.txt
     - flake8 bspump
+
+publish-base-image:
+  image:
+    name: amazon/aws-cli
+    entrypoint: [""]
+  variables:
+    AWS_REGION: eu-central-1
+  services:
+    - docker:dind
+  before_script:
+    - amazon-linux-extras install docker
+    - aws --version
+    - docker --version
+  script:
+    - aws ecr get-login-password | docker login --username AWS --password-stdin $DOCKER_REGISTRY
+    - docker build -t $DOCKER_REGISTRY/bspump:$CI_PIPELINE_IID .
+    - docker push $DOCKER_REGISTRY/bspump:$CI_PIPELINE_IID
+
