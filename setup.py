@@ -75,8 +75,8 @@ setup(
 	},
 	install_requires=[
 		'pyasn1==0.4.8',  # version 0.5.0 is not compatible with pysnmp
-		'asab>=20.7.28',
-		'aiohttp>=3.6.2',
+		'asab @ git+https://github.com/TeskaLabs/asab.git#egg=asab',
+		'aiohttp>=3.8.3',
 		'requests>=2.24.0',
 		'confluent-kafka>=1.8.2',
 		'aiozk>=0.25.0',

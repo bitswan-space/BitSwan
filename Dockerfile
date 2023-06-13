@@ -1,5 +1,5 @@
-FROM python:3.7-slim
-MAINTAINER TeskaLabs Ltd (support@teskalabs.com)
+FROM python:3.10-slim
+MAINTAINER LibertyAces Ltd
 
 RUN set -ex \
 	&& apt-get -y update \
@@ -14,14 +14,13 @@ RUN apt-get -y install \
 	g++ \
 	libsnappy-dev
 
-RUN pip3 install git+https://github.com/LibertyAces/BitSwanPump.git
-RUN pip3 install -U git+https://github.com/TeskaLabs/asab.git
+COPY . /app/
+RUN cd /app/ ; pip3 install .
 
+FROM python:3.10-slim
+MAINTAINER LibertyAces Ltd
 
-FROM python:3.7-slim
-MAINTAINER TeskaLabs Ltd (support@teskalabs.com)
-
-COPY --from=0 /usr/local/lib/python3.7/site-packages /usr/local/lib/python3.7/site-packages
+COPY --from=0 /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
 
 EXPOSE 80/tcp
 
