@@ -45,5 +45,7 @@ publish-base-image:
   script:
     - aws ecr get-login-password | docker login --username AWS --password-stdin $DOCKER_REGISTRY
     - docker build -t $DOCKER_REGISTRY/bspump:$CI_PIPELINE_IID .
+    - docker tag $DOCKER_REGISTRY/bspump:$CI_PIPELINE_IID $DOCKER_REGISTRY/bspump:latest
     - docker push $DOCKER_REGISTRY/bspump:$CI_PIPELINE_IID
+    - docker push $DOCKER_REGISTRY/bspump:latest
 
