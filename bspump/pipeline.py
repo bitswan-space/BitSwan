@@ -259,11 +259,11 @@ class Pipeline(abc.ABC, asab.Configurable):
 
 			# send alert
 			self.App.AlertService.trigger(
-				tenant_id=self.App.__class__.__name__,
+				source=self.App.__class__.__name__,
 				alert_cls=self.Id,
 				alert_id=self.Alert_id,
 				title="{}:{} ERROR".format(self.Id, self.Alert_id),
-				detail=str({"exception": exc, "data": event})
+				data={"exception": "{}: {}".format(exc.__class__.__name__, exc), "event": str(event)}
 			)
 
 			L.exception("Pipeline '{}' stopped due to a processing error: {} ({})".format(self.Id, exc, type(exc)))
