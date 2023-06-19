@@ -1,3 +1,4 @@
+import logging
 import signal
 import sys
 
@@ -34,6 +35,9 @@ class BSPumpApplication(asab.Application):
 
 		self.PumpService = BSPumpService(self)
 		self.WebContainer = None
+
+		from asab.alert import AlertService
+		self.AlertService = AlertService(self)
 
 		try:
 			# Signals are not available on Windows

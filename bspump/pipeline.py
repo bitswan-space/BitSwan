@@ -4,6 +4,7 @@ import collections
 import concurrent
 import datetime
 import logging
+import uuid
 
 import time
 
@@ -75,6 +76,11 @@ class Pipeline(abc.ABC, asab.Configurable):
 		self.Id = _id
 		self.App = app
 		self.Loop = app.Loop
+
+		self.AlertService = app.AlertService
+
+		# Ensuring the uniqueness of the alert for each pipeline
+		self.Alert_id = self.Config.get("alert_id", str(uuid.uuid4()))
 
 		self.AsyncFutures = []
 		self.AsyncConcurencyLimit = int(self.Config["async_concurency_limit"])
@@ -250,7 +256,16 @@ class Pipeline(abc.ABC, asab.Configurable):
 				L.warning("Error on a pipeline is already set!")
 
 			self._error = (context, event, exc, self.App.time())
-			self.App.ASABApiService.attention_required({"msg": "Pipeline '{}' stopped due to a processing error: {} ({})".format(self.Id, exc, type(exc))})
+
+			# send alert
+			self.App.AlertService.trigger(
+				tenant_id=self.App.__class__.__name__,
+				alert_cls=self.Id,
+				alert_id=self.Alert_id,
+				title="{}:{} ERROR".format(self.Id, self.Alert_id),
+				detail=str({"exception": exc, "data": event})
+			)
+
 			L.exception("Pipeline '{}' stopped due to a processing error: {} ({})".format(self.Id, exc, type(exc)))
 
 			self.PubSub.publish("bspump.pipeline.error!", pipeline=self)
