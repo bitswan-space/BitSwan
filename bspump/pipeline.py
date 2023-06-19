@@ -242,6 +242,16 @@ class Pipeline(abc.ABC, asab.Configurable):
 				self._evaluate_ready()
 
 		else:
+
+			# send alert
+			self.App.AlertService.trigger(
+				source=self.App.__class__.__name__,
+				alert_cls=self.Id,
+				alert_id=self.Alert_id,
+				title="{}:{} ERROR".format(self.Id, self.Alert_id),
+				data={"exception": "{}: {}".format(exc.__class__.__name__, exc), "event": str(event)}
+			)
+
 			if self.handle_error(exc, context, event):
 
 				self.MetricsEPSCounter.add('warning', 1)
@@ -256,15 +266,6 @@ class Pipeline(abc.ABC, asab.Configurable):
 				L.warning("Error on a pipeline is already set!")
 
 			self._error = (context, event, exc, self.App.time())
-
-			# send alert
-			self.App.AlertService.trigger(
-				source=self.App.__class__.__name__,
-				alert_cls=self.Id,
-				alert_id=self.Alert_id,
-				title="{}:{} ERROR".format(self.Id, self.Alert_id),
-				data={"exception": "{}: {}".format(exc.__class__.__name__, exc), "event": str(event)}
-			)
 
 			L.exception("Pipeline '{}' stopped due to a processing error: {} ({})".format(self.Id, exc, type(exc)))
 
