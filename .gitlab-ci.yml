@@ -1,5 +1,5 @@
 variables:
-  DOCKER_REGISTRY: public.ecr.aws/h9w9d7v3/
+  DOCKER_REGISTRY: public.ecr.aws/h9w9d7v3
   AWS_DEFAULT_REGION: us-east-1
   DOCKER_HOST: tcp://docker:2375
 
