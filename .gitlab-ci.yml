@@ -34,8 +34,6 @@ publish-base-image:
   image:
     name: amazon/aws-cli
     entrypoint: [""]
-  variables:
-    AWS_REGION: eu-central-1
   services:
     - docker:dind
   before_script:
