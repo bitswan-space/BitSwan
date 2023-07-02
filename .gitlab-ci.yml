@@ -41,11 +41,9 @@ publish-base-image:
     - aws --version
     - docker --version
   script:
-    - aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin $DOCKER_REGISTRY
-    - docker build -t $DOCKER_REGISTRY/bspump:$CI_PIPELINE_IID .
-    - docker tag $DOCKER_REGISTRY/bspump:$CI_PIPELINE_IID $DOCKER_REGISTRY/bspump:latest
     - YEAR=$(date +%Y)
-    - docker tag $DOCKER_REGISTRY/bspump:$CI_PIPELINE_IID $DOCKER_REGISTRY/bspump:$YEAR-$CI_PIPELINE_IID
-    - docker push $DOCKER_REGISTRY/bspump:$CI_PIPELINE_IID
+    - aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin $DOCKER_REGISTRY
+    - docker build -t $DOCKER_REGISTRY/bspump:$YEAR-$CI_PIPELINE_IID .
+    - docker tag $DOCKER_REGISTRY/bspump:$YEAR-$CI_PIPELINE_IID $DOCKER_REGISTRY/bspump:latest
     - docker push $DOCKER_REGISTRY/bspump:latest
     - docker push $DOCKER_REGISTRY/bspump:$YEAR-$CI_PIPELINE_IID
