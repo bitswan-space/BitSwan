@@ -42,8 +42,9 @@ publish-base-image:
     - docker --version
   script:
     - YEAR=$(date +%Y)
+    - COMMIT_HASH=$(git rev-parse --short HEAD)
     - aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin $DOCKER_REGISTRY
-    - docker build -t $DOCKER_REGISTRY/bspump:$YEAR-$CI_PIPELINE_IID .
-    - docker tag $DOCKER_REGISTRY/bspump:$YEAR-$CI_PIPELINE_IID $DOCKER_REGISTRY/bspump:latest
+    - docker build -t $DOCKER_REGISTRY/bspump:$YEAR-$CI_PIPELINE_IID-git-$COMMIT_HASH .
+    - docker tag $DOCKER_REGISTRY/bspump:$YEAR-$CI_PIPELINE_IID-git-$COMMIT_HASH $DOCKER_REGISTRY/bspump:latest
     - docker push $DOCKER_REGISTRY/bspump:latest
-    - docker push $DOCKER_REGISTRY/bspump:$YEAR-$CI_PIPELINE_IID
+    - docker push $DOCKER_REGISTRY/bspump:$YEAR-$CI_PIPELINE_IID-git-$COMMIT_HASH
