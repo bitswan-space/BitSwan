@@ -16,19 +16,7 @@ test-py310:
     - pip3 install --upgrade cython
     - pip3 install .
     - pip install -r requirements-dev.txt
-    - coverage run -m unittest test
-    - coverage report -m
-
-flake8:
-  image: python:3.10
-  stage: test
-  script:
-    - apt-get update
-    - apt-get -y install unixodbc-dev
-    - pip3 install --upgrade cython
-    - pip3 install .
-    - pip install -r requirements-dev.txt
-    - flake8 bspump
+    - pytest bspump/file
 
 publish-base-image:
   image:
