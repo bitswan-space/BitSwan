@@ -37,7 +37,7 @@ publish-base-image:
   services:
     - docker:dind
   before_script:
-    - amazon-linux-extras install docker
+    - amazon-linux-extras install docker git
     - aws --version
     - docker --version
   script:
