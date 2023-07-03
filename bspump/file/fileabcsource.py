@@ -4,7 +4,7 @@ import os
 
 import time
 
-from .globscan import _glob_scan
+from .globscan import iter_files_glob
 from ..abc.source import TriggerSource
 
 
@@ -29,6 +29,7 @@ class FileABCSource(TriggerSource):
 		'move_destination': '',  # destination folder for 'move'. Make sure it's outside of the glob search
 		'lines_per_event': 10000,  # the number of lines after which the read method enters the idle state to allow other operations to perform their tasks
 		'event_idle_time': 0.01,  # the time for which the read method enters the idle state (see above)
+		'files_per_cycle': 1,
 	}
 
 
@@ -49,7 +50,28 @@ class FileABCSource(TriggerSource):
 
 		config : JSON, default = None
 			Configuration file with additional information.
-
+			path : str (required)
+				Path to the file. Can be a glob pattern to select multiple files.
+			mode : str, default = 'rb'
+				Mode in which the file is opened.
+			newline : str, default = os.linesep
+				Newline character.
+			post : str, default = 'move'
+				One of 'delete', 'noop' and 'move'.
+			exclude : str, default = ''
+				Glob of filenames that should be excluded (has precedence over 'include').
+			include : str, default = ''
+				Glob of filenames that should be included.
+			encoding : str, default = ''
+				Encoding of the file.
+			move_destination : str, default = ''
+				Destination folder for 'move'. Make sure it's outside of the glob search.
+			lines_per_event : int, default = 10000
+				The number of lines after which the read method enters the idle state to allow other operations to perform their tasks.
+			event_idle_time : float, default = 0.01
+				The time for which the read method enters the idle state (see above).
+			files_per_cycle : int, default = 1
+				The number of files that are processed in one cycle.
 		"""
 		super().__init__(app, pipeline, id=id, config=config)
 		self.path = self.Config['path']
@@ -62,6 +84,8 @@ class FileABCSource(TriggerSource):
 		self.include = self.Config['include']
 		self.exclude = self.Config['exclude']
 		conf_encoding = self.Config['encoding']
+		conf_encoding = self.Config['encoding']
+		self.files_per_cycle = self.Config['files_per_cycle']
 		self.encoding = conf_encoding if len(conf_encoding) > 0 else None
 
 		self.MoveDestination = self.Config['move_destination']
@@ -97,34 +121,35 @@ class FileABCSource(TriggerSource):
 
 	async def cycle(self):
 		"""
-		Cycles through a file.
-
+		Cycles through files that match the glob pattern.
 		"""
 		filename = None
 
 		start_time = time.time()
+		filenames = []
 		for path in self.path.split(os.pathsep):
-			# Asynchronously call following:
-			# filename = _glob_scan(path, self.Gauge, self.Loop, exclude=self.exclude, include=self.include)
-			filename = await self.ProactorService.execute(
-				_glob_scan,
+			filenames.extend(await self.ProactorService.execute(
+				iter_files_glob,
 				path,
 				self.Gauge,
 				self.Loop,
 				self.exclude,
 				self.include
-			)
-			if filename is not None:
+			))
+			if len(filenames) >= self.files_per_cycle:
 				break
 		end_time = time.time()
 		self.Gauge.set("scan_time", end_time - start_time)
 
-		if filename is None:
+		if len(filenames) == 0:
 			self.Pipeline.PubSub.publish("bspump.file_source.no_files!")
 			return  # No file to read
 
 		await self.Pipeline.ready()
+		for filename in filenames[:self.files_per_cycle]:
+			await self.lock_and_read_file(filename)
 
+	async def lock_and_read_file(self, filename):
 		# Lock the file
 		L.debug("Locking file '{}'".format(filename))
 		locked_filename = filename + '-locked'
@@ -237,3 +262,51 @@ class FileABCSource(TriggerSource):
 
 		"""
 		raise NotImplementedError()
+
+import pytest
+@staticmethod
+@pytest.mark.asyncio
+async def test_file_abc_source():
+	read_files = []
+	class TestFileABCSource(FileABCSource):
+		async def read(self, filename, f):
+			read_files.append(filename)
+	# Copy test files to temp dir
+	import shutil
+	import tempfile
+	temp_dir = tempfile.mkdtemp()
+	# copy globscan test data ("bspump/test-data/globscan/") to temp dir
+	shutil.copytree(os.path.join(os.path.dirname(__file__), "..", "test-data", "globscan"), os.path.join(temp_dir, "globscan"))
+	class FakePipeline:
+		def __init__(self):
+			self.Id = "FakePipeline"
+			self.Loop = asyncio.get_event_loop()
+			class FakePubSub:
+				def publish(self, *args, **kwargs):
+					pass
+			self.PubSub = FakePubSub()
+		async def ready(self):
+			pass
+		def get_service(self, *args, **kwargs):
+			class FakeService:
+				def create_gauge(self, *args, **kwargs):
+					class FakeGauge:
+						def set(self, *args, **kwargs):
+							pass
+					return FakeGauge()
+				async def execute(self, fn, *args, **kwargs):
+					return fn(*args, **kwargs)
+			return FakeService()
+	testfilesource = TestFileABCSource(
+		app=FakePipeline(),
+		config={
+			"path": os.path.join(temp_dir, "globscan", "*"),
+			"post": "noop",
+			"files_per_cycle": 2,
+		},
+		pipeline=FakePipeline(),
+	)
+	await testfilesource.cycle()
+	assert len(read_files) == 2
+	assert read_files[0] == os.path.join(temp_dir, "globscan", "1")
+	assert read_files[1] == os.path.join(temp_dir, "globscan", "2")

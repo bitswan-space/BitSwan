@@ -7,3 +7,5 @@ pyyaml==5.4
 mongoquery==1.3.6
 pytz
 flake8
+pytest
+pytest-asyncio
