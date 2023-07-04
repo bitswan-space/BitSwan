@@ -268,6 +268,11 @@ try:
   @staticmethod
   @pytest.mark.asyncio
   async def test_file_abc_source():
+      await run_file_abc_source("move", ["1-processed", "2-processed", "3", "4-locked", "5-failed", "6-processed"])
+      await run_file_abc_source("noop", ["1", "2", "3", "4-locked", "5-failed", "6-processed"])
+      await run_file_abc_source("delete", ["3", "4-locked", "5-failed", "6-processed"])
+
+  async def run_file_abc_source(post, expected_resultant_files):
           read_files = []
           class TestFileABCSource(FileABCSource):
                   async def read(self, filename, f):
@@ -302,8 +307,8 @@ try:
                   app=FakePipeline(),
                   config={
                           "path": os.path.join(temp_dir, "globscan", "*"),
-                          "post": "noop",
                           "files_per_cycle": 2,
+                          "post": post,
                   },
                   pipeline=FakePipeline(),
           )
@@ -311,6 +316,9 @@ try:
           assert len(read_files) == 2
           assert read_files[0] == os.path.join(temp_dir, "globscan", "1")
           assert read_files[1] == os.path.join(temp_dir, "globscan", "2")
+          # Make sure that the files have been renamed as being processed
+          # Get file listing and compare for easy debugging
+          assert sorted(os.listdir(os.path.join(temp_dir, "globscan"))) == sorted(expected_resultant_files)
 
 except ImportError:
     pass
