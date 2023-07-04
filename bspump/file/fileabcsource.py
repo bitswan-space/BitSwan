@@ -86,6 +86,11 @@ class FileABCSource(TriggerSource):
 		conf_encoding = self.Config['encoding']
 		conf_encoding = self.Config['encoding']
 		self.files_per_cycle = self.Config['files_per_cycle']
+		if type(self.files_per_cycle) is not int:
+			try:
+				self.files_per_cycle = int(self.files_per_cycle)
+			except ValueError:
+				L.error("Incorrect 'files_per_cycle' configuration value '{}'".format(self.files_per_cycle))
 		self.encoding = conf_encoding if len(conf_encoding) > 0 else None
 
 		self.MoveDestination = self.Config['move_destination']
@@ -308,7 +313,7 @@ try:
                   app=FakePipeline(),
                   config={
                           "path": os.path.join(temp_dir, "globscan", "*"),
-                          "files_per_cycle": 2,
+                          "files_per_cycle": "2",
                           "post": post,
                   },
                   pipeline=FakePipeline(),
