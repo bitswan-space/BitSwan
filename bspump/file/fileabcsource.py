@@ -263,50 +263,54 @@ class FileABCSource(TriggerSource):
 		"""
 		raise NotImplementedError()
 
-import pytest
-@staticmethod
-@pytest.mark.asyncio
-async def test_file_abc_source():
-	read_files = []
-	class TestFileABCSource(FileABCSource):
-		async def read(self, filename, f):
-			read_files.append(filename)
-	# Copy test files to temp dir
-	import shutil
-	import tempfile
-	temp_dir = tempfile.mkdtemp()
-	# copy globscan test data ("bspump/test-data/globscan/") to temp dir
-	shutil.copytree(os.path.join(os.path.dirname(__file__), "..", "test-data", "globscan"), os.path.join(temp_dir, "globscan"))
-	class FakePipeline:
-		def __init__(self):
-			self.Id = "FakePipeline"
-			self.Loop = asyncio.get_event_loop()
-			class FakePubSub:
-				def publish(self, *args, **kwargs):
-					pass
-			self.PubSub = FakePubSub()
-		async def ready(self):
-			pass
-		def get_service(self, *args, **kwargs):
-			class FakeService:
-				def create_gauge(self, *args, **kwargs):
-					class FakeGauge:
-						def set(self, *args, **kwargs):
-							pass
-					return FakeGauge()
-				async def execute(self, fn, *args, **kwargs):
-					return fn(*args, **kwargs)
-			return FakeService()
-	testfilesource = TestFileABCSource(
-		app=FakePipeline(),
-		config={
-			"path": os.path.join(temp_dir, "globscan", "*"),
-			"post": "noop",
-			"files_per_cycle": 2,
-		},
-		pipeline=FakePipeline(),
-	)
-	await testfilesource.cycle()
-	assert len(read_files) == 2
-	assert read_files[0] == os.path.join(temp_dir, "globscan", "1")
-	assert read_files[1] == os.path.join(temp_dir, "globscan", "2")
+try:
+  import pytest
+  @staticmethod
+  @pytest.mark.asyncio
+  async def test_file_abc_source():
+          read_files = []
+          class TestFileABCSource(FileABCSource):
+                  async def read(self, filename, f):
+                          read_files.append(filename)
+          # Copy test files to temp dir
+          import shutil
+          import tempfile
+          temp_dir = tempfile.mkdtemp()
+          # copy globscan test data ("bspump/test-data/globscan/") to temp dir
+          shutil.copytree(os.path.join(os.path.dirname(__file__), "..", "test-data", "globscan"), os.path.join(temp_dir, "globscan"))
+          class FakePipeline:
+                  def __init__(self):
+                          self.Id = "FakePipeline"
+                          self.Loop = asyncio.get_event_loop()
+                          class FakePubSub:
+                                  def publish(self, *args, **kwargs):
+                                          pass
+                          self.PubSub = FakePubSub()
+                  async def ready(self):
+                          pass
+                  def get_service(self, *args, **kwargs):
+                          class FakeService:
+                                  def create_gauge(self, *args, **kwargs):
+                                          class FakeGauge:
+                                                  def set(self, *args, **kwargs):
+                                                          pass
+                                          return FakeGauge()
+                                  async def execute(self, fn, *args, **kwargs):
+                                          return fn(*args, **kwargs)
+                          return FakeService()
+          testfilesource = TestFileABCSource(
+                  app=FakePipeline(),
+                  config={
+                          "path": os.path.join(temp_dir, "globscan", "*"),
+                          "post": "noop",
+                          "files_per_cycle": 2,
+                  },
+                  pipeline=FakePipeline(),
+          )
+          await testfilesource.cycle()
+          assert len(read_files) == 2
+          assert read_files[0] == os.path.join(temp_dir, "globscan", "1")
+          assert read_files[1] == os.path.join(temp_dir, "globscan", "2")
+
+except ImportError:
+    pass
