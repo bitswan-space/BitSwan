@@ -128,7 +128,7 @@ class FileABCSource(TriggerSource):
 		start_time = time.time()
 		filenames = []
 		for path in self.path.split(os.pathsep):
-			filenames.extend(await self.ProactorService.execute(
+			these_filenames = list(await self.ProactorService.execute(
 				iter_files_glob,
 				path,
 				self.Gauge,
@@ -136,6 +136,7 @@ class FileABCSource(TriggerSource):
 				self.exclude,
 				self.include
 			))
+			filenames.extend(these_filenames)
 			if len(filenames) >= self.files_per_cycle:
 				break
 		end_time = time.time()

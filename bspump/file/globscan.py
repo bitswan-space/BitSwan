@@ -37,8 +37,7 @@ def iter_files_glob(path, gauge, loop,  exclude='', include=''):
 	filelist_to_check.extend(filelist)
 	loop.call_soon_threadsafe(_file_check, filelist_to_check, gauge)
 
-	while len(filelist) > 0:
-		fname = filelist.pop(0)
+	for fname in filelist:
 		if any([
 			fname.endswith('-locked'),
 			fname.endswith('-failed'),
