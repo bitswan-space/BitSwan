@@ -61,8 +61,9 @@ class MongoDBChangeStreamSource(Source):
 				await stream.close()
 				break
 			try:
-				event = await stream.next()
-				await self.process(event, context={})
+				if stream.valid():
+					event = await stream.next()
+					await self.process(event, context={})
 
 			except asyncio.CancelledError:
 				running = False
