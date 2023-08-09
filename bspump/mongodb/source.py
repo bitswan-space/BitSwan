@@ -40,41 +40,6 @@ class MongoDBSource(TriggerSource):
 		self.Connection = pipeline.locate_connection(app, connection)
 		self.Database = self.Config['database']
 		self.Collection = self.Config['collection']
-		self._conn_future = None
-
-		# Subscribe
-		self._on_health_check("Connection.open!")
-		app.PubSub.subscribe("Application.tick!", self._on_health_check)
-		app.PubSub.subscribe("Application.stop!", self._on_application_stop)
-		app.PubSub.subscribe("Application.exit!", self._on_exit)
-
-	def _on_health_check(self, message_type):
-
-		if self._conn_future is not None:
-
-			if not self._conn_future.done():
-				return
-			try:
-				self._conn_future.result()
-			except Exception:
-				# Connection future threw an error
-				L.exception("Unexpected connection future error")
-
-			self._conn_future = None
-
-		assert (self._conn_future is None)
-
-		self._conn_future = asyncio.ensure_future(
-			self.cycle(),
-			loop=self.Loop
-		)
-
-	def _on_application_stop(self, message_type, counter):
-		self._output_queue.put_nowait(None)
-
-	async def _on_exit(self, message_type):
-		if self._conn_future is not None:
-			await asyncio.wait([self._conn_future], return_when=asyncio.ALL_COMPLETED, loop=self.Loop)
 
 	async def cycle(self):
 		db = self.Connection.Client[self.Database]
@@ -92,6 +57,7 @@ class MongoDBSource(TriggerSource):
 		q_limit = self.QueryParms.get("limit", 0)
 
 		cur = coll.find(q_filter, q_projection, 0, int(q_limit))
+
 		async for recs in cur:
 			pass
 			await self.process(recs, context={})
