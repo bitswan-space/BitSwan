@@ -75,7 +75,7 @@ class PostgreSQLConnection(Connection):
 		app.PubSub.subscribe("PostgreSQLConnection.pause!", self._on_pause)
 		app.PubSub.subscribe("PostgreSQLConnection.unpause!", self._on_unpause)
 
-		self._output_queue = asyncio.Queue(loop=app.Loop)
+		self._output_queue = asyncio.Queue()
 		self._bulks = {}  # We have a "bulk" per query
 
 

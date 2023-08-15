@@ -24,23 +24,20 @@ else:
 		return False
 
 
-def _glob_scan(path, gauge, loop, exclude='', include=''):
+def iter_files_glob(path, gauge, loop,  exclude='', include=''):
 	if path is None:
-		return None
+		return []
 	if path == "":
-		return None
-
+		return []
 	filelist = glob.glob(path, recursive=True)
 	filelist.sort()
 
+	# We clone the file list and send it to file_check which logs statistics about the files
 	filelist_to_check = []
 	filelist_to_check.extend(filelist)
-
-	# also check the whole folder meanwhile
 	loop.call_soon_threadsafe(_file_check, filelist_to_check, gauge)
 
-	while len(filelist) > 0:
-		fname = filelist.pop(0)
+	for fname in filelist:
 		if any([
 			fname.endswith('-locked'),
 			fname.endswith('-failed'),
@@ -58,10 +55,15 @@ def _glob_scan(path, gauge, loop, exclude='', include=''):
 
 		if _is_file_open(fname):
 			continue
+		yield fname
+	return
 
-		return fname
 
-	return None
+def _glob_scan(path, gauge, loop, exclude='', include=''):
+	try:
+		return iter_files_glob(path, gauge, loop, exclude, include).__next__()
+	except StopIteration:
+		return None
 
 
 def _file_check(filelist, gauge):
@@ -94,3 +96,21 @@ def _file_check(filelist, gauge):
 	gauge.set("locked", file_count["locked"])
 	gauge.set("unprocessed", file_count["unprocessed"])
 	gauge.set("all_files", file_count["all_files"])
+
+def test_iter_files_glob():
+	class FakeGauge:
+		def set(self, key, value):
+			pass
+	fake_gauge = FakeGauge()
+	class FakeLoop:
+		def call_soon_threadsafe(self, func, *args):
+			func(*args)
+	fake_loop = FakeLoop()
+	filelist = list(iter_files_glob("bspump/test-data/globscan/*", fake_gauge, fake_loop))
+	assert len(filelist) == 3
+	assert filelist[0] == "bspump/test-data/globscan/1"
+	assert filelist[1] == "bspump/test-data/globscan/2"
+	assert filelist[2] == "bspump/test-data/globscan/3"
+
+	# test _glob_scan
+	assert _glob_scan("bspump/test-data/globscan/*", fake_gauge, fake_loop) == "bspump/test-data/globscan/1"
