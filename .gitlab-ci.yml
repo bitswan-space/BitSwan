@@ -24,6 +24,8 @@ publish-base-image:
     entrypoint: [""]
   services:
     - docker:dind
+  only:
+    - master
   before_script:
     - amazon-linux-extras install docker
     - yum install -y git

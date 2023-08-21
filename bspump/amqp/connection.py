@@ -61,12 +61,11 @@ class AMQPConnection(Connection):
 		self.ConnectionEvent.set()
 		self.PubSub.publish("AMQPConnection.open!")
 
-	def _on_connection_close(self, connection, code, reason):
+	def _on_connection_close(self, connection, code, reason=None):
 		L.warning("AMQP disconnected ({}): {}".format(code, reason))
 		self.ConnectionEvent.clear()
 		self.PubSub.publish("AMQPConnection.close!")
 		self.Loop.call_later(float(self.Config['reconnect_delay']), self._reconnect)
-
 
 	def _on_connection_open_error(self, connection, error_message=None):
 		L.error("AMQP error: {}".format(error_message if error_message is not None else 'Generic error'))
