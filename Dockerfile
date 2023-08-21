@@ -17,7 +17,7 @@ RUN apt-get -y install \
 COPY . /app/
 RUN cd /app/ ; pip3 install .
 
-FROM python:3.10-slim
+FROM python:3.10-slim-bullseye
 MAINTAINER LibertyAces Ltd
 
 COPY --from=0 /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
