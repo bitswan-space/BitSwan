@@ -1,5 +1,6 @@
 FROM python:3.10-slim-bullseye
 MAINTAINER LibertyAces Ltd
+LABEL "space.bitswan.pipeline.protocol-version"="2023.8-1"
 
 RUN set -ex \
 	&& apt-get -y update \
