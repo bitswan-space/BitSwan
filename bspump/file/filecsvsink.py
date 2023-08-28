@@ -134,7 +134,7 @@ class FileCSVSink(Sink):
 			fieldnames = event.keys()
 			fname = self.get_file_name(context, event)
 			self.fd = open(fname, 'w', newline='')
-			self._csv_writer = self.writer(fd, fieldnames)
+			self._csv_writer = self.writer(self.fd, fieldnames)
 			self._csv_writer.writeheader()
 
 		self._csv_writer.writerow(event)
