@@ -133,11 +133,12 @@ class FileCSVSink(Sink):
 			# Open CSV file if needed
 			fieldnames = event.keys()
 			fname = self.get_file_name(context, event)
-			fo = open(fname, 'w', newline='')
-			self._csv_writer = self.writer(fo, fieldnames)
+			self.fd = open(fname, 'w', newline='')
+			self._csv_writer = self.writer(fd, fieldnames)
 			self._csv_writer.writeheader()
 
 		self._csv_writer.writerow(event)
+		self.fd.flush()
 
 	def rotate(self):
 		"""
