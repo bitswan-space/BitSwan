@@ -1,7 +1,6 @@
 import paho.mqtt.client as mqtt
 import time
 import json
-from datetime import datetime
 import logging
 from asab.web.rest.json import JSONDumper
 
@@ -16,7 +15,6 @@ def parse_topology(pipelines: dict):
         for processor in pipeline["Processors"][0]:
             components.append(processor)
 
-    print(components)
     output_list = []
     for i in range(len(components)):
         current_dict = {"id": components[i]["Id"]}
@@ -42,14 +40,11 @@ def on_message_factory(app):
     def on_message(client, userdata, message):
         global container_id
         payload = message.payload.decode("utf-8")
-        print(message.topic)
-
         if payload == "get":
             svc = app.get_service("bspump.PumpService")
 
             topology = parse_topology(json.loads(dumper(svc.Pipelines)))
-            L.warning(f"Publishing to {container_id}/Metrics")
-            client.publish(f"{container_id[:20]}/Metrics", json.dumps(topology))
+            client.publish(f"{container_id}/Metrics", json.dumps(topology))
     return on_message
 
 
@@ -60,12 +55,11 @@ def on_connect(client, userdata, flags, rc):
     while True:
         try:
             with open("/container_id", "r") as f:
-                container_id = f.read()
+                container_id = f.read().replace("\n", "")
                 break
         except FileNotFoundError:
             time.sleep(1)
-    # L.warning(f"Subscribing to {container_id}/Metrics/get")
-    client.subscribe(f"{container_id[:20]}/Metrics/get")
+    client.subscribe(f"{container_id}/Metrics/get")
 
 
 def initialize_mqtt(app, broker):
