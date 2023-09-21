@@ -58,8 +58,8 @@ class BSPumpApplication(asab.Application):
 			self.ASABApiService.initialize_web()
 
 		if "MQTTMetrics" in asab.Config and asab.Config["MQTTMetrics"].get("broker"):
-			from .mqtt_metrics import initialize_mqtt
-			self.MQTTContainer = initialize_mqtt(self, asab.Config["MQTTMetrics"].get("broker"))
+			from .mqtt_metrics import MQTTService
+			self.MQTTService = MQTTService(self)
 
 		# Initialize zookeeper container
 		if "zookeeper" in asab.Config.sections():

@@ -3,6 +3,7 @@ import time
 import json
 import logging
 from asab.web.rest.json import JSONDumper
+import asab
 
 L = logging.getLogger(__name__)
 
@@ -30,47 +31,76 @@ def parse_topology(pipelines: dict):
     output = {"topology": output_list}
     return output
 
+class MQTTService(asab.Service):
+    def __init__(self, app, service_name="bspump.MQTTService"):
+        super().__init__(app, service_name)
+        self.App = app
+        broker = asab.Config["MQTTMetrics"].get("broker")
+        self.host, self.port = broker.split(":")
+        self.client = mqtt.Client()
 
+        self.client.on_connect = self.on_connect
+        self.client.on_message = self.on_message
+        self.client.connect(self.host, int(self.port), 60)
+        self.client.loop_start()
 
-container_id = None
-# Callback when a message is received
-def on_message_factory(app):
-    dumper = JSONDumper(pretty=False)
+        self.dumper = JSONDumper(pretty=False)
+        self.container_id = None
 
-    def on_message(client, userdata, message):
-        global container_id
+        self.sub_queue = []
+
+    def on_message(self, client, userdata, message):
         payload = message.payload.decode("utf-8")
+        svc = self.App.get_service("bspump.PumpService")
         if payload == "get":
-            svc = app.get_service("bspump.PumpService")
+            topology = parse_topology(json.loads(self.dumper(svc.Pipelines)))
+            client.publish(f"{self.container_id}/Metrics", json.dumps(topology))
+        if payload == "start":
+            message_splitted = message.topic.split("/")
+            pipeline = message_splitted[1]
+            processor = message_splitted[3]
+            pipeline = svc.locate(f"{pipeline}")
 
-            topology = parse_topology(json.loads(dumper(svc.Pipelines)))
-            client.publish(f"{container_id}/Metrics", json.dumps(topology))
-    return on_message
+            source = pipeline.locate_source(f"{processor}")
+            if source is not None:
+                source.Publish = True
+            else:
+                L.warning(f"adding {processor} to {pipeline.Id}")
+                pipeline.PublishingProcessors.add(f"{processor}")
+                
+        if payload == "stop":
+            message_splitted = message.topic.split("/")
+            pipeline = message_splitted[1]
+            processor = message_splitted[3]
+            pipeline = svc.locate(f"{pipeline}")
+
+            source = pipeline.locate_source(f"{processor}")
+            if source is not None:
+                source.Publish = False
+            else:
+                pipeline.PublishingProcessors.remove(f"{processor}")
+            
+
+    # Callback when connected to the MQTT broker
+    def on_connect(self, client, userdata, flags, rc):
+        # wait for /container_id file to exist and read it
+        while True:
+            try:
+                with open("/container_id", "r") as f:
+                    self.container_id = f.read().replace("\n", "")
+                    break
+            except FileNotFoundError:
+                time.sleep(1)
+        client.subscribe(f"{self.container_id}/Metrics/get")
+        for sub in self.sub_queue:
+            L.warning(f"Subscribing to {self.container_id}/{sub}")
+            client.subscribe(f"{self.container_id}/{sub}")
 
 
-# Callback when connected to the MQTT broker
-def on_connect(client, userdata, flags, rc):
-    global container_id
-    # wait for /container_id file to exist and read it
-    while True:
-        try:
-            with open("/container_id", "r") as f:
-                container_id = f.read().replace("\n", "")
-                break
-        except FileNotFoundError:
-            time.sleep(1)
-    client.subscribe(f"{container_id}/Metrics/get")
+    def subscribe(self, pipeline, component):
+        self.sub_queue.append(f"{pipeline}/Components/{component}/events/subscribe")
 
+    def publish(self, pipeline, component, data):
+        self.client.publish(f"{self.container_id}/{pipeline}/Components/{component}/events", json.dumps(data))
 
-def initialize_mqtt(app, broker):
-    # Initialize MQTT client
-    client = mqtt.Client()
-    client.on_connect = on_connect
-    client.on_message = on_message_factory(app)
-
-    # Connect to MQTT broker
-    host, port = broker.split(":")
-    client.connect(host, int(port), 60)
-
-    # Loop to keep the connection open
-    client.loop_start()
+        
