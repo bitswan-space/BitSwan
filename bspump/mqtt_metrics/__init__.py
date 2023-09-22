@@ -67,7 +67,7 @@ class MQTTService(asab.Service):
             else:
                 L.warning(f"adding {processor} to {pipeline.Id}")
                 pipeline.PublishingProcessors.add(f"{processor}")
-                
+
         if payload == "stop":
             message_splitted = message.topic.split("/")
             pipeline = message_splitted[1]
@@ -79,7 +79,7 @@ class MQTTService(asab.Service):
                 source.Publish = False
             else:
                 pipeline.PublishingProcessors.remove(f"{processor}")
-            
+
 
     # Callback when connected to the MQTT broker
     def on_connect(self, client, userdata, flags, rc):
@@ -102,5 +102,3 @@ class MQTTService(asab.Service):
 
     def publish(self, pipeline, component, data):
         self.client.publish(f"{self.container_id}/{pipeline}/Components/{component}/events", json.dumps(data))
-
-        
