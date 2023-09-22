@@ -104,7 +104,16 @@ class Application(metaclass=Singleton):
 		# Load configuration
 
 		# Obtain HostName
-		self.HostName = platform.node()
+		if container_id_file := os.environ.get('CONTAINER_ID_FILE'):
+			while True:
+				try:
+					with open(container_id_file, "r") as f:
+						self.HostName = f.read()
+						break
+				except FileNotFoundError:
+					time.sleep(1)
+		else:
+			self.HostName = platform.node()
 		os.environ['HOSTNAME'] = self.HostName
 		Config._load()
 
