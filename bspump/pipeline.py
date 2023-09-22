@@ -196,7 +196,6 @@ class Pipeline(abc.ABC, asab.Configurable):
 
 		:return: xxxx
 		"""
-		# TODO: add EPS calculation
 		for field in self.MetricsCounter.Storage["fieldset"]:
 			values = field["values"]
 			if values["event.in"] == 0:
@@ -205,6 +204,19 @@ class Pipeline(abc.ABC, asab.Configurable):
 				continue
 			self.MetricsGauge.set("warning.ratio", values["warning"] / values["event.in"])
 			self.MetricsGauge.set("error.ratio", values["error"] / values["event.in"])
+
+
+		for processor in self.ProcessorsCounter:
+			for field in self.ProcessorsCounter[processor].Storage["fieldset"]:
+				values = field["values"]
+				if values["event.in"] == 0:
+					print(self.ProcessorsEPSMetrics[processor])
+					self.ProcessorsEPSMetrics[processor].add("eps.in", 0.0)
+					self.ProcessorsEPSMetrics[processor].add("eps.out", 0.0)
+					continue
+				self.ProcessorsEPSMetrics[processor].add("eps.in", values["event.in"] / 60)
+				self.ProcessorsEPSMetrics[processor].add("eps.out", values["event.out"] / 60)
+
 
 	def is_error(self):
 		"""
@@ -442,6 +454,7 @@ class Pipeline(abc.ABC, asab.Configurable):
 
 			t0 = time.perf_counter()
 			try:
+				self.ProcessorsCounter[processor.Id].add('event.in', 1)
 				event = processor.process(context, event)
 			except BaseException as e:
 				if depth > 0:
@@ -452,14 +465,14 @@ class Pipeline(abc.ABC, asab.Configurable):
 			finally:
 				if processor.Id in self.PublishingProcessors and self.MQTTService:
 					self.MQTTService.publish(self.Id, processor.Id, event)
-				self.ProcessorsCounter[processor.Id].add('event.in', 1)
+				self.ProcessorsCounter[processor.Id].add('event.out', 1)
 				self.ProfilerCounter[processor.Id].add('duration', time.perf_counter() - t0)
 				self.ProfilerCounter[processor.Id].add('run', 1)
 
 			if event is None:  # Event has been consumed on the way
 				if len(self.Processors) == (depth + 1):
 					if isinstance(processor, Sink):
-						self.ProcessorsCounter[processor.Id].add('event.out', 1)
+						# self.ProcessorsCounter[processor.Id].add('event.out', 1)
 						self.MetricsEPSCounter.add('eps.out', 1)
 						self.MetricsCounter.add('event.out', 1)
 					else:
@@ -730,20 +743,20 @@ class Pipeline(abc.ABC, asab.Configurable):
 			init_values={'duration': 0.0, 'run': 0},
 			reset=self.ResetProfiler,
 		)
-		self.ProcessorsEPSMetrics[processor.Id] = self.MetricsService.create_eps_counter(
-			'bspump.pipeline.processor.eps',
+		self.ProcessorsEPSMetrics[processor.Id] = self.create_eps_counter()
+
+		self.ProcessorsCounter[processor.Id] = self.MetricsService.create_counter(
+			'bspump.pipeline.processor',
 			tags={
 				'processor': processor.Id,
 				'pipeline': self.Id,
 			},
 			init_values={
-				'eps.in': 0,
-				'eps.out': 0,
-				'eps.drop': 0,
+				'event.in': 0,
+				'event.out': 0,
+				'event.drop': 0,
 			}
 		)
-
-		# TODO: add processor counter init
 
 		if isinstance(processor, Analyzer):
 			self.ProfilerCounter['analyzer_' + processor.Id] = self.MetricsService.create_counter(
@@ -755,7 +768,7 @@ class Pipeline(abc.ABC, asab.Configurable):
 				init_values={'duration': 0.0, 'run': 0},
 				reset=self.ResetProfiler,
 			)
-		
+
 		if self.MQTTService:
 			self.MQTTService.subscribe(self.Id, processor.Id)
 
