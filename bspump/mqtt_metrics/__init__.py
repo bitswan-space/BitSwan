@@ -34,8 +34,7 @@ def parse_topology(pipelines: dict):
         # add metrics
         for metric in metrics_components:
             if metric["static_tags"]["processor"] == current_dict["id"]:
-                print(metric["fieldset"])
-                current_dict["metrics"] = {"eps.in" : metric["fieldset"][0]["actuals"]["eps.in"], "eps.out" : metric["fieldset"][0]["actuals"]["eps.out"]}
+                current_dict["metrics"] = {"eps.in" : metric["fieldset"][0]["values"]["eps.in"], "eps.out" : metric["fieldset"][0]["values"]["eps.out"]}
                 break
 
         output_list.append(current_dict)
