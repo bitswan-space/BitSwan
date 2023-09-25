@@ -209,15 +209,8 @@ class Pipeline(abc.ABC, asab.Configurable):
 		for processor in self.ProcessorsCounter:
 			for field in self.ProcessorsCounter[processor].Storage["fieldset"]:
 				values = field["values"]
-				print("-------")
-				print("event.in",values["event.in"])
-				if values["event.in"] == 0:
-					# print(self.ProcessorsEPSMetrics[processor])
-					self.ProcessorsEPSMetrics[processor].add("eps.in", 0.0)
-					self.ProcessorsEPSMetrics[processor].add("eps.out", 0.0)
-					continue
-				self.ProcessorsEPSMetrics[processor].add("eps.in", values["event.in"] / 60)
-				self.ProcessorsEPSMetrics[processor].add("eps.out", values["event.out"] / 60)
+				self.ProcessorsEPSMetrics[processor].add("eps.in", round(values["event.in"] / 60, 3))
+				self.ProcessorsEPSMetrics[processor].add("eps.out", round(values["event.out"] / 60, 3))
 
 
 	def is_error(self):
