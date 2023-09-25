@@ -11,8 +11,13 @@ L = logging.getLogger(__name__)
 def parse_topology(pipelines: dict):
 
     components = []
+    metrics_components = []
     for pipeline in pipelines.values():
         components.append(pipeline["Sources"][0])
+        # get metrics
+        for metric in pipeline["Metrics"]:
+            if metric["type"] == "Counter" and metric["name"] == "bspump.pipeline.eps_processor":
+                metrics_components.append(metric)
         for processor in pipeline["Processors"][0]:
             components.append(processor)
 
@@ -25,6 +30,13 @@ def parse_topology(pipelines: dict):
             current_dict["wires"] = [components[i + 1]["Id"]]
         else:
             current_dict["wires"] = []
+
+        # add metrics
+        for metric in metrics_components:
+            if metric["static_tags"]["processor"] == current_dict["id"]:
+                print(metric["fieldset"])
+                current_dict["metrics"] = {"eps.in" : metric["fieldset"][0]["actuals"]["eps.in"], "eps.out" : metric["fieldset"][0]["actuals"]["eps.out"]}
+                break
 
         output_list.append(current_dict)
 

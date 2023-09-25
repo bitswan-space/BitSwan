@@ -209,8 +209,10 @@ class Pipeline(abc.ABC, asab.Configurable):
 		for processor in self.ProcessorsCounter:
 			for field in self.ProcessorsCounter[processor].Storage["fieldset"]:
 				values = field["values"]
+				print("-------")
+				print("event.in",values["event.in"])
 				if values["event.in"] == 0:
-					print(self.ProcessorsEPSMetrics[processor])
+					# print(self.ProcessorsEPSMetrics[processor])
 					self.ProcessorsEPSMetrics[processor].add("eps.in", 0.0)
 					self.ProcessorsEPSMetrics[processor].add("eps.out", 0.0)
 					continue
@@ -457,6 +459,7 @@ class Pipeline(abc.ABC, asab.Configurable):
 				self.ProcessorsCounter[processor.Id].add('event.in', 1)
 				event = processor.process(context, event)
 			except BaseException as e:
+				self.ProcessorsCounter[processor.Id].add('event.drop', 1)
 				if depth > 0:
 					raise  # Handle error on the top depth
 				self.set_error(context, event, e)
@@ -743,7 +746,18 @@ class Pipeline(abc.ABC, asab.Configurable):
 			init_values={'duration': 0.0, 'run': 0},
 			reset=self.ResetProfiler,
 		)
-		self.ProcessorsEPSMetrics[processor.Id] = self.create_eps_counter()
+		self.ProcessorsEPSMetrics[processor.Id] = self.MetricsService.create_counter(
+			'bspump.pipeline.eps_processor',
+			tags={
+				'processor': processor.Id,
+				'pipeline': self.Id,
+			},
+			init_values={
+				'eps.in': 0,
+				'eps.out': 0,
+				'eps.drop': 0,
+			}
+		)
 
 		self.ProcessorsCounter[processor.Id] = self.MetricsService.create_counter(
 			'bspump.pipeline.processor',
