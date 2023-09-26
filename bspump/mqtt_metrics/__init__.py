@@ -42,6 +42,11 @@ def parse_topology(pipelines: dict):
 
         output_list.append(current_dict)
 
+    # add metrics to the source as it doesn't have any metrics from the metric service
+    if "metrics" not in output_list[0]:
+        if "eps.out" in output_list[1]["metrics"]:
+            output_list[0]["metrics"]["eps.out"] = output_list[1]["metrics"]["eps.out"]
+
     output = {"topology": output_list}
     return output
 
@@ -80,7 +85,7 @@ class MQTTService(asab.Service):
 
             num_of_events = payload["event_count"]
 
-            if num_of_events is not None and num_of_events > 0: 
+            if num_of_events is not None and num_of_events > 0:
                 source = pipeline.locate_source(f"{processor}")
                 if source is not None:
                     source.EventsToPublish = num_of_events
@@ -110,6 +115,9 @@ class MQTTService(asab.Service):
         data = {
             "timestamp": time.time_ns(),
             "data": event,
-            "event_count": component.EventCount
+            "event_count": component.EventCount,
         }
-        self.client.publish(f"{self.container_id}/{pipeline}/Components/{component.Id}/events", json.dumps(data))
+        self.client.publish(
+            f"{self.container_id}/{pipeline}/Components/{component.Id}/events",
+            json.dumps(data),
+        )
