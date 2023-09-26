@@ -2,7 +2,6 @@ from .opportunistic import OpportunisticTrigger
 from .periodic import PeriodicTrigger
 from .pubsub import PubSubTrigger
 from .runonce import RunOnceTrigger
-from .crontrig import CronTrigger
 from .trigger import Trigger
 
 __all__ = (
@@ -11,5 +10,4 @@ __all__ = (
 	'RunOnceTrigger',
 	'PubSubTrigger',
 	'PeriodicTrigger',
-    'CronTrigger'
 )
