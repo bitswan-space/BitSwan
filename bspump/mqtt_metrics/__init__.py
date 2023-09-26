@@ -45,7 +45,8 @@ def parse_topology(pipelines: dict):
     # add metrics to the source as it doesn't have any metrics from the metric service
     if "metrics" not in output_list[0]:
         if "eps.out" in output_list[1]["metrics"]:
-            output_list[0]["metrics"]["eps.out"] = output_list[1]["metrics"]["eps.out"]
+            output_list[0]["metrics"] = {}
+            output_list[0]["metrics"]["eps.out"] = int(output_list[1]["metrics"]["eps.out"])
 
     output = {"topology": output_list}
     return output
