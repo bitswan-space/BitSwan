@@ -25,968 +25,974 @@ L = logging.getLogger(__name__)
 
 
 class Pipeline(abc.ABC, asab.Configurable):
-	"""
-	Description: Pipeline is ...
-
-	An example of The :meth:`Pipeline <bspump.Pipeline()>` construction:
-
-	.. code:: python
-
-	class MyPipeline(bspump.Pipeline):
-
-			def __init__(self, app, pipeline_id):
-					super().__init__(app, pipeline_id)
-					self.build(
-							[
-							MySource(app, self),
-							MyProcessor(app, self),
-							MyProcessor2(app, self),
-							]
-						bspump.common.NullSink(app, self),
-					)
-
-	"""
-
-
-
-	ConfigDefaults = {
-		"async_concurency_limit": 1000,  # TODO concurrency
-		"reset_profiler": True,
-	}
-
-	def __init__(self, app, id=None, config=None):
-		"""
-		Initializes basic variables used in the other :meth:`Pipeline <bspump.Pipeline()>` methods. You can also add more information using parameters.
-
-		**Parameters**
-
-				app : Application
-						name of the ASAB `Application <https://asab.readthedocs.io/en/latest/asab/application.html>`_
-
-				id : str, default None
-						You can enter ID of the class. Otherwise a name of the current class will used by calling __class__ descriptor object.
-
-				config : ,default None
-						You can add a config file with additional settings and configurations, otherwise a default config is used.
+    """
+    Description: Pipeline is ...
+
+    An example of The :meth:`Pipeline <bspump.Pipeline()>` construction:
+
+    .. code:: python
+
+    class MyPipeline(bspump.Pipeline):
+
+                    def __init__(self, app, pipeline_id):
+                                    super().__init__(app, pipeline_id)
+                                    self.build(
+                                                    [
+                                                    MySource(app, self),
+                                                    MyProcessor(app, self),
+                                                    MyProcessor2(app, self),
+                                                    ]
+                                            bspump.common.NullSink(app, self),
+                                    )
+
+    """
+
+    ConfigDefaults = {
+        "async_concurency_limit": 1000,  # TODO concurrency
+        "reset_profiler": True,
+    }
+
+    def __init__(self, app, id=None, config=None):
+        """
+        Initializes basic variables used in the other :meth:`Pipeline <bspump.Pipeline()>` methods. You can also add more information using parameters.
+
+        **Parameters**
+
+                        app : Application
+                                        name of the ASAB `Application <https://asab.readthedocs.io/en/latest/asab/application.html>`_
+
+                        id : str, default None
+                                        You can enter ID of the class. Otherwise a name of the current class will used by calling __class__ descriptor object.
+
+                        config : ,default None
+                                        You can add a config file with additional settings and configurations, otherwise a default config is used.
+
+        """
+        _id = id if id is not None else self.__class__.__name__
+        super().__init__("pipeline:{}".format(_id), config=config)
+
+        self.Id = _id
+        self.App = app
+        self.Loop = app.Loop
+
+        self.AlertService = app.AlertService
 
-		"""
-		_id = id if id is not None else self.__class__.__name__
-		super().__init__("pipeline:{}".format(_id), config=config)
+        self.MQTTService = app.get_service("bspump.MQTTService")
+        self.PublishingProcessors = set()
 
-		self.Id = _id
-		self.App = app
-		self.Loop = app.Loop
+        # Ensuring the uniqueness of the alert for each pipeline
+        self.Alert_id = self.Config.get("alert_id", str(uuid.uuid4()))
 
-		self.AlertService = app.AlertService
+        self.AsyncFutures = []
+        self.AsyncConcurencyLimit = int(self.Config["async_concurency_limit"])
+        self.ResetProfiler = self.Config.getboolean("reset_profiler")
+        assert self.AsyncConcurencyLimit > 1
 
-		self.MQTTService = app.get_service("bspump.MQTTService")
-		self.PublishingProcessors = set()
+        # This object serves to identify the throttler, because list cannot be used as a throttler
+        self.AsyncFuturesThrottler = object()
 
-		# Ensuring the uniqueness of the alert for each pipeline
-		self.Alert_id = self.Config.get("alert_id", str(uuid.uuid4()))
+        self.Sources = []
+        self.Processors = [
+            []
+        ]  # List of lists of processors, the depth is increased by a Generator object
 
-		self.AsyncFutures = []
-		self.AsyncConcurencyLimit = int(self.Config["async_concurency_limit"])
-		self.ResetProfiler = self.Config.getboolean("reset_profiler")
-		assert (self.AsyncConcurencyLimit > 1)
+        # Publish-Subscribe for this pipeline
+        self.PubSub = asab.PubSub(app)
+        self.MetricsService = app.get_service("asab.MetricsService")
+        self.MetricsCounter = self.MetricsService.create_counter(
+            "bspump.pipeline",
+            tags={"pipeline": self.Id},
+            init_values={
+                "event.in": 0,
+                "event.out": 0,
+                "event.drop": 0,
+                "warning": 0,
+                "error": 0,
+            },
+        )
+        self.MetricsEPSCounter = self.create_eps_counter()
+
+        self.MetricsGauge = self.MetricsService.create_gauge(
+            "bspump.pipeline.gauge",
+            tags={"pipeline": self.Id},
+            init_values={
+                "warning.ratio": 0.0,
+                "error.ratio": 0.0,
+            },
+        )
+        self.MetricsDutyCycle = self.MetricsService.create_duty_cycle(
+            "bspump.pipeline.dutycycle",
+            tags={"pipeline": self.Id},
+            init_values={
+                "ready": False,
+            },
+        )
 
-		# This object serves to identify the throttler, because list cannot be used as a throttler
-		self.AsyncFuturesThrottler = object()
+        # Processor's metrics
+        self.ProfilerCounter = {}
+        self.ProcessorsEPSMetrics = {}
+        self.ProcessorsCounter = {}
 
-		self.Sources = []
-		self.Processors = [[]]  # List of lists of processors, the depth is increased by a Generator object
+        app.PubSub.subscribe("Metrics.flush!", self._on_metrics_flush)
 
-		# Publish-Subscribe for this pipeline
-		self.PubSub = asab.PubSub(app)
-		self.MetricsService = app.get_service('asab.MetricsService')
-		self.MetricsCounter = self.MetricsService.create_counter(
-			"bspump.pipeline",
-			tags={'pipeline': self.Id},
-			init_values={
-				'event.in': 0,
-				'event.out': 0,
-				'event.drop': 0,
-				'warning': 0,
-				'error': 0,
-			}
-		)
-		self.MetricsEPSCounter = self.create_eps_counter()
+        # Pipeline logger
+        self.L = PipelineLogger(
+            "bspump.pipeline.{}".format(self.Id), self.MetricsCounter
+        )
 
-		self.MetricsGauge = self.MetricsService.create_gauge(
-			"bspump.pipeline.gauge",
-			tags={'pipeline': self.Id},
-			init_values={
-				'warning.ratio': 0.0,
-				'error.ratio': 0.0,
-			}
-		)
-		self.MetricsDutyCycle = self.MetricsService.create_duty_cycle(
-			"bspump.pipeline.dutycycle",
-			tags={'pipeline': self.Id},
-			init_values={
-				'ready': False,
-			}
-		)
+        self.LastReadyStateSwitch = self.Loop.time()
 
-		# Processor's metrics
-		self.ProfilerCounter = {}
-		self.ProcessorsEPSMetrics = {}
-		self.ProcessorsCounter = {}
+        self._error = None  # None if not in error state otherwise there is a tuple (context, event, exc, timestamp)
 
-		app.PubSub.subscribe(
-			"Metrics.flush!",
-			self._on_metrics_flush
-		)
+        self._throttles = set()
+        self._ancestral_pipelines = set()
 
-		# Pipeline logger
-		self.L = PipelineLogger(
-			"bspump.pipeline.{}".format(self.Id),
-			self.MetricsCounter
-		)
+        self._ready = asyncio.Event()
+        self._ready.clear()
 
-		self.LastReadyStateSwitch = self.Loop.time()
+        # Chillout is used to break a pipeline processing to smaller tasks that allows other event in event loop to be processed
+        self._chillout_trigger = 10000
+        self._chillout_counter = 0
 
-		self._error = None  # None if not in error state otherwise there is a tuple (context, event, exc, timestamp)
+        self._context = {}
 
-		self._throttles = set()
-		self._ancestral_pipelines = set()
+    def time(self):
+        """
+        Returns correct time.
 
-		self._ready = asyncio.Event()
-		self._ready.clear()
+        :return: App.time()
 
-		# Chillout is used to break a pipeline processing to smaller tasks that allows other event in event loop to be processed
-		self._chillout_trigger = 10000
-		self._chillout_counter = 0
+        :hint: More information in the ASAB documentation in `UTC Time <https://asab.readthedocs.io/en/latest/asab/application.html#utc-time>`_.
 
-		self._context = {}
+        """
+        return self.App.time()
 
-	def time(self):
-		"""
-		Returns correct time.
+    def get_throttles(self):
+        """
+        Returns components from :meth:`Pipeline <bspump.Pipeline()>` that are throttled.
 
-		:return: App.time()
+        :return: self._throttles
+                        Return list of throttles.
 
-		:hint: More information in the ASAB documentation in `UTC Time <https://asab.readthedocs.io/en/latest/asab/application.html#utc-time>`_.
+        Parameters: ---
 
-		"""
-		return self.App.time()
 
-	def get_throttles(self):
-		"""
-		Returns components from :meth:`Pipeline <bspump.Pipeline()>` that are throttled.
+        :return: xxxx
+        """
+        return self._throttles
 
-		:return: self._throttles
-				Return list of throttles.
+    def _on_metrics_flush(self, event_type):
+        """
+        Description: Pipeline is ...
 
-		Parameters: ---
 
+        Parameters: event_type
 
-		:return: xxxx
-		"""
-		return self._throttles
 
+        :return: xxxx
+        """
+        for field in self.MetricsCounter.Storage["fieldset"]:
+            values = field["values"]
+            if values["event.in"] == 0:
+                self.MetricsGauge.set("warning.ratio", 0.0)
+                self.MetricsGauge.set("error.ratio", 0.0)
+                continue
+            self.MetricsGauge.set(
+                "warning.ratio", values["warning"] / values["event.in"]
+            )
+            self.MetricsGauge.set("error.ratio", values["error"] / values["event.in"])
 
-	def _on_metrics_flush(self, event_type):
-		"""
-		Description: Pipeline is ...
+        for processor in self.ProcessorsCounter:
+            for field in self.ProcessorsCounter[processor].Storage["fieldset"]:
+                values = field["values"]
+                self.ProcessorsEPSMetrics[processor].add(
+                    "eps.in", round(values["event.in"] / 60, 3)
+                )
+                self.ProcessorsEPSMetrics[processor].add(
+                    "eps.out", round(values["event.out"] / 60, 3)
+                )
 
+    def is_error(self):
+        """
+        Returns False when there is no error, otherwise it returns True.
 
-		Parameters: event_type
+        :return: self._error is not None.
 
+        Parameters: ---
 
-		:return: xxxx
-		"""
-		for field in self.MetricsCounter.Storage["fieldset"]:
-			values = field["values"]
-			if values["event.in"] == 0:
-				self.MetricsGauge.set("warning.ratio", 0.0)
-				self.MetricsGauge.set("error.ratio", 0.0)
-				continue
-			self.MetricsGauge.set("warning.ratio", values["warning"] / values["event.in"])
-			self.MetricsGauge.set("error.ratio", values["error"] / values["event.in"])
 
+        :return: xxxx
+        """
+        return self._error is not None
 
-		for processor in self.ProcessorsCounter:
-			for field in self.ProcessorsCounter[processor].Storage["fieldset"]:
-				values = field["values"]
-				self.ProcessorsEPSMetrics[processor].add("eps.in", round(values["event.in"] / 60, 3))
-				self.ProcessorsEPSMetrics[processor].add("eps.out", round(values["event.out"] / 60, 3))
+    def set_error(self, context, event, exc):
+        """
+        When called with `exc is None`, it resets error (aka recovery).
 
+        When called with exc, it sets exceptions for soft errors.
 
-	def is_error(self):
-		"""
-		Returns False when there is no error, otherwise it returns True.
+        **Parameters**
 
-		:return: self._error is not None.
+        context : type?
+                        Context of an error.
 
-		Parameters: ---
+        event : Data with time stamp stored in any data type usually is in JSON.
+                        You can specify an event that is passed to the method.
 
+        exc : Exception.
+                        Python default exceptions.
 
-		:return: xxxx
-		"""
-		return self._error is not None
+        """
+        if exc is None:
+            # Reset branch
+            if self._error is not None:
+                self._error = None
+                L.info("Error cleared at a pipeline '{}'".format(self.Id))
 
-	def set_error(self, context, event, exc):
-		"""
-		When called with `exc is None`, it resets error (aka recovery).
+                for source in self.Sources:
+                    source.restart(self.Loop)
 
-		When called with exc, it sets exceptions for soft errors.
+                self.PubSub.publish("bspump.pipeline.clear_error!", pipeline=self)
+                self._evaluate_ready()
 
-		**Parameters**
+        else:
+            # send alert
+            self.App.AlertService.trigger(
+                source=self.App.__class__.__name__,
+                alert_cls=self.Id,
+                alert_id=self.Alert_id,
+                title="{}:{} ERROR".format(self.Id, self.Alert_id),
+                data={
+                    "exception": "{}: {}".format(exc.__class__.__name__, exc),
+                    "event": str(event),
+                },
+            )
 
-		context : type?
-				Context of an error.
+            if self.handle_error(exc, context, event):
+                self.MetricsEPSCounter.add("warning", 1)
+                self.MetricsCounter.add("warning", 1)
+                self.PubSub.publish("bspump.pipeline.warning!", pipeline=self)
+                return
+            else:
+                self.MetricsEPSCounter.add("error", 1)
+                self.MetricsCounter.add("error", 1)
 
-		event : Data with time stamp stored in any data type usually is in JSON.
-				You can specify an event that is passed to the method.
+            if self._error is not None:
+                L.warning("Error on a pipeline is already set!")
 
-		exc : Exception.
-				Python default exceptions.
+            self._error = (context, event, exc, self.App.time())
 
-		"""
-		if exc is None:
-			# Reset branch
-			if self._error is not None:
-				self._error = None
-				L.info("Error cleared at a pipeline '{}'".format(self.Id))
+            L.exception(
+                "Pipeline '{}' stopped due to a processing error: {} ({})".format(
+                    self.Id, exc, type(exc)
+                )
+            )
 
-				for source in self.Sources:
-					source.restart(self.Loop)
+            self.PubSub.publish("bspump.pipeline.error!", pipeline=self)
+            self._evaluate_ready()
 
-				self.PubSub.publish("bspump.pipeline.clear_error!", pipeline=self)
-				self._evaluate_ready()
+    def handle_error(self, exception, context, event):
+        """
+        Used for setting up exceptions and conditions for errors. You can implement it to evaluate processing errors.
 
-		else:
+        **Parameters**
 
-			# send alert
-			self.App.AlertService.trigger(
-				source=self.App.__class__.__name__,
-				alert_cls=self.Id,
-				alert_id=self.Alert_id,
-				title="{}:{} ERROR".format(self.Id, self.Alert_id),
-				data={"exception": "{}: {}".format(exc.__class__.__name__, exc), "event": str(event)}
-			)
+        exception : Exception
+                        Used for setting up a custom Exception.
 
-			if self.handle_error(exc, context, event):
+        context : information
+                        Additional information can be passed.
 
-				self.MetricsEPSCounter.add('warning', 1)
-				self.MetricsCounter.add('warning', 1)
-				self.PubSub.publish("bspump.pipeline.warning!", pipeline=self)
-				return
-			else:
-				self.MetricsEPSCounter.add('error', 1)
-				self.MetricsCounter.add('error', 1)
+        event : Data with time stamp stored in any data type, usually it is in JSON.
+                        You can specify an event that is passed to the method.
 
-			if (self._error is not None):
-				L.warning("Error on a pipeline is already set!")
+        :return: False for hard errors (stop the :meth:`Pipeline <bspump.Pipeline()>` processing). True for soft errors that will be ignored.
 
-			self._error = (context, event, exc, self.App.time())
+        Example:
 
-			L.exception("Pipeline '{}' stopped due to a processing error: {} ({})".format(self.Id, exc, type(exc)))
+        .. code:: python
 
-			self.PubSub.publish("bspump.pipeline.error!", pipeline=self)
-			self._evaluate_ready()
+                        class SampleInternalPipeline(bspump.Pipeline):
 
-	def handle_error(self, exception, context, event):
-		"""
-		Used for setting up exceptions and conditions for errors. You can implement it to evaluate processing errors.
+                                        def __init__(self, app, pipeline_id):
+                                                        super().__init__(app, pipeline_id)
 
-		**Parameters**
+                                                        self.build(
+                                                                        bspump.common.InternalSource(app, self),
+                                                                        bspump.common.JSONParserProcessor(app, self),
+                                                                        bspump.common.PPrintSink(app, self)
+                                                        )
 
-		exception : Exception
-				Used for setting up a custom Exception.
+                                        def handle_error(self, exception, context, event):
+                                                        if isinstance(exception, json.decoder.JSONDecodeError):
+                                                                        return True
+                                                        return False
 
-		context : information
-				Additional information can be passed.
+        |
 
-		event : Data with time stamp stored in any data type, usually it is in JSON.
-				You can specify an event that is passed to the method.
+        """
 
-		:return: False for hard errors (stop the :meth:`Pipeline <bspump.Pipeline()>` processing). True for soft errors that will be ignored.
+        return False
 
-		Example:
+    def link(self, ancestral_pipeline):
+        """
+        Links this :meth:`Pipeline <bspump.Pipeline()>` with an ancestral :meth:`Pipeline <bspump.Pipeline()>`.
+        This is needed e. g. for a propagation of the throttling from child :meth:`Pipelines <bspump.Pipeline()>` back to their ancestors.
+        If the child :meth:`Pipeline <bspump.Pipeline()>` uses InternalSource, it may become throttled because the internal queue is full. If so,
+        the throttling is propagated to the ancestral :meth:`Pipeline <bspump.Pipeline()>`, so that its source may block incoming events until the
+        internal queue is empty again.
 
-		.. code:: python
+        **Parameters**
 
-				class SampleInternalPipeline(bspump.Pipeline):
+        ancestral_pipeline : str
+                        ID of a :meth:`Pipeline <bspump.Pipeline()>` that will be linked.
 
-						def __init__(self, app, pipeline_id):
-								super().__init__(app, pipeline_id)
+        """
 
-								self.build(
-										bspump.common.InternalSource(app, self),
-										bspump.common.JSONParserProcessor(app, self),
-										bspump.common.PPrintSink(app, self)
-								)
+        self._ancestral_pipelines.add(ancestral_pipeline)
 
-						def handle_error(self, exception, context, event):
-								if isinstance(exception, json.decoder.JSONDecodeError):
-										return True
-								return False
+    def unlink(self, ancestral_pipeline):
+        """
+        Unlinks an ancestral :meth:`Pipeline <bspump.Pipeline()>` from this :meth:`Pipeline <bspump.Pipeline()>`.
 
-		|
+        **Parameters**
 
-		"""
+        ancestral_pipeline : str
+                        ID of a ancestral :meth:`Pipeline <bspump.Pipeline()>` that will be unlinked.
 
-		return False
+        """
 
-	def link(self, ancestral_pipeline):
-		"""
-		Links this :meth:`Pipeline <bspump.Pipeline()>` with an ancestral :meth:`Pipeline <bspump.Pipeline()>`.
-		This is needed e. g. for a propagation of the throttling from child :meth:`Pipelines <bspump.Pipeline()>` back to their ancestors.
-		If the child :meth:`Pipeline <bspump.Pipeline()>` uses InternalSource, it may become throttled because the internal queue is full. If so,
-		the throttling is propagated to the ancestral :meth:`Pipeline <bspump.Pipeline()>`, so that its source may block incoming events until the
-		internal queue is empty again.
+        self._ancestral_pipelines.remove(ancestral_pipeline)
 
-		**Parameters**
+    def throttle(self, who, enable=True):
+        """
+        Enables throttling method for a chosen :meth:`pipeline <bspump.Pipeline()>` and its ancestral :meth:`pipelines <bspump.Pipeline()>`,x if needed.
 
-		ancestral_pipeline : str
-				ID of a :meth:`Pipeline <bspump.Pipeline()>` that will be linked.
 
-		"""
+        **Parameters**
 
-		self._ancestral_pipelines.add(ancestral_pipeline)
+        who : ID of a :meth:`processor <bspump.Processor()>`.
+                        Name of a :meth:`processor <bspump.Processor()>` that we want to throttle.
 
-	def unlink(self, ancestral_pipeline):
-		"""
-		Unlinks an ancestral :meth:`Pipeline <bspump.Pipeline()>` from this :meth:`Pipeline <bspump.Pipeline()>`.
+        enable : bool, defualt True
+                        When True, content of argument 'who' is added to _throttles list.
 
-		**Parameters**
 
-		ancestral_pipeline : str
-				ID of a ancestral :meth:`Pipeline <bspump.Pipeline()>` that will be unlinked.
+        """
+        # L.debug("Pipeline '{}' throttle {} by {}".format(self.Id, "enabled" if enable else "disabled", who))
+        if enable:
+            self._throttles.add(who)
+        else:
+            if who in self._throttles:
+                try:
+                    self._throttles.remove(who)
+                except KeyError:
+                    raise KeyError("'{}' not present among throttles".format(who))
 
-		"""
+        # Throttle primary pipelines, if there are any
+        for ancestral_pipeline in self._ancestral_pipelines:
+            ancestral_pipeline.throttle(who=who, enable=enable)
 
-		self._ancestral_pipelines.remove(ancestral_pipeline)
+        self._evaluate_ready()
 
-	def throttle(self, who, enable=True):
-		"""
-		Enables throttling method for a chosen :meth:`pipeline <bspump.Pipeline()>` and its ancestral :meth:`pipelines <bspump.Pipeline()>`,x if needed.
+    def _evaluate_ready(self):
+        """
+        Description:
 
+        :return:
+        """
+        orig_ready = self.is_ready()
 
-		**Parameters**
+        # Do we observed an error?
+        new_ready = self._error is None
 
-		who : ID of a :meth:`processor <bspump.Processor()>`.
-				Name of a :meth:`processor <bspump.Processor()>` that we want to throttle.
+        # Are we throttled?
+        if new_ready:
+            new_ready = len(self._throttles) == 0
 
-		enable : bool, defualt True
-				When True, content of argument 'who' is added to _throttles list.
+        if orig_ready != new_ready:
+            if new_ready:
+                self._ready.set()
+                self.PubSub.publish("bspump.pipeline.ready!", pipeline=self)
+                self.MetricsDutyCycle.set("ready", True)
+            else:
+                self._ready.clear()
+                self.PubSub.publish("bspump.pipeline.not_ready!", pipeline=self)
+                self.MetricsDutyCycle.set("ready", False)
 
+    async def ready(self):
+        """
+        Checks if the :meth:`Pipeline <bspump.Pipeline()>` is ready. The method can be used in source: `await self.Pipeline.ready()`.
 
-		"""
-		# L.debug("Pipeline '{}' throttle {} by {}".format(self.Id, "enabled" if enable else "disabled", who))
-		if enable:
-			self._throttles.add(who)
-		else:
-			if who in self._throttles:
-				try:
-					self._throttles.remove(who)
-				except KeyError:
-					raise KeyError("'{}' not present among throttles".format(who))
+        """
 
-		# Throttle primary pipelines, if there are any
-		for ancestral_pipeline in self._ancestral_pipelines:
-			ancestral_pipeline.throttle(who=who, enable=enable)
+        self._chillout_counter += 1
+        if self._chillout_counter >= self._chillout_trigger:
+            self._chillout_counter = 0
+            await asyncio.sleep(0)
 
-		self._evaluate_ready()
+        await self._ready.wait()
+        return True
 
-	def _evaluate_ready(self):
-		"""
-		Description:
+    def is_ready(self):
+        """
+        This method is a check up of the event in the Event class.
 
-		:return:
-		"""
-		orig_ready = self.is_ready()
+        :return: _ready.is_set().
 
-		# Do we observed an error?
-		new_ready = self._error is None
+        """
+        return self._ready.is_set()
 
-		# Are we throttled?
-		if new_ready:
-			new_ready = len(self._throttles) == 0
+    def _do_process(self, event, depth, context):
+        """
+        Description:
 
-		if orig_ready != new_ready:
-			if new_ready:
-				self._ready.set()
-				self.PubSub.publish("bspump.pipeline.ready!", pipeline=self)
-				self.MetricsDutyCycle.set('ready', True)
-			else:
-				self._ready.clear()
-				self.PubSub.publish("bspump.pipeline.not_ready!", pipeline=self)
-				self.MetricsDutyCycle.set('ready', False)
+        :return:
+        """
+        for processor in self.Processors[depth]:
+            t0 = time.perf_counter()
+            try:
+                self.ProcessorsCounter[processor.Id].add("event.in", 1)
+                event = processor.process(context, event)
+            except BaseException as e:
+                self.ProcessorsCounter[processor.Id].add("event.drop", 1)
+                if depth > 0:
+                    raise  # Handle error on the top depth
+                self.set_error(context, event, e)
+                event = None  # Event is discarted
 
-	async def ready(self):
-		"""
-		Checks if the :meth:`Pipeline <bspump.Pipeline()>` is ready. The method can be used in source: `await self.Pipeline.ready()`.
+            finally:
+                if processor.Id in self.PublishingProcessors and self.MQTTService:
+                    self.MQTTService.publish(self.Id, processor.Id, event)
+                self.ProcessorsCounter[processor.Id].add("event.out", 1)
+                self.ProfilerCounter[processor.Id].add(
+                    "duration", time.perf_counter() - t0
+                )
+                self.ProfilerCounter[processor.Id].add("run", 1)
 
-		"""
+            if event is None:  # Event has been consumed on the way
+                if len(self.Processors) == (depth + 1):
+                    if isinstance(processor, Sink):
+                        # self.ProcessorsCounter[processor.Id].add('event.out', 1)
+                        self.MetricsEPSCounter.add("eps.out", 1)
+                        self.MetricsCounter.add("event.out", 1)
+                    else:
+                        self.ProcessorsCounter[processor.Id].add("event.drop", 1)
+                        self.MetricsEPSCounter.add("eps.drop", 1)
+                        self.MetricsCounter.add("event.drop", 1)
+                return
 
-		self._chillout_counter += 1
-		if self._chillout_counter >= self._chillout_trigger:
-			self._chillout_counter = 0
-			await asyncio.sleep(0)
+        assert event is not None
 
-		await self._ready.wait()
-		return True
+        self.set_error(
+            context,
+            event,
+            ProcessingError(
+                "Incomplete pipeline, event '{}' is not consumed by a Sink".format(
+                    event
+                )
+            ),
+        )
 
-	def is_ready(self):
-		"""
-		This method is a check up of the event in the Event class.
+    def inject(self, context, event, depth):
+        """
+        Injects method serves to inject events into the :meth:`Pipeline <bspump.Pipeline()>`'s depth defined by the depth attribute.
+        Every depth is interconnected with a generator object.
 
-		:return: _ready.is_set().
+        **Parameters**
 
-		"""
-		return self._ready.is_set()
+        context : string
+                        Information propagated through the :meth:`Pipeline <bspump.Pipeline()>`.
 
-	def _do_process(self, event, depth, context):
-		"""
-		Description:
+        event : Data with time stamp stored in any data type, usually it is in JSON.
+                        You can specify an event that is passed to the method.
 
-		:return:
-		"""
-		for processor in self.Processors[depth]:
+        depth : int
+                        Level of depth.
 
-			t0 = time.perf_counter()
-			try:
-				self.ProcessorsCounter[processor.Id].add('event.in', 1)
-				event = processor.process(context, event)
-			except BaseException as e:
-				self.ProcessorsCounter[processor.Id].add('event.drop', 1)
-				if depth > 0:
-					raise  # Handle error on the top depth
-				self.set_error(context, event, e)
-				event = None  # Event is discarted
+        :note: For normal operations, it is highly recommended to use process method instead.
 
-			finally:
-				if processor.Id in self.PublishingProcessors and self.MQTTService:
-					self.MQTTService.publish(self.Id, processor.Id, event)
-				self.ProcessorsCounter[processor.Id].add('event.out', 1)
-				self.ProfilerCounter[processor.Id].add('duration', time.perf_counter() - t0)
-				self.ProfilerCounter[processor.Id].add('run', 1)
+        """
 
-			if event is None:  # Event has been consumed on the way
-				if len(self.Processors) == (depth + 1):
-					if isinstance(processor, Sink):
-						# self.ProcessorsCounter[processor.Id].add('event.out', 1)
-						self.MetricsEPSCounter.add('eps.out', 1)
-						self.MetricsCounter.add('event.out', 1)
-					else:
-						self.ProcessorsCounter[processor.Id].add('event.drop', 1)
-						self.MetricsEPSCounter.add('eps.drop', 1)
-						self.MetricsCounter.add('event.drop', 1)
-				return
+        if context is None:
+            context = self._context.copy()
+        else:
+            context = context.copy()
+            context.update(self._context)
 
-		assert (event is not None)
+        self._do_process(event, depth, context)
 
-		self.set_error(
-			context,
-			event,
-			ProcessingError("Incomplete pipeline, event '{}' is not consumed by a Sink".format(event))
-		)
+    async def process(self, event, context=None):
+        """
+        Process method serves to inject events into the :meth:`Pipeline <bspump.Pipeline()>`'s depth 0,
+        while incrementing the event in metric.
 
-	def inject(self, context, event, depth):
-		"""
-		Injects method serves to inject events into the :meth:`Pipeline <bspump.Pipeline()>`'s depth defined by the depth attribute.
-		Every depth is interconnected with a generator object.
+        **Parameters**
 
-		**Parameters**
+        event : Data with time stamp stored in any data type, usually it is in JSON.
+                        You can specify an event that is passed to the method.
 
-		context : string
-				Information propagated through the :meth:`Pipeline <bspump.Pipeline()>`.
+        context : str, default None
+                        You can add additional information needed for work with event streaming.
 
-		event : Data with time stamp stored in any data type, usually it is in JSON.
-				You can specify an event that is passed to the method.
+        :hint: This is recommended way of inserting events into a :meth:`Pipeline <bspump.Pipeline()>`.
 
-		depth : int
-				Level of depth.
+        """
 
-		:note: For normal operations, it is highly recommended to use process method instead.
+        while not self.is_ready():
+            await self.ready()
 
-		"""
+        self.MetricsEPSCounter.add("eps.in", 1)
+        self.MetricsCounter.add("event.in", 1)
 
-		if context is None:
-			context = self._context.copy()
-		else:
-			context = context.copy()
-			context.update(self._context)
+        self.inject(context, event, depth=0)
 
-		self._do_process(event, depth, context)
+    def create_eps_counter(self):
+        """
+        Creates a dictionary with information about the :meth:`Pipeline <bspump.Pipeline()>`. It contains eps (events per second), warnings and errors.
 
-	async def process(self, event, context=None):
-		"""
-		Process method serves to inject events into the :meth:`Pipeline <bspump.Pipeline()>`'s depth 0,
-		while incrementing the event in metric.
+        :return: self.MetricsService
+                        Creates eps counter using MetricsService.
 
-		**Parameters**
+        :note: EPS counter can be created using this method or dicertly by using MatricsService method.
 
-		event : Data with time stamp stored in any data type, usually it is in JSON.
-				You can specify an event that is passed to the method.
+        """
+        return self.MetricsService.create_eps_counter(
+            "bspump.pipeline.eps",
+            tags={"pipeline": self.Id},
+            init_values={
+                "eps.in": 0,
+                "eps.out": 0,
+                "eps.drop": 0,
+                "warning": 0,
+                "error": 0,
+            },
+        )
 
-		context : str, default None
-				You can add additional information needed for work with event streaming.
+    # Future methods
 
-		:hint: This is recommended way of inserting events into a :meth:`Pipeline <bspump.Pipeline()>`.
+    def ensure_future(self, coro):
+        """
+        You can use this method to schedule a future task that will be executed in a context of the :meth:`Pipeline <bspump.Pipeline()>`.
+        The :meth:`Pipeline <bspump.Pipeline()>` also manages a whole lifecycle of the future/task, which means,
+        it will collect the future result, trash it, and mainly it will capture any possible exception,
+        which will then block the :meth:`Pipeline <bspump.Pipeline()>` via set_error().
 
-		"""
+        **Parameters**
 
-		while not self.is_ready():
-			await self.ready()
+        coro : ??
+                        ??
 
-		self.MetricsEPSCounter.add('eps.in', 1)
-		self.MetricsCounter.add('event.in', 1)
+        :hint: If the number of futures exceeds the configured limit, the :meth:`Pipeline <bspump.Pipeline()>` is throttled.
 
-		self.inject(context, event, depth=0)
+        |
 
+        """
 
+        future = asyncio.ensure_future(coro)
+        future.add_done_callback(self._future_done)
+        self.AsyncFutures.append(future)
 
-	def create_eps_counter(self):
-		"""
-		Creates a dictionary with information about the :meth:`Pipeline <bspump.Pipeline()>`. It contains eps (events per second), warnings and errors.
+        # Throttle when the number of futures exceeds the max count
+        if len(self.AsyncFutures) == self.AsyncConcurencyLimit:
+            self.throttle(self.AsyncFuturesThrottler, True)
 
-		:return: self.MetricsService
-				Creates eps counter using MetricsService.
+    def _future_done(self, future):
+        # Remove the throttle
+        if len(self.AsyncFutures) == self.AsyncConcurencyLimit:
+            self.throttle(self.AsyncFuturesThrottler, False)
 
-		:note: EPS counter can be created using this method or dicertly by using MatricsService method.
+        self.AsyncFutures.remove(future)
 
-		"""
-		return self.MetricsService.create_eps_counter(
-			"bspump.pipeline.eps",
-			tags={'pipeline': self.Id},
-			init_values={
-				'eps.in': 0,
-				'eps.out': 0,
-				'eps.drop': 0,
-				'warning': 0,
-				'error': 0,
-			}
-		)
+        exception = future.exception()
+        if exception is not None:
+            try:
+                self.set_error(None, None, exception)
+            except Exception:
+                # The exception is handled by set_error
+                pass
 
-	# Future methods
+    # Construction
 
-	def ensure_future(self, coro):
-		"""
-		You can use this method to schedule a future task that will be executed in a context of the :meth:`Pipeline <bspump.Pipeline()>`.
-		The :meth:`Pipeline <bspump.Pipeline()>` also manages a whole lifecycle of the future/task, which means,
-		it will collect the future result, trash it, and mainly it will capture any possible exception,
-		which will then block the :meth:`Pipeline <bspump.Pipeline()>` via set_error().
+    def set_source(self, source):
+        """
+        Sets a specific source or list of sources to the :meth:`Pipeline <bspump.Pipeline()>`.
 
-		**Parameters**
+        **Parameters**
 
-		coro : ??
-				??
+        source : str, list optional
+                        ID of a source.
 
-		:hint: If the number of futures exceeds the configured limit, the :meth:`Pipeline <bspump.Pipeline()>` is throttled.
+        If a list of sources is passed to the method, it adds the entire list of sources to the :meth:`Pipeline <bspump.Pipeline()>`.
+        """
+        if isinstance(source, Source):
+            self.Sources.append(source)
+            if self.MQTTService:
+                self.MQTTService.subscribe(self.Id, source.Id)
+        else:
+            self.Sources.extend(source)
+            for s in source:
+                if self.MQTTService:
+                    self.MQTTService.subscribe(self.Id, s.Id)
 
-		|
+    def append_processor(self, processor):
+        """
+        Adds a :meth:`Processors <bspump.Processor()>` to the current :meth:`Pipeline <bspump.Pipeline()>`.
 
-		"""
+        **Parameters**
 
-		future = asyncio.ensure_future(coro)
-		future.add_done_callback(self._future_done)
-		self.AsyncFutures.append(future)
+        processor : str
+                        ID of a :meth:`processor <bspump.Processor()>`.
 
-		# Throttle when the number of futures exceeds the max count
-		if len(self.AsyncFutures) == self.AsyncConcurencyLimit:
-			self.throttle(self.AsyncFuturesThrottler, True)
+        :hint: The Generator can be added by using this method. It requires a depth parameter.
 
+        """
+        for depth in self.Processors:
+            if len(depth) != 0 and isinstance(depth[-1], Sink):
+                L.exception("Cannot add {} after {}.".format(processor, depth[-1]))
+        # TODO: Check if fitting
+        self.Processors[-1].append(processor)
 
-	def _future_done(self, future):
+        if isinstance(processor, Generator):
+            processor.set_depth(len(self.Processors) - 1)
+            self.Processors.append([])
 
-		# Remove the throttle
-		if len(self.AsyncFutures) == self.AsyncConcurencyLimit:
-			self.throttle(self.AsyncFuturesThrottler, False)
+        self._post_add_processor(processor)
 
-		self.AsyncFutures.remove(future)
+    def remove_processor(self, processor_id):
+        """
+        Removes a specific :meth:`processor <bspump.Processor()>` from the :meth:`Pipeline <bspump.Pipeline()>`.
 
-		exception = future.exception()
-		if exception is not None:
-			try:
-				self.set_error(None, None, exception)
-			except Exception:
-				# The exception is handled by set_error
-				pass
+        **Parameters**
 
-	# Construction
+        processor_id : str
+                        ID of a :meth:`processor <bspump.Processor()>`.
 
-	def set_source(self, source):
-		"""
-		Sets a specific source or list of sources to the :meth:`Pipeline <bspump.Pipeline()>`.
+        :raises: Error when :meth:`processor <bspump.Processor()>` is not found.
 
-		**Parameters**
+        """
+        for depth in self.Processors:
+            for idx, processor in enumerate(depth):
+                if processor.Id != processor_id:
+                    continue
+                del depth[idx]
+                del self.ProfilerCounter[processor.Id]
+                del self.ProcessorsEPSMetrics[processor.Id]
+                if isinstance(processor, Analyzer):
+                    del self.ProfilerCounter["analyzer_" + processor.Id]
+                return
+        raise KeyError("Cannot find processor '{}'".format(processor_id))
+
+    def insert_before(self, id, processor):
+        """
+        Inserts the :meth:`Processor <bspump.Processor()>` into the :meth:`Pipeline <bspump.Pipeline()>` in front of another :meth:`processor <bspump.Processor()>` specified by ID.
+
+        **Parameters**
+
+        id : str
+                        ID of a :meth:`processor <bspump.Processor()>` that we want to insert.
+
+        processor : str
+                        Name of the :meth:`processor <bspump.Processor()>` in front of which will be inserted the new :meth:`processor <bspump.Processor()>`.
+
+        :return: True on success. False if ID was not found.
 
-		source : str, list optional
-				ID of a source.
+        """
+        for processors in self.Processors:
+            for idx, _processor in enumerate(processors):
+                if _processor.Id == id:
+                    processors.insert(idx, processor)
+                    self._post_add_processor(processor)
+                    return True
+        return False
 
-		If a list of sources is passed to the method, it adds the entire list of sources to the :meth:`Pipeline <bspump.Pipeline()>`.
-		"""
-		if isinstance(source, Source):
-			self.Sources.append(source)
-			if self.MQTTService:
-				self.MQTTService.subscribe(self.Id, source.Id)
-		else:
-			self.Sources.extend(source)
-			for s in source:
-				if self.MQTTService:
-					self.MQTTService.subscribe(self.Id, s.Id)
+    def insert_after(self, id, processor):
+        """
+        Inserts the :meth:`Processor <bspump.Processor()>` into the :meth:`Pipeline <bspump.Pipeline()>` behind another :meth:`Processors <bspump.Processor()>` specified by ID.
 
-	def append_processor(self, processor):
-		"""
-		Adds a :meth:`Processors <bspump.Processor()>` to the current :meth:`Pipeline <bspump.Pipeline()>`.
+        **Parameters**
 
-		**Parameters**
+        id : str
+                        ID of a processor that we want to insert.
 
-		processor : str
-				ID of a :meth:`processor <bspump.Processor()>`.
+        processor : str
+                        Name of a :meth:`processor <bspump.Processor()>` after which we insert our :meth:`processor <bspump.Processor()>`.
 
-		:hint: The Generator can be added by using this method. It requires a depth parameter.
+        :return: True if successful. False if ID was not found.
 
-		"""
-		for depth in self.Processors:
-			if len(depth) != 0 and isinstance(depth[-1], Sink):
-				L.exception("Cannot add {} after {}.".format(processor, depth[-1]))
-		# TODO: Check if fitting
-		self.Processors[-1].append(processor)
+        """
+        for processors in self.Processors:
+            for idx, _processor in enumerate(processors):
+                if _processor.Id == id:
+                    processors.insert(idx + 1, processor)
+                    self._post_add_processor(processor)
+                    return True
+        return False
 
-		if isinstance(processor, Generator):
-			processor.set_depth(len(self.Processors) - 1)
-			self.Processors.append([])
+    def _post_add_processor(self, processor):
+        """
+        Description:
 
-		self._post_add_processor(processor)
+        :return:
+        """
+        self.ProfilerCounter[processor.Id] = self.MetricsService.create_counter(
+            "bspump.pipeline.profiler",
+            tags={
+                "processor": processor.Id,
+                "pipeline": self.Id,
+            },
+            init_values={"duration": 0.0, "run": 0},
+            reset=self.ResetProfiler,
+        )
+        self.ProcessorsEPSMetrics[processor.Id] = self.MetricsService.create_counter(
+            "bspump.pipeline.eps_processor",
+            tags={
+                "processor": processor.Id,
+                "pipeline": self.Id,
+            },
+            init_values={
+                "eps.in": 0,
+                "eps.out": 0,
+                "eps.drop": 0,
+            },
+        )
 
-	def remove_processor(self, processor_id):
-		"""
-		Removes a specific :meth:`processor <bspump.Processor()>` from the :meth:`Pipeline <bspump.Pipeline()>`.
+        self.ProcessorsCounter[processor.Id] = self.MetricsService.create_counter(
+            "bspump.pipeline.processor",
+            tags={
+                "processor": processor.Id,
+                "pipeline": self.Id,
+            },
+            init_values={
+                "event.in": 0,
+                "event.out": 0,
+                "event.drop": 0,
+            },
+        )
 
-		**Parameters**
+        if isinstance(processor, Analyzer):
+            self.ProfilerCounter[
+                "analyzer_" + processor.Id
+            ] = self.MetricsService.create_counter(
+                "bspump.pipeline.profiler",
+                tags={
+                    "analyzer": processor.Id,
+                    "pipeline": self.Id,
+                },
+                init_values={"duration": 0.0, "run": 0},
+                reset=self.ResetProfiler,
+            )
 
-		processor_id : str
-				ID of a :meth:`processor <bspump.Processor()>`.
+        if self.MQTTService:
+            self.MQTTService.subscribe(self.Id, processor.Id)
 
-		:raises: Error when :meth:`processor <bspump.Processor()>` is not found.
+    def build(self, source, *processors):
+        """
+        This method enables to add sources, :meth:`Processors <bspump.Processor()>`, and sink to create the structure of the :meth:`Pipeline <bspump.Pipeline()>`.
 
-		"""
-		for depth in self.Processors:
-			for idx, processor in enumerate(depth):
-				if processor.Id != processor_id:
-					continue
-				del depth[idx]
-				del self.ProfilerCounter[processor.Id]
-				del self.ProcessorsEPSMetrics[processor.Id]
-				if isinstance(processor, Analyzer):
-					del self.ProfilerCounter['analyzer_' + processor.Id]
-				return
-		raise KeyError("Cannot find processor '{}'".format(processor_id))
+        **Parameters**
 
-	def insert_before(self, id, processor):
-		"""
-		Inserts the :meth:`Processor <bspump.Processor()>` into the :meth:`Pipeline <bspump.Pipeline()>` in front of another :meth:`processor <bspump.Processor()>` specified by ID.
+        source : str
+                        ID of a source.
 
-		**Parameters**
+        *processors : str, list optional
+                        ID of :meth:`Processor <bspump.Processor()>` or list of IDs.
 
-		id : str
-				ID of a :meth:`processor <bspump.Processor()>` that we want to insert.
+        """
+        self.set_source(source)
+        for processor in processors:
+            self.append_processor(processor)
 
-		processor : str
-				Name of the :meth:`processor <bspump.Processor()>` in front of which will be inserted the new :meth:`processor <bspump.Processor()>`.
+    def iter_processors(self):
+        """
+        Uses python generator routine that iterates through all :meth:`Processors <bspump.Processor()>` in the :meth:`Pipeline <bspump.Pipeline()>`.
 
-		:return: True on success. False if ID was not found.
+        :yields: A Processor from a list in the :meth:`Pipeline <bspump.Pipeline()>`.
 
-		"""
-		for processors in self.Processors:
-			for idx, _processor in enumerate(processors):
-				if _processor.Id == id:
-					processors.insert(idx, processor)
-					self._post_add_processor(processor)
-					return True
-		return False
+        """
+        for processors in self.Processors:
+            for processor in processors:
+                yield processor
 
-	def insert_after(self, id, processor):
-		"""
-		Inserts the :meth:`Processor <bspump.Processor()>` into the :meth:`Pipeline <bspump.Pipeline()>` behind another :meth:`Processors <bspump.Processor()>` specified by ID.
+    # Locate  ...
 
-		**Parameters**
+    def locate_source(self, address):
+        """
+        Locates a sources based on its ID.
 
-		id : str
-				ID of a processor that we want to insert.
+        **Parameters**
 
-		processor : str
-				Name of a :meth:`processor <bspump.Processor()>` after which we insert our :meth:`processor <bspump.Processor()>`.
+        address : str
+                        ID of the source.
 
-		:return: True if successful. False if ID was not found.
+        """
+        for source in self.Sources:
+            if source.Id == address:
+                return source
+        return None
 
-		"""
-		for processors in self.Processors:
-			for idx, _processor in enumerate(processors):
-				if _processor.Id == id:
-					processors.insert(idx + 1, processor)
-					self._post_add_processor(processor)
-					return True
-		return False
+    def locate_connection(self, app, connection_id):
+        """
+        Finds a connection by ID.
 
-	def _post_add_processor(self, processor):
-		"""
-		Description:
 
-		:return:
-		"""
-		self.ProfilerCounter[processor.Id] = self.MetricsService.create_counter(
-			'bspump.pipeline.profiler',
-			tags={
-				'processor': processor.Id,
-				'pipeline': self.Id,
-			},
-			init_values={'duration': 0.0, 'run': 0},
-			reset=self.ResetProfiler,
-		)
-		self.ProcessorsEPSMetrics[processor.Id] = self.MetricsService.create_counter(
-			'bspump.pipeline.eps_processor',
-			tags={
-				'processor': processor.Id,
-				'pipeline': self.Id,
-			},
-			init_values={
-				'eps.in': 0,
-				'eps.out': 0,
-				'eps.drop': 0,
-			}
-		)
+        **Parameters**
 
-		self.ProcessorsCounter[processor.Id] = self.MetricsService.create_counter(
-			'bspump.pipeline.processor',
-			tags={
-				'processor': processor.Id,
-				'pipeline': self.Id,
-			},
-			init_values={
-				'event.in': 0,
-				'event.out': 0,
-				'event.drop': 0,
-			}
-		)
+        app : Application
+                        Name of the `Application <https://asab.readthedocs.io/en/latest/asab/application.html>`_.
 
-		if isinstance(processor, Analyzer):
-			self.ProfilerCounter['analyzer_' + processor.Id] = self.MetricsService.create_counter(
-				'bspump.pipeline.profiler',
-				tags={
-					'analyzer': processor.Id,
-					'pipeline': self.Id,
-				},
-				init_values={'duration': 0.0, 'run': 0},
-				reset=self.ResetProfiler,
-			)
+        connection_id : str
+                        ID of connection we want to locate.
 
-		if self.MQTTService:
-			self.MQTTService.subscribe(self.Id, processor.Id)
+        :return: connection
 
-	def build(self, source, *processors):
-		"""
-		This method enables to add sources, :meth:`Processors <bspump.Processor()>`, and sink to create the structure of the :meth:`Pipeline <bspump.Pipeline()>`.
+        """
+        if isinstance(connection_id, Connection):
+            return connection_id
+        svc = app.get_service("bspump.PumpService")
+        connection = svc.locate_connection(connection_id)
+        if connection is None:
+            raise RuntimeError("Cannot locate connection '{}'".format(connection_id))
+        return connection
 
-		**Parameters**
+    def locate_processor(self, processor_id):
+        """
+        Finds a :meth:`Processor <bspump.Processor()>` by ID.
 
-		source : str
-				ID of a source.
+        **Parameters**
 
-		*processors : str, list optional
-				ID of :meth:`Processor <bspump.Processor()>` or list of IDs.
+        processor_id : str
+                        ID of a :meth:`Processor <bspump.Processor()>`.
 
-		"""
-		self.set_source(source)
-		for processor in processors:
-			self.append_processor(processor)
+        :return: processor
 
-	def iter_processors(self):
-		"""
-		Uses python generator routine that iterates through all :meth:`Processors <bspump.Processor()>` in the :meth:`Pipeline <bspump.Pipeline()>`.
+        |
 
-		:yields: A Processor from a list in the :meth:`Pipeline <bspump.Pipeline()>`.
+        """
+        for processor in self.iter_processors():
+            if processor.Id == processor_id:
+                return processor
 
-		"""
-		for processors in self.Processors:
-			for processor in processors:
-				yield processor
+    # Lifecycle ...
 
-	# Locate  ...
+    def start(self):
+        """
+        Starts the lifecycle of the :meth:`Pipeline <bspump.Pipeline()>`.
 
-	def locate_source(self, address):
-		"""
-		Locates a sources based on its ID.
+        """
+        self.PubSub.publish("bspump.pipeline.start!", pipeline=self)
 
-		**Parameters**
+        # Start all non-started sources
+        for source in self.Sources:
+            source.start(self.Loop)
 
-		address : str
-				ID of the source.
+        self._evaluate_ready()
 
-		"""
-		for source in self.Sources:
-			if source.Id == address:
-				return source
-		return None
+    async def stop(self):
+        """
+        Gracefully stops the lifecycle of the :meth:`Pipeline <bspump.Pipeline()>`.
 
-	def locate_connection(self, app, connection_id):
-		"""
-		Finds a connection by ID.
+        """
+        self.PubSub.publish("bspump.pipeline.stop!", pipeline=self)
 
+        # Stop all futures
+        while len(self.AsyncFutures) > 0:
+            # The futures are removed in _future_done
+            await asyncio.wait(
+                self.AsyncFutures, return_when=concurrent.futures.ALL_COMPLETED
+            )
 
-		**Parameters**
+        # Stop all started sources
+        for source in self.Sources:
+            await source.stop()
 
-		app : Application
-				Name of the `Application <https://asab.readthedocs.io/en/latest/asab/application.html>`_.
+    # Rest API
 
-		connection_id : str
-				ID of connection we want to locate.
+    def rest_get(self):
+        """
+        Returns information about the status of the :meth:`Pipeline <bspump.Pipeline()>`:
 
-		:return: connection
+        :return:
+        """
+        rest = {
+            "Id": self.Id,
+            "Ready": self.is_ready(),
+            "Throttles": list(self._throttles),
+            "Sources": self.Sources,
+            "Processors": [],
+            "Metrics": self.MetricsService.Storage.Metrics,
+            "Log": [record.__dict__ for record in self.L.Deque],
+        }
 
-		"""
-		if isinstance(connection_id, Connection):
-			return connection_id
-		svc = app.get_service("bspump.PumpService")
-		connection = svc.locate_connection(connection_id)
-		if connection is None:
-			raise RuntimeError("Cannot locate connection '{}'".format(connection_id))
-		return connection
+        for processors in self.Processors:
+            rest["Processors"].append(processors)
 
-	def locate_processor(self, processor_id):
-		"""
-		Finds a :meth:`Processor <bspump.Processor()>` by ID.
+        if self._error:
+            error_text = str(self._error[2])  # (context, event, exc, timestamp)[2]
+            error_time = self._error[3]
+            if len(error_text) == 0:
+                error_text = str(type(self._error[2]))
+            rest["Error"] = error_text
+            rest["ErrorTimestamp"] = error_time
 
-		**Parameters**
-
-		processor_id : str
-				ID of a :meth:`Processor <bspump.Processor()>`.
-
-		:return: processor
-
-		|
-
-		"""
-		for processor in self.iter_processors():
-			if processor.Id == processor_id:
-				return processor
-
-	# Lifecycle ...
-
-	def start(self):
-		"""
-		Starts the lifecycle of the :meth:`Pipeline <bspump.Pipeline()>`.
-
-		"""
-		self.PubSub.publish("bspump.pipeline.start!", pipeline=self)
-
-		# Start all non-started sources
-		for source in self.Sources:
-			source.start(self.Loop)
-
-		self._evaluate_ready()
-
-	async def stop(self):
-		"""
-		Gracefully stops the lifecycle of the :meth:`Pipeline <bspump.Pipeline()>`.
-
-		"""
-		self.PubSub.publish("bspump.pipeline.stop!", pipeline=self)
-
-		# Stop all futures
-		while len(self.AsyncFutures) > 0:
-			# The futures are removed in _future_done
-			await asyncio.wait(
-				self.AsyncFutures,
-				return_when=concurrent.futures.ALL_COMPLETED
-			)
-
-		# Stop all started sources
-		for source in self.Sources:
-			await source.stop()
-
-	# Rest API
-
-	def rest_get(self):
-		"""
-		Returns information about the status of the :meth:`Pipeline <bspump.Pipeline()>`:
-
-		:return:
-		"""
-		rest = {
-			'Id': self.Id,
-			'Ready': self.is_ready(),
-			'Throttles': list(self._throttles),
-			'Sources': self.Sources,
-			'Processors': [],
-			'Metrics': self.MetricsService.Storage.Metrics,
-			'Log': [record.__dict__ for record in self.L.Deque]
-		}
-
-		for processors in self.Processors:
-			rest['Processors'].append(processors)
-
-		if self._error:
-			error_text = str(self._error[2])  # (context, event, exc, timestamp)[2]
-			error_time = self._error[3]
-			if len(error_text) == 0:
-				error_text = str(type(self._error[2]))
-			rest['Error'] = error_text
-			rest['ErrorTimestamp'] = error_time
-
-		return rest
+        return rest
 
 
 ###
 
 
 class PipelineLogger(logging.Logger):
-	"""
-	PipelineLogger is a feature of BSPump which enables direct monitoring of a specific :meth:`Pipeline <bspump.Pipeline()>`.
-	It offers an overview of errors, error handling, data in a given time with its timestamp.
+    """
+    PipelineLogger is a feature of BSPump which enables direct monitoring of a specific :meth:`Pipeline <bspump.Pipeline()>`.
+    It offers an overview of errors, error handling, data in a given time with its timestamp.
 
-	"""
+    """
 
-	def __init__(self, name, metrics_counter, level=logging.NOTSET):
-		"""
-		Itialize a metrics counter.
-
-
-		"""
-		super().__init__(name, level=level)
-		self.Deque = collections.deque([], 50)
-		self._metrics_counter = metrics_counter
-
-	# TODO: configurable maxlen that is now 50 ^^
-	# TODO: configurable log level (per pipeline, from its config)
-
-	def handle(self, record):
-		"""
-		Counts and add errors to the error counter.
-
-		**Parameters**
-
-		record :
-				Record that is evaluated.
+    def __init__(self, name, metrics_counter, level=logging.NOTSET):
+        """
+        Itialize a metrics counter.
 
 
-		"""
-		# Count errors and warnings
-		if record.levelno == logging.WARNING:
-			self._metrics_counter.add("warning", 1)
-		elif record.levelno >= logging.ERROR:
-			self._metrics_counter.add("error", 1)
+        """
+        super().__init__(name, level=level)
+        self.Deque = collections.deque([], 50)
+        self._metrics_counter = metrics_counter
 
-		# Add formatted timestamp
-		record.timestamp = self._format_time(record)
+    # TODO: configurable maxlen that is now 50 ^^
+    # TODO: configurable log level (per pipeline, from its config)
 
-		# Add record
-		self.Deque.append(record)
+    def handle(self, record):
+        """
+        Counts and add errors to the error counter.
 
-	def _format_time(self, record):
-		"""
-		Description:
+        **Parameters**
 
-		:return:
-		"""
-		try:
-			ct = datetime.datetime.fromtimestamp(record.created)
-			return ct.isoformat()
-		except BaseException as e:
-			L.error("ERROR when logging: {}".format(e))
-			return str(record.created)
+        record :
+                        Record that is evaluated.
+
+
+        """
+        # Count errors and warnings
+        if record.levelno == logging.WARNING:
+            self._metrics_counter.add("warning", 1)
+        elif record.levelno >= logging.ERROR:
+            self._metrics_counter.add("error", 1)
+
+        # Add formatted timestamp
+        record.timestamp = self._format_time(record)
+
+        # Add record
+        self.Deque.append(record)
+
+    def _format_time(self, record):
+        """
+        Description:
+
+        :return:
+        """
+        try:
+            ct = datetime.datetime.fromtimestamp(record.created)
+            return ct.isoformat()
+        except BaseException as e:
+            L.error("ERROR when logging: {}".format(e))
+            return str(record.created)
