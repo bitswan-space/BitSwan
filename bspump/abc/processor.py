@@ -38,6 +38,8 @@ class ProcessorBase(asab.Configurable):
 		self.Id = id if id is not None else self.__class__.__name__
 		self.Pipeline = pipeline
 
+		self.EventCount = 0
+
 
 	def time(self):
 		"""

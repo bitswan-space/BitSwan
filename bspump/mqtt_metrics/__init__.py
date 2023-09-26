@@ -66,30 +66,23 @@ class MQTTService(asab.Service):
         if payload == "get":
             topology = parse_topology(json.loads(self.dumper(svc.Pipelines)))
             client.publish(f"{self.container_id}/Metrics", json.dumps(topology))
-        if payload == "start":
+        else:
+            L.warning(payload)
+            payload = json.loads(payload)
             message_splitted = message.topic.split("/")
             pipeline = message_splitted[1]
             processor = message_splitted[3]
             pipeline = svc.locate(f"{pipeline}")
 
-            source = pipeline.locate_source(f"{processor}")
-            if source is not None:
-                source.Publish = True
-            else:
-                L.warning(f"adding {processor} to {pipeline.Id}")
-                pipeline.PublishingProcessors.add(f"{processor}")
+            num_of_events = payload["event_count"]
 
-        if payload == "stop":
-            message_splitted = message.topic.split("/")
-            pipeline = message_splitted[1]
-            processor = message_splitted[3]
-            pipeline = svc.locate(f"{pipeline}")
-
-            source = pipeline.locate_source(f"{processor}")
-            if source is not None:
-                source.Publish = False
-            else:
-                pipeline.PublishingProcessors.remove(f"{processor}")
+            if num_of_events is not None and num_of_events > 0: 
+                source = pipeline.locate_source(f"{processor}")
+                if source is not None:
+                    source.EventsToPublish = num_of_events
+                else:
+                    L.warning(f"adding {processor} to {pipeline.Id}")
+                    pipeline.PublishingProcessors[processor] = num_of_events
 
 
     # Callback when connected to the MQTT broker
@@ -111,5 +104,10 @@ class MQTTService(asab.Service):
     def subscribe(self, pipeline, component):
         self.sub_queue.append(f"{pipeline}/Components/{component}/events/subscribe")
 
-    def publish(self, pipeline, component, data):
-        self.client.publish(f"{self.container_id}/{pipeline}/Components/{component}/events", json.dumps(data))
+    def publish(self, pipeline, component, event):
+        data = {
+            "timestamp": time.time_ns(),
+            "data": event,
+            "event_count": component.EventCount
+        }
+        self.client.publish(f"{self.container_id}/{pipeline}/Components/{component.Id}/events", json.dumps(data))

@@ -80,7 +80,7 @@ class Pipeline(abc.ABC, asab.Configurable):
 		self.AlertService = app.AlertService
 
 		self.MQTTService = app.get_service("bspump.MQTTService")
-		self.PublishingProcessors = set()
+		self.PublishingProcessors = {}
 
 		# Ensuring the uniqueness of the alert for each pipeline
 		self.Alert_id = self.Config.get("alert_id", str(uuid.uuid4()))
@@ -451,6 +451,11 @@ class Pipeline(abc.ABC, asab.Configurable):
 			try:
 				self.ProcessorsCounter[processor.Id].add('event.in', 1)
 				event = processor.process(context, event)
+				processor.EventCount += 1
+				if self.MQTTService and processor.Id in self.PublishingProcessors.keys() and self.PublishingProcessors[processor.Id] > 0:
+					self.MQTTService.publish(self.Id, processor, event)
+					self.PublishingProcessors[processor.Id] -= 1
+				
 			except BaseException as e:
 				self.ProcessorsCounter[processor.Id].add('event.drop', 1)
 				if depth > 0:
@@ -459,8 +464,6 @@ class Pipeline(abc.ABC, asab.Configurable):
 				event = None  # Event is discarted
 
 			finally:
-				if processor.Id in self.PublishingProcessors and self.MQTTService:
-					self.MQTTService.publish(self.Id, processor.Id, event)
 				self.ProcessorsCounter[processor.Id].add('event.out', 1)
 				self.ProfilerCounter[processor.Id].add('duration', time.perf_counter() - t0)
 				self.ProfilerCounter[processor.Id].add('run', 1)
@@ -777,6 +780,7 @@ class Pipeline(abc.ABC, asab.Configurable):
 			)
 
 		if self.MQTTService:
+			self.PublishingProcessors[processor.Id] = 0
 			self.MQTTService.subscribe(self.Id, processor.Id)
 
 	def build(self, source, *processors):
