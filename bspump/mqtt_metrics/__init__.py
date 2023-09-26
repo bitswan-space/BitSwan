@@ -9,14 +9,16 @@ L = logging.getLogger(__name__)
 
 
 def parse_topology(pipelines: dict):
-
     components = []
     metrics_components = []
     for pipeline in pipelines.values():
         components.append(pipeline["Sources"][0])
         # get metrics
         for metric in pipeline["Metrics"]:
-            if metric["type"] == "Counter" and metric["name"] == "bspump.pipeline.eps_processor":
+            if (
+                metric["type"] == "Counter"
+                and metric["name"] == "bspump.pipeline.eps_processor"
+            ):
                 metrics_components.append(metric)
         for processor in pipeline["Processors"][0]:
             components.append(processor)
@@ -30,17 +32,19 @@ def parse_topology(pipelines: dict):
             current_dict["wires"] = [components[i + 1]["Id"]]
         else:
             current_dict["wires"] = []
-
-        # add metrics
         for metric in metrics_components:
             if metric["static_tags"]["processor"] == current_dict["id"]:
-                current_dict["metrics"] = {"eps.in" : metric["fieldset"][0]["values"]["eps.in"], "eps.out" : metric["fieldset"][0]["values"]["eps.out"]}
+                current_dict["metrics"] = {
+                    "eps.in": metric["fieldset"][0]["values"]["eps.in"],
+                    "eps.out": metric["fieldset"][0]["values"]["eps.out"],
+                }
                 break
 
         output_list.append(current_dict)
 
     output = {"topology": output_list}
     return output
+
 
 class MQTTService(asab.Service):
     def __init__(self, app, service_name="bspump.MQTTService"):
@@ -91,7 +95,6 @@ class MQTTService(asab.Service):
             else:
                 pipeline.PublishingProcessors.remove(f"{processor}")
 
-
     # Callback when connected to the MQTT broker
     def on_connect(self, client, userdata, flags, rc):
         # wait for /container_id file to exist and read it
@@ -107,9 +110,11 @@ class MQTTService(asab.Service):
             L.warning(f"Subscribing to {self.container_id}/{sub}")
             client.subscribe(f"{self.container_id}/{sub}")
 
-
     def subscribe(self, pipeline, component):
         self.sub_queue.append(f"{pipeline}/Components/{component}/events/subscribe")
 
     def publish(self, pipeline, component, data):
-        self.client.publish(f"{self.container_id}/{pipeline}/Components/{component}/events", json.dumps(data))
+        self.client.publish(
+            f"{self.container_id}/{pipeline}/Components/{component}/events",
+            json.dumps(data),
+        )
