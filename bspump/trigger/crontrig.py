@@ -48,6 +48,8 @@ class CronTrigger(Trigger):
     @classmethod
     def construct(cls, app, definition: dict):
         id = definition.get("id")
-        interval = definition.get("args", {}).get("cron_string", "*/2 * * *")
+        interval = definition.get("args", {}).get("cron_string")
+        if interval is None:
+            raise RuntimeError("CronTrigger needs interval to be defined")
         init_time = datetime.now()
         return cls(app, id=id, cron_string=interval, init_time=init_time)
