@@ -100,6 +100,7 @@ setup(
 		'pandas>=0.24.2',
 		'xxhash>=1.4.4',
 		'orjson',
+		'croniter>=1.4.1',
 	],
 	extras_require={
 		'ldap': 'python-ldap',
