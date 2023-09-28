@@ -11,5 +11,5 @@ __all__ = (
 	'RunOnceTrigger',
 	'PubSubTrigger',
 	'PeriodicTrigger',
-    'CronTrigger'
+	'CronTrigger'
 )
