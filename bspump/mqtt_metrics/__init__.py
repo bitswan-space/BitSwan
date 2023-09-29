@@ -4,6 +4,7 @@ import json
 import logging
 from asab.web.rest.json import JSONDumper
 import asab
+import re
 
 L = logging.getLogger(__name__)
 
@@ -73,15 +74,31 @@ class MQTTService(asab.Service):
     def on_message(self, client, userdata, message):
         payload = message.payload.decode("utf-8")
         svc = self.App.get_service("bspump.PumpService")
-        if payload == "get":
-            topology = parse_topology(json.loads(self.dumper(svc.Pipelines)))
-            client.publish(f"{self.container_id}/Metrics", json.dumps(topology))
-        else:
-            L.warning(payload)
-            payload = json.loads(payload)
-            message_splitted = message.topic.split("/")
-            pipeline = message_splitted[1]
-            processor = message_splitted[3]
+        topic = message.topic
+
+        # Regex patterns
+        topology_pattern = r"^c/(?P<container_identifier>[^/]+)/topology/get$"
+        events_pattern = r"^c/(?P<container_identifier>[^/]+)/c/(?P<pipeline_identifier>[^/]+)/c/(?P<component_identifier>[^/]+)/events/subscribe$"
+
+        # Matching
+        topology = re.match(topology_pattern, topic)
+        events = re.match(events_pattern, topic)
+
+        if topology:
+            if payload == "get":
+                pump_topology = parse_topology(json.loads(self.dumper(svc.Pipelines)))
+                client.publish(f"c/{self.container_id}/topology", json.dumps(pump_topology))
+        
+        if events:
+            try:
+                payload = json.loads(payload)
+            except json.decoder.JSONDecodeError:
+                payload = message.payload.decode("utf-8")
+                L.warning("Payload is not a valid JSON. Payload: {}".format(payload))
+                return
+            
+            pipeline = events.group("pipeline_identifier")
+            processor = events.group("component_identifier")
             pipeline = svc.locate(f"{pipeline}")
 
             num_of_events = payload["event_count"]
@@ -104,21 +121,21 @@ class MQTTService(asab.Service):
                     break
             except FileNotFoundError:
                 time.sleep(1)
-        client.subscribe(f"{self.container_id}/Metrics/get")
+        client.subscribe(f"c/{self.container_id}/topology/get")
+
         for sub in self.sub_queue:
-            L.warning(f"Subscribing to {self.container_id}/{sub}")
-            client.subscribe(f"{self.container_id}/{sub}")
+            client.subscribe(f"c/{self.container_id}/{sub}")
 
     def subscribe(self, pipeline, component):
-        self.sub_queue.append(f"{pipeline}/Components/{component}/events/subscribe")
+        self.sub_queue.append(f"c/{pipeline}/c/{component}/events/subscribe")
 
     def publish(self, pipeline, component, event):
         data = {
             "timestamp": time.time_ns(),
             "data": event,
-            "event_count": component.EventCount,
+            "event_number": component.EventCount,
         }
         self.client.publish(
-            f"{self.container_id}/{pipeline}/Components/{component.Id}/events",
+            f"c/{self.container_id}/c/{pipeline}/c/{component.Id}/events",
             json.dumps(data),
         )
