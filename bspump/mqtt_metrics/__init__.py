@@ -5,51 +5,76 @@ import logging
 from asab.web.rest.json import JSONDumper
 import asab
 import re
+import asab
 
 L = logging.getLogger(__name__)
 
 
-def parse_topology(pipelines: dict):
+def get_pipeline_topology(pipelines: dict, pipeline):
+    pipeline_data = pipelines[pipeline]
     components = []
     metrics_components = []
-    for pipeline in pipelines.values():
-        components.append(pipeline["Sources"][0])
-        # get metrics
-        for metric in pipeline["Metrics"]:
-            if (
-                metric["type"] == "Counter"
-                and metric["name"] == "bspump.pipeline.eps_processor"
-            ):
-                metrics_components.append(metric)
-        for processor in pipeline["Processors"][0]:
-            components.append(processor)
+    components.append(pipeline_data["Sources"][0])
+    # get metrics
+    for metric in pipeline_data["Metrics"]:
+        if (
+            metric["type"] == "Counter"
+            and metric["name"] == "bspump.pipeline.eps_processor"
+        ):
+            metrics_components.append(metric)
+    for processor in pipeline_data["Processors"][0]:
+        components.append(processor)
 
-    output_list = []
+    
+
+    output = {
+        "topology": {},
+        "display-style": "graph",
+        "display-priority": "shown",
+    }
     for i in range(len(components)):
-        current_dict = {"id": components[i]["Id"]}
+        component_data = {}
 
         # If it's not the last element, add the "wires" key
         if i < len(components) - 1:
-            current_dict["wires"] = [components[i + 1]["Id"]]
+            component_data["wires"] = [components[i + 1]["Id"]]
         else:
-            current_dict["wires"] = []
+            component_data["wires"] = []
+
+        # Implement getting properties
+        component_data["properties"] = {}
+
         for metric in metrics_components:
-            if metric["static_tags"]["processor"] == current_dict["id"]:
-                current_dict["metrics"] = {
+            if metric["static_tags"]["processor"] == components[i]["Id"]:
+                component_data["metrics"] = {
                     "eps.in": metric["fieldset"][0]["values"]["eps.in"],
                     "eps.out": metric["fieldset"][0]["values"]["eps.out"],
                 }
                 break
-
-        output_list.append(current_dict)
+        output["topology"][components[i]["Id"]] = component_data
 
     # add metrics to the source as it doesn't have any metrics from the metric service
-    if "metrics" not in output_list[0]:
-        if "eps.out" in output_list[1]["metrics"]:
-            output_list[0]["metrics"] = {}
-            output_list[0]["metrics"]["eps.out"] = int(output_list[1]["metrics"]["eps.out"])
+    if "metrics" not in output["topology"][components[0]["Id"]]:
+        if "eps.out" in output["topology"][components[1]["Id"]]["metrics"]:
+            output["topology"][components[0]["Id"]]["metrics"] = {}
+            output["topology"][components[0]["Id"]]["metrics"]["eps.out"] = int(output["topology"][components[1]["Id"]]["metrics"]["eps.out"])
 
-    output = {"topology": output_list}
+    return output
+
+def get_pipelines(pipelines: dict):
+    output = {
+        "topology" : {},
+        "display-style": "graph",
+        "display-priority": "shown"
+    }
+    for pipeline in pipelines.values():
+        pipeline_dict = {
+            "wires": [],
+            "properties": [],
+            "metrics": [],
+        }
+        output["topology"][pipeline["Id"]] = pipeline_dict
+    
     return output
 
 
@@ -60,35 +85,47 @@ class MQTTService(asab.Service):
         broker = asab.Config["MQTTMetrics"].get("broker")
         self.host, self.port = broker.split(":")
         self.client = mqtt.Client()
+        self.dumper = JSONDumper(pretty=False)
+        self.container_id = None
+
+        self.sub_queue = []
 
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
         self.client.connect(self.host, int(self.port), 60)
         self.client.loop_start()
 
-        self.dumper = JSONDumper(pretty=False)
-        self.container_id = None
 
-        self.sub_queue = []
 
     def on_message(self, client, userdata, message):
         payload = message.payload.decode("utf-8")
         svc = self.App.get_service("bspump.PumpService")
         topic = message.topic
 
+        
         # Regex patterns
-        topology_pattern = r"^c/(?P<container_identifier>[^/]+)/topology/get$"
+        pipelines_list_pattern = r"^c/(?P<container_identifier>[^/]+)/topology/get$"
+        pipeline_components_pattern = r"^c/(?P<container_identifier>[^/]+)/c/(?P<pipeline_identifier>[^/]+)/topology/get$"
         events_pattern = r"^c/(?P<container_identifier>[^/]+)/c/(?P<pipeline_identifier>[^/]+)/c/(?P<component_identifier>[^/]+)/events/subscribe$"
 
         # Matching
-        topology = re.match(topology_pattern, topic)
+        pipelines_list = re.match(pipelines_list_pattern, topic)
+        pipeline_components = re.match(pipeline_components_pattern, topic)
         events = re.match(events_pattern, topic)
 
-        if topology:
+        # Get list of pipelines from application
+        if pipelines_list:
             if payload == "get":
-                pump_topology = parse_topology(json.loads(self.dumper(svc.Pipelines)))
+                pump_topology = get_pipelines(json.loads(self.dumper(svc.Pipelines)))
                 client.publish(f"c/{self.container_id}/topology", json.dumps(pump_topology))
         
+        # Get components of one pipeline
+        if pipeline_components:
+            if payload == "get":
+                pipeline = pipeline_components.group("pipeline_identifier")
+                pipeline_topology = get_pipeline_topology(json.loads(self.dumper(svc.Pipelines)), pipeline)
+                client.publish(f"c/{self.container_id}/c/{pipeline}/topology", json.dumps(pipeline_topology))
+
         if events:
             try:
                 payload = json.loads(payload)
@@ -125,6 +162,9 @@ class MQTTService(asab.Service):
 
         for sub in self.sub_queue:
             client.subscribe(f"c/{self.container_id}/{sub}")
+
+    def add_pipeline(self, pipeline):
+        self.sub_queue.append(f"c/{pipeline}/topology/get")
 
     def subscribe(self, pipeline, component):
         self.sub_queue.append(f"c/{pipeline}/c/{component}/events/subscribe")
