@@ -36,6 +36,8 @@ class BSPumpService(asab.Service):
 		self.LookupFactories = []
 		self.Matrixes = dict()
 
+		self.App = app
+
 
 	def locate(self, address):
 		"""
@@ -103,6 +105,10 @@ class BSPumpService(asab.Service):
 		"""
 		if pipeline.Id in self.Pipelines:
 			raise RuntimeError("Pipeline with id '{}' is already registered".format(pipeline.Id))
+		
+		if self.App.MQTTService is not None:
+			self.App.MQTTService.add_pipeline(pipeline.Id)
+		
 		self.Pipelines[pipeline.Id] = pipeline
 
 	def add_pipelines(self, *pipelines):

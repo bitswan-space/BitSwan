@@ -38,6 +38,11 @@ class Source(asab.Configurable):
 
 		self.Task = None  # Contains a main coroutine `main()` if Pipeline is started
 
+		self.MQTTService = app.get_service("bspump.MQTTService")
+
+		self.EventCount = 0
+		self.EventsToPublish = 0
+
 
 	async def process(self, event, context=None):
 		"""
@@ -57,7 +62,13 @@ class Source(asab.Configurable):
 
 		"""
 		# TODO: Remove this method completely, each source should call pipeline.process() method directly
+
 		await self.Pipeline.process(event, context=context)
+
+		self.EventCount += 1
+		if self.MQTTService and self.EventsToPublish > 0 :
+			self.MQTTService.publish(self.Pipeline.Id, self, event)
+			self.EventsToPublish -= 1
 
 
 	def start(self, loop):
