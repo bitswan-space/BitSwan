@@ -95,6 +95,7 @@ class MQTTService(asab.Service):
         self.client.connect(self.host, int(self.port), 60)
         self.client.loop_start()
 
+        self.dumper = JSONDumper(pretty=False)
 
 
     def on_message(self, client, userdata, message):
@@ -117,7 +118,7 @@ class MQTTService(asab.Service):
         if pipelines_list:
             if payload == "get":
                 pump_topology = get_pipelines(json.loads(self.dumper(svc.Pipelines)))
-                client.publish(f"c/{self.container_id}/topology", json.dumps(pump_topology))
+                client.publish(f"c/{self.App.HostName}/topology", json.dumps(pump_topology))
         
         # Get components of one pipeline
         if pipeline_components:
@@ -150,18 +151,10 @@ class MQTTService(asab.Service):
 
     # Callback when connected to the MQTT broker
     def on_connect(self, client, userdata, flags, rc):
-        # wait for /container_id file to exist and read it
-        while True:
-            try:
-                with open("/container_id", "r") as f:
-                    self.container_id = f.read().replace("\n", "")
-                    break
-            except FileNotFoundError:
-                time.sleep(1)
-        client.subscribe(f"c/{self.container_id}/topology/get")
+        client.subscribe(f"c/{self.App.HostName}/topology/get")
 
         for sub in self.sub_queue:
-            client.subscribe(f"c/{self.container_id}/{sub}")
+            client.subscribe(f"c/{self.App.HostName}/{sub}")
 
     def add_pipeline(self, pipeline):
         self.sub_queue.append(f"c/{pipeline}/topology/get")
@@ -176,6 +169,6 @@ class MQTTService(asab.Service):
             "event_number": component.EventCount,
         }
         self.client.publish(
-            f"c/{self.container_id}/c/{pipeline}/c/{component.Id}/events",
+            f"c/{self.App.HostName}/c/{pipeline}/c/{component.Id}/events",
             json.dumps(data),
         )
