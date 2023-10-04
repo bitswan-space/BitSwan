@@ -131,7 +131,7 @@ class MQTTService(asab.Service):
                 payload = json.loads(payload)
             except json.decoder.JSONDecodeError:
                 payload = message.payload.decode("utf-8")
-                L.warning("Payload is not a valid JSON. Payload: {}".format(payload))
+                L.warning(f"Payload sent to {topic} is not a valid JSON. Payload: {payload}")
                 return
             
             pipeline = events.group("pipeline_identifier")
@@ -145,7 +145,7 @@ class MQTTService(asab.Service):
                 if source is not None:
                     source.EventsToPublish = num_of_events
                 else:
-                    L.warning(f"adding {processor} to {pipeline.Id}")
+                    L.info(f"adding {processor} to {pipeline.Id}")
                     pipeline.PublishingProcessors[processor] = num_of_events
 
     # Callback when connected to the MQTT broker
