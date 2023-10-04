@@ -86,7 +86,6 @@ class MQTTService(asab.Service):
         self.host, self.port = broker.split(":")
         self.client = mqtt.Client()
         self.dumper = JSONDumper(pretty=False)
-        self.container_id = None
 
         self.sub_queue = []
 
@@ -125,7 +124,7 @@ class MQTTService(asab.Service):
             if payload == "get":
                 pipeline = pipeline_components.group("pipeline_identifier")
                 pipeline_topology = get_pipeline_topology(json.loads(self.dumper(svc.Pipelines)), pipeline)
-                client.publish(f"c/{self.container_id}/c/{pipeline}/topology", json.dumps(pipeline_topology))
+                client.publish(f"c/{self.App.HostName}/c/{pipeline}/topology", json.dumps(pipeline_topology))
 
         if events:
             try:
