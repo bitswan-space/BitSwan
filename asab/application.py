@@ -108,7 +108,7 @@ class Application(metaclass=Singleton):
 			while True:
 				try:
 					with open(container_id_file, "r") as f:
-						self.HostName = f.read()
+						self.HostName = f.read().strip()
 						break
 				except FileNotFoundError:
 					time.sleep(1)
