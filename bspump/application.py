@@ -9,6 +9,7 @@ import asab.api
 from .service import BSPumpService
 from .__version__ import __version__, __build__
 
+L = logging.getLogger(__name__)
 
 class BSPumpApplication(asab.Application):
 
@@ -38,6 +39,8 @@ class BSPumpApplication(asab.Application):
 
 		from asab.alert import AlertService
 		self.AlertService = AlertService(self)
+
+		self.MQTTService = None
 
 		try:
 			# Signals are not available on Windows
