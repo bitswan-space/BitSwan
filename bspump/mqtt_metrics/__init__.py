@@ -43,6 +43,7 @@ def get_pipeline_topology(pipelines: dict, pipeline):
 
         # Implement getting properties
         component_data["properties"] = {}
+        component_data["type"] = "component"
 
         for metric in metrics_components:
             if metric["static_tags"]["processor"] == components[i]["Id"]:
@@ -65,13 +66,14 @@ def get_pipelines(pipelines: dict):
     output = {
         "topology" : {},
         "display-style": "graph",
-        "display-priority": "shown"
+        "display-priority": "hidden"
     }
     for pipeline in pipelines.values():
         pipeline_dict = {
             "wires": [],
             "properties": [],
             "metrics": [],
+            "type": "pipeline",
         }
         output["topology"][pipeline["Id"]] = pipeline_dict
     
