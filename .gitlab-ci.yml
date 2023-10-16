@@ -1,10 +1,9 @@
 variables:
-  DOCKER_REGISTRY: public.ecr.aws/h9w9d7v3
-  AWS_DEFAULT_REGION: us-east-1
-  DOCKER_HOST: tcp://docker:2375
+  DOCKER_IMAGE: bspump
 
 stages:
   - test
+  - build
 
 test-py310:
   image: python:3.10
@@ -18,24 +17,6 @@ test-py310:
     - pip install -r requirements-dev.txt
     - pytest bspump/file
 
-publish-base-image:
-  image:
-    name: amazon/aws-cli
-    entrypoint: [""]
-  services:
-    - docker:dind
-  only:
-    - master
-  before_script:
-    - amazon-linux-extras install docker
-    - yum install -y git
-    - aws --version
-    - docker --version
-  script:
-    - YEAR=$(date +%Y)
-    - COMMIT_HASH=$(git rev-parse --short HEAD)
-    - aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin $DOCKER_REGISTRY
-    - docker build -t $DOCKER_REGISTRY/bspump:$YEAR-$CI_PIPELINE_IID-git-$COMMIT_HASH .
-    - docker tag $DOCKER_REGISTRY/bspump:$YEAR-$CI_PIPELINE_IID-git-$COMMIT_HASH $DOCKER_REGISTRY/bspump:latest
-    - docker push $DOCKER_REGISTRY/bspump:latest
-    - docker push $DOCKER_REGISTRY/bspump:$YEAR-$CI_PIPELINE_IID-git-$COMMIT_HASH
+include:
+  - project: 'LibertyAces/Product/bitswanmonorepo'
+    file: 'cicd/docker-build-public.yml'
