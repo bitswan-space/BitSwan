@@ -101,6 +101,7 @@ setup(
 		'xxhash>=1.4.4',
 		'orjson',
 		'croniter>=1.4.1',
+        'paho-mqtt',
 	],
 	extras_require={
 		'ldap': 'python-ldap',
