@@ -25,8 +25,6 @@ def get_pipeline_topology(pipelines: dict, pipeline):
     for processor in pipeline_data["Processors"][0]:
         components.append(processor)
 
-    
-
     output = {
         "topology": {},
         "display-style": "graph",
@@ -43,7 +41,7 @@ def get_pipeline_topology(pipelines: dict, pipeline):
 
         # Implement getting properties
         component_data["properties"] = {}
-        component_data["capabilities"] = ["subscribable-events"]
+        component_data["type"] = "component"
 
         for metric in metrics_components:
             if metric["static_tags"]["processor"] == components[i]["Id"]:
@@ -73,10 +71,10 @@ def get_pipelines(pipelines: dict):
             "wires": [],
             "properties": [],
             "metrics": [],
-            "capabilities": ["has-children"],
+            "type": "pipeline",
         }
         output["topology"][pipeline["Id"]] = pipeline_dict
-    
+
     return output
 
 
@@ -95,6 +93,7 @@ class MQTTService(asab.Service):
         self.client.on_message = self.on_message
         self.client.connect(self.host, int(self.port), 60)
         self.client.loop_start()
+        self.connected = False
 
         self.dumper = JSONDumper(pretty=False)
 
@@ -104,11 +103,11 @@ class MQTTService(asab.Service):
         svc = self.App.get_service("bspump.PumpService")
         topic = message.topic
 
-        
+
         # Regex patterns
-        pipelines_list_pattern = r"^c/(?P<deployment_identifier>[^/]+)/topology/get$"
-        pipeline_components_pattern = r"^c/(?P<deployment_identifier>[^/]+)/c/(?P<pipeline_identifier>[^/]+)/topology/get$"
-        events_pattern = r"^c/(?P<deployment_identifier>[^/]+)/c/(?P<pipeline_identifier>[^/]+)/c/(?P<component_identifier>[^/]+)/events/subscribe$"
+        pipelines_list_pattern = r"^c/(?P<container_identifier>[^/]+)/topology/get$"
+        pipeline_components_pattern = r"^c/(?P<container_identifier>[^/]+)/c/(?P<pipeline_identifier>[^/]+)/topology/get$"
+        events_pattern = r"^c/(?P<container_identifier>[^/]+)/c/(?P<pipeline_identifier>[^/]+)/c/(?P<component_identifier>[^/]+)/events/subscribe$"
 
         # Matching
         pipelines_list = re.match(pipelines_list_pattern, topic)
@@ -117,29 +116,13 @@ class MQTTService(asab.Service):
 
         # Get list of pipelines from application
         if pipelines_list:
-            try:
-                payload = json.loads(payload)
-            except json.decoder.JSONDecodeError:
-                payload = message.payload.decode("utf-8")
-                L.warning(f"Payload sent to {topic} is not a valid JSON. Payload: {payload}")
-                return
-
-            method = payload.get("method")
-            if method is not None and method == "get":
+            if payload == "get":
                 pump_topology = get_pipelines(json.loads(self.dumper(svc.Pipelines)))
                 client.publish(f"c/{self.App.HostName}/topology", json.dumps(pump_topology))
-        
+
         # Get components of one pipeline
         if pipeline_components:
-            try:
-                payload = json.loads(payload)
-            except json.decoder.JSONDecodeError:
-                payload = message.payload.decode("utf-8")
-                L.warning(f"Payload sent to {topic} is not a valid JSON. Payload: {payload}")
-                return
-            
-            method = payload.get("method")
-            if method is not None and method == "get":
+            if payload == "get":
                 pipeline = pipeline_components.group("pipeline_identifier")
                 pipeline_topology = get_pipeline_topology(json.loads(self.dumper(svc.Pipelines)), pipeline)
                 client.publish(f"c/{self.App.HostName}/c/{pipeline}/topology", json.dumps(pipeline_topology))
@@ -151,12 +134,12 @@ class MQTTService(asab.Service):
                 payload = message.payload.decode("utf-8")
                 L.warning(f"Payload sent to {topic} is not a valid JSON. Payload: {payload}")
                 return
-            
+
             pipeline = events.group("pipeline_identifier")
             processor = events.group("component_identifier")
             pipeline = svc.locate(f"{pipeline}")
 
-            num_of_events = payload.get("event_count")
+            num_of_events = payload["event_count"]
 
             if num_of_events is not None and num_of_events > 0:
                 source = pipeline.locate_source(f"{processor}")
@@ -168,6 +151,10 @@ class MQTTService(asab.Service):
 
     # Callback when connected to the MQTT broker
     def on_connect(self, client, userdata, flags, rc):
+        self.apply_subscriptions()
+        self.connected = True
+
+    def apply_subscriptions(self):
         client.subscribe(f"c/{self.App.HostName}/topology/get")
 
         for sub in self.sub_queue:
@@ -175,9 +162,13 @@ class MQTTService(asab.Service):
 
     def add_pipeline(self, pipeline):
         self.sub_queue.append(f"c/{pipeline}/topology/get")
+        if self.connected:
+            self.apply_subscriptions()
 
     def subscribe(self, pipeline, component):
         self.sub_queue.append(f"c/{pipeline}/c/{component}/events/subscribe")
+        if self.connected:
+            self.apply_subscriptions()
 
     def publish(self, pipeline, component, event):
         data = {
