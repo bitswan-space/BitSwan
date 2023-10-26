@@ -155,10 +155,10 @@ class MQTTService(asab.Service):
         self.connected = True
 
     def apply_subscriptions(self):
-        client.subscribe(f"c/{self.App.HostName}/topology/get")
+        self.client.subscribe(f"c/{self.App.HostName}/topology/get")
 
         for sub in self.sub_queue:
-            client.subscribe(f"c/{self.App.HostName}/{sub}")
+            self.client.subscribe(f"c/{self.App.HostName}/{sub}")
 
     def add_pipeline(self, pipeline):
         self.sub_queue.append(f"c/{pipeline}/topology/get")
