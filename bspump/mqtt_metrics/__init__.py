@@ -43,7 +43,7 @@ def get_pipeline_topology(pipelines: dict, pipeline):
 
         # Implement getting properties
         component_data["properties"] = {}
-        component_data["type"] = "component"
+        component_data["capabilities"] = ["subscribable-events"]
 
         for metric in metrics_components:
             if metric["static_tags"]["processor"] == components[i]["Id"]:
@@ -73,7 +73,7 @@ def get_pipelines(pipelines: dict):
             "wires": [],
             "properties": [],
             "metrics": [],
-            "type": "pipeline",
+            "capabilities": ["has-children"],
         }
         output["topology"][pipeline["Id"]] = pipeline_dict
     
@@ -106,9 +106,9 @@ class MQTTService(asab.Service):
 
         
         # Regex patterns
-        pipelines_list_pattern = r"^c/(?P<container_identifier>[^/]+)/topology/get$"
-        pipeline_components_pattern = r"^c/(?P<container_identifier>[^/]+)/c/(?P<pipeline_identifier>[^/]+)/topology/get$"
-        events_pattern = r"^c/(?P<container_identifier>[^/]+)/c/(?P<pipeline_identifier>[^/]+)/c/(?P<component_identifier>[^/]+)/events/subscribe$"
+        pipelines_list_pattern = r"^c/(?P<deployment_identifier>[^/]+)/topology/get$"
+        pipeline_components_pattern = r"^c/(?P<deployment_identifier>[^/]+)/c/(?P<pipeline_identifier>[^/]+)/topology/get$"
+        events_pattern = r"^c/(?P<deployment_identifier>[^/]+)/c/(?P<pipeline_identifier>[^/]+)/c/(?P<component_identifier>[^/]+)/events/subscribe$"
 
         # Matching
         pipelines_list = re.match(pipelines_list_pattern, topic)
@@ -117,13 +117,29 @@ class MQTTService(asab.Service):
 
         # Get list of pipelines from application
         if pipelines_list:
-            if payload == "get":
+            try:
+                payload = json.loads(payload)
+            except json.decoder.JSONDecodeError:
+                payload = message.payload.decode("utf-8")
+                L.warning(f"Payload sent to {topic} is not a valid JSON. Payload: {payload}")
+                return
+
+            method = payload.get("method")
+            if method is not None and method == "get":
                 pump_topology = get_pipelines(json.loads(self.dumper(svc.Pipelines)))
                 client.publish(f"c/{self.App.HostName}/topology", json.dumps(pump_topology))
         
         # Get components of one pipeline
         if pipeline_components:
-            if payload == "get":
+            try:
+                payload = json.loads(payload)
+            except json.decoder.JSONDecodeError:
+                payload = message.payload.decode("utf-8")
+                L.warning(f"Payload sent to {topic} is not a valid JSON. Payload: {payload}")
+                return
+            
+            method = payload.get("method")
+            if method is not None and method == "get":
                 pipeline = pipeline_components.group("pipeline_identifier")
                 pipeline_topology = get_pipeline_topology(json.loads(self.dumper(svc.Pipelines)), pipeline)
                 client.publish(f"c/{self.App.HostName}/c/{pipeline}/topology", json.dumps(pipeline_topology))
@@ -140,7 +156,7 @@ class MQTTService(asab.Service):
             processor = events.group("component_identifier")
             pipeline = svc.locate(f"{pipeline}")
 
-            num_of_events = payload["event_count"]
+            num_of_events = payload.get("event_count")
 
             if num_of_events is not None and num_of_events > 0:
                 source = pipeline.locate_source(f"{processor}")
