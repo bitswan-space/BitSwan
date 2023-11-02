@@ -100,6 +100,7 @@ setup(
 		'pandas>=0.24.2',
 		'xxhash>=1.4.4',
 		'orjson',
+		'pyjq>=3.0.0',
 		'croniter>=1.4.1',
         'paho-mqtt',
 	],
