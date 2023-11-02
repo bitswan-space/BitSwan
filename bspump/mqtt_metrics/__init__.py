@@ -163,7 +163,7 @@ class MQTTService(asab.Service):
                     source.EventsToPublish = num_of_events
                 else:
                     L.info(f"adding {processor} to {pipeline.Id}")
-                    pipeline.PublishingProcessors[processor] = num_of_events
+                    pipeline.PublishingProcessors[processor] = max(num_of_events, pipeline.PublishingProcessors[processor])
 
     # Callback when connected to the MQTT broker
     def on_connect(self, client, userdata, flags, rc):
@@ -186,11 +186,12 @@ class MQTTService(asab.Service):
         if self.connected:
             self.apply_subscriptions()
 
-    def publish(self, pipeline, component, event):
+    def publish_event(self, pipeline, component, event, count_remaining):
         data = {
             "timestamp": time.time_ns(),
             "data": event,
             "event_number": component.EventCount,
+            "remaining_subscription_count": count_remaining,
         }
         self.client.publish(
             f"c/{self.App.HostName}/c/{pipeline}/c/{component.Id}/events",

@@ -67,7 +67,7 @@ class Source(asab.Configurable):
 
 		self.EventCount += 1
 		if self.MQTTService and self.EventsToPublish > 0 :
-			self.MQTTService.publish(self.Pipeline.Id, self, event)
+			self.MQTTService.publish_event(self.Pipeline.Id, self, event, self.EventsToPublish)
 			self.EventsToPublish -= 1
 
 

@@ -453,9 +453,8 @@ class Pipeline(abc.ABC, asab.Configurable):
 				event = processor.process(context, event)
 				processor.EventCount += 1
 				if self.MQTTService and processor.Id in self.PublishingProcessors.keys() and self.PublishingProcessors[processor.Id] > 0:
-					self.MQTTService.publish(self.Id, processor, event)
+					self.MQTTService.publish_event(self.Id, processor, event, self.PublishingProcessors[processor.Id])
 					self.PublishingProcessors[processor.Id] -= 1
-				
 			except BaseException as e:
 				self.ProcessorsCounter[processor.Id].add('event.drop', 1)
 				if depth > 0:
