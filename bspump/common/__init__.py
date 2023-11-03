@@ -23,6 +23,7 @@ from .tee import TeeSource
 from .time import TimeZoneNormalizer
 from .transfr import MappingTransformator
 from .jsonbytes import DictToJsonBytesParser
+from .jq import JQProcessor
 
 __all__ = (
 	'BytesToStringParser',
@@ -63,4 +64,5 @@ __all__ = (
 	'ListEventAggregationStrategy',
 	'StringAggregationStrategy',
 	'DictToJsonBytesParser',
+    'JQProcessor',
 )
