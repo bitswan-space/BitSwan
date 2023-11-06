@@ -8,7 +8,7 @@ class JQProcessor(Processor):
 
     def __init__(self, app, pipeline, id=None, config=None, query=None):
         super().__init__(app, pipeline, id=id, config=config)
-        self.Query = query or self.Config['query']
+        self.Query = query or "{}".format(self.Config['query'])
 
     def process(self, context, event):
         return pyjq.first(self.Query, event)
