@@ -64,5 +64,5 @@ __all__ = (
 	'ListEventAggregationStrategy',
 	'StringAggregationStrategy',
 	'DictToJsonBytesParser',
-    'JQProcessor',
+	'JQProcessor',
 )
