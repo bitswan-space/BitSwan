@@ -12,7 +12,10 @@ RUN apt-get -y install \
 	git \
 	gcc \
 	g++ \
-	libsnappy-dev
+	libsnappy-dev \
+  autoconf \
+  automake \
+  libtool
 
 COPY . /app/
 RUN cd /app/ ; pip3 install .

@@ -8,6 +8,9 @@ in pkgs.mkShell {
         python311Packages.virtualenv
         python311Packages.wheel
         stdenv.cc.cc.lib
+        autoconf
+        automake
+        libtool
     ];
 
   shellHook = ''
