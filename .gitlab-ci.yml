@@ -16,6 +16,7 @@ test-py310:
     - pip3 install .
     - pip install -r requirements-dev.txt
     - pytest bspump/file
+    - ruff bspump
 
 include:
   - project: 'LibertyAces/Product/bitswanmonorepo'

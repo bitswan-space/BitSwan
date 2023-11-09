@@ -9,7 +9,6 @@ from .iterator import IteratorSource
 from .json import CySimdJsonParser
 from .json import StdDictToJsonParser
 from .json import StdJsonToDictParser
-from .json import DictToJsonBytesParser
 from .mapping import MappingKeysGenerator, MappingValuesGenerator, MappingItemsGenerator
 from .mapping import MappingKeysProcessor, MappingValuesProcessor, MappingItemsProcessor
 from .null import NullSink
@@ -36,7 +35,6 @@ __all__ = (
 	'CySimdJsonParser',
 	'StdDictToJsonParser',
 	'StdJsonToDictParser',
-	'DictToJsonBytesParser',
 	'MappingKeysGenerator',
 	'MappingValuesGenerator',
 	'MappingItemsGenerator',

@@ -5,7 +5,7 @@ import re
 
 from ..abc.sink import Sink
 
-from .stream import Stream, TLSStream
+from .stream import Stream
 
 #
 

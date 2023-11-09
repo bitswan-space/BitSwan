@@ -229,8 +229,8 @@ class Aggregator(Generator):
 	}
 
 	def __init__(self, app, pipeline,
-				 aggregation_strategy: AggregationStrategy = ListAggregationStrategy(),
-				 id=None, config=None):
+				aggregation_strategy: AggregationStrategy = ListAggregationStrategy(),
+				id=None, config=None):
 		"""
 		Description:
 

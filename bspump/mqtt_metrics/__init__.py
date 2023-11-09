@@ -5,7 +5,6 @@ import logging
 from asab.web.rest.json import JSONDumper
 import asab
 import re
-import asab
 
 L = logging.getLogger(__name__)
 
