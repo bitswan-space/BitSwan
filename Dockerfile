@@ -15,7 +15,8 @@ RUN apt-get -y install \
 	libsnappy-dev \
   autoconf \
   automake \
-  libtool
+  libtool \
+  build-essential
 
 COPY . /app/
 RUN cd /app/ ; pip3 install .
