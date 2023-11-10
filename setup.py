@@ -15,6 +15,10 @@ if (here / '.git').exists():
 	version = version.decode('utf-8').strip()
 	if version[:1] == 'v':
 		version = version[1:]
+	if len(version) == 7:
+		from datetime import datetime
+		current_date = datetime.now().strftime("%Y.%m.%d")
+		version = f"{current_date}+{version}"
 
 	# PEP 440 requires that the PUBLIC version field does not contain hyphens or pluses.
 	# https://peps.python.org/pep-0440/#semantic-versioning
