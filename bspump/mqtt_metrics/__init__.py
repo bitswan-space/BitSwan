@@ -104,9 +104,9 @@ class MQTTService(asab.Service):
 
 
         # Regex patterns
-        pipelines_list_pattern = r"^c/(?P<deployment_identifier>[^/]+)/topology/get$"
-        pipeline_components_pattern = r"^c/(?P<deployment_identifier>[^/]+)/c/(?P<pipeline_identifier>[^/]+)/topology/get$"
-        events_pattern = r"^c/(?P<deployment_identifier>[^/]+)/c/(?P<pipeline_identifier>[^/]+)/c/(?P<component_identifier>[^/]+)/events/subscribe$"
+        pipelines_list_pattern = r"^/c/(?P<deployment_identifier>[^/]+)/topology/subscribe$"
+        pipeline_components_pattern = r"^/c/(?P<deployment_identifier>[^/]+)/c/(?P<pipeline_identifier>[^/]+)/topology/subscribe$"
+        events_pattern = r"^/c/(?P<deployment_identifier>[^/]+)/c/(?P<pipeline_identifier>[^/]+)/c/(?P<component_identifier>[^/]+)/events/subscribe$"
 
         # Matching
         pipelines_list = re.match(pipelines_list_pattern, topic)
@@ -122,10 +122,19 @@ class MQTTService(asab.Service):
                 L.warning(f"Payload sent to {topic} is not a valid JSON. Payload: {payload}")
                 return
 
-            method = payload.get("method")
-            if method is not None and method == "get":
-                pump_topology = get_pipelines(json.loads(self.dumper(svc.Pipelines)))
-                client.publish(f"c/{self.App.HostName}/topology", json.dumps(pump_topology))
+            topology_count = payload.get("topology_count")
+            if topology_count > 2000:
+                topology_count = 2000
+            if topology_count is not None and topology_count > 0:
+                for i in range(1, topology_count+1):
+                    new_message = {
+                        "timestamp": time.time_ns(),
+                        "data": get_pipelines(json.loads(self.dumper(svc.Pipelines))),
+                        "topology_number": i,
+                        "remaining_subscription_count": topology_count - i,
+                    }
+                    client.publish(f"/c/{self.App.HostName}/topology", json.dumps(new_message))
+
 
         # Get components of one pipeline
         if pipeline_components:
@@ -136,11 +145,19 @@ class MQTTService(asab.Service):
                 L.warning(f"Payload sent to {topic} is not a valid JSON. Payload: {payload}")
                 return
             
-            method = payload.get("method")
-            if method is not None and method == "get":
+            topology_count = payload.get("topology_count")
+            if topology_count > 2000:
+                topology_count = 2000
+            if topology_count is not None and topology_count > 0:
                 pipeline = pipeline_components.group("pipeline_identifier")
-                pipeline_topology = get_pipeline_topology(json.loads(self.dumper(svc.Pipelines)), pipeline)
-                client.publish(f"c/{self.App.HostName}/c/{pipeline}/topology", json.dumps(pipeline_topology))
+                for i in range(1, topology_count+1):
+                    new_message = {
+                        "timestamp": time.time_ns(),
+                        "data": get_pipeline_topology(json.loads(self.dumper(svc.Pipelines)), pipeline),
+                        "topology_number": i,
+                        "remaining_subscription_count": topology_count - i,
+                    }
+                    client.publish(f"/c/{self.App.HostName}/c/{pipeline}/topology", json.dumps(new_message))
 
         if events:
             try:
@@ -155,7 +172,8 @@ class MQTTService(asab.Service):
             pipeline = svc.locate(f"{pipeline}")
 
             num_of_events = payload.get("event_count")
-
+            if num_of_events > 2000:
+                num_of_events = 2000
             if num_of_events is not None and num_of_events > 0:
                 source = pipeline.locate_source(f"{processor}")
                 if source is not None:
@@ -170,18 +188,18 @@ class MQTTService(asab.Service):
         self.connected = True
 
     def apply_subscriptions(self):
-        self.client.subscribe(f"c/{self.App.HostName}/topology/get")
+        self.client.subscribe(f"/c/{self.App.HostName}/topology/subscribe")
 
         for sub in self.sub_queue:
-            self.client.subscribe(f"c/{self.App.HostName}/{sub}")
+            self.client.subscribe(f"/c/{self.App.HostName}/{sub}")
 
     def add_pipeline(self, pipeline):
-        self.sub_queue.append(f"c/{pipeline}/topology/get")
+        self.sub_queue.append(f"/c/{pipeline}/topology/subscribe")
         if self.connected:
             self.apply_subscriptions()
 
     def subscribe(self, pipeline, component):
-        self.sub_queue.append(f"c/{pipeline}/c/{component}/events/subscribe")
+        self.sub_queue.append(f"/c/{pipeline}/c/{component}/events/subscribe")
         if self.connected:
             self.apply_subscriptions()
 
@@ -193,6 +211,6 @@ class MQTTService(asab.Service):
             "remaining_subscription_count": count_remaining,
         }
         self.client.publish(
-            f"c/{self.App.HostName}/c/{pipeline}/c/{component.Id}/events",
+            f"/c/{self.App.HostName}/c/{pipeline}/c/{component.Id}/events",
             json.dumps(data),
         )
