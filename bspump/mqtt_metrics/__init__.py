@@ -105,7 +105,7 @@ class MQTTService(asab.Service):
             self.max_count = int(asab.Config["MQTTMetrics"].get("max_count"))
         except Exception:
             L.warning(
-                "MQTTService: The max_count parameter is not set in the configuration file or is not an integer. Default value is 10000."
+                "MQTTService: The max_count parameter is not set in the configuration file or is not an integer. Default value is 100."
             )
             self.max_count = 10000
 
