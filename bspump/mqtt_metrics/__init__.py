@@ -55,16 +55,15 @@ def get_pipeline_topology(pipelines: dict, pipeline):
     if "metrics" not in output["topology"][components[0]["Id"]]:
         if "eps.out" in output["topology"][components[1]["Id"]]["metrics"]:
             output["topology"][components[0]["Id"]]["metrics"] = {}
-            output["topology"][components[0]["Id"]]["metrics"]["eps.out"] = int(output["topology"][components[1]["Id"]]["metrics"]["eps.out"])
+            output["topology"][components[0]["Id"]]["metrics"]["eps.out"] = int(
+                output["topology"][components[1]["Id"]]["metrics"]["eps.out"]
+            )
 
     return output
 
+
 def get_pipelines(pipelines: dict):
-    output = {
-        "topology" : {},
-        "display-style": "graph",
-        "display-priority": "hidden"
-    }
+    output = {"topology": {}, "display-style": "graph", "display-priority": "hidden"}
     for pipeline in pipelines.values():
         pipeline_dict = {
             "wires": [],
@@ -75,6 +74,7 @@ def get_pipelines(pipelines: dict):
         output["topology"][pipeline["Id"]] = pipeline_dict
 
     return output
+
 
 def get_message_structure():
     return {
@@ -104,15 +104,15 @@ class MQTTService(asab.Service):
 
         self.dumper = JSONDumper(pretty=False)
 
-
     def on_message(self, client, userdata, message):
         payload = message.payload.decode("utf-8")
         svc = self.App.get_service("bspump.PumpService")
         topic = message.topic
 
-
         # Regex patterns
-        pipelines_list_pattern = r"^/c/(?P<deployment_identifier>[^/]+)/topology/subscribe$"
+        pipelines_list_pattern = (
+            r"^/c/(?P<deployment_identifier>[^/]+)/topology/subscribe$"
+        )
         pipeline_components_pattern = r"^/c/(?P<deployment_identifier>[^/]+)/c/(?P<pipeline_identifier>[^/]+)/topology/subscribe$"
         events_pattern = r"^/c/(?P<deployment_identifier>[^/]+)/c/(?P<pipeline_identifier>[^/]+)/c/(?P<component_identifier>[^/]+)/events/subscribe$"
 
@@ -126,13 +126,15 @@ class MQTTService(asab.Service):
             payload = json.loads(payload)
         except json.decoder.JSONDecodeError:
             payload = message.payload.decode("utf-8")
-            L.warning(f"Payload sent to {topic} is not a valid JSON. Payload: {payload}")
+            L.warning(
+                f"Payload sent to {topic} is not a valid JSON. Payload: {payload}"
+            )
             return
-        
+
         count = payload.get("count")
         if count is None or count < 0:
             return
-        
+
         count = min(count, 2000)
         if pipelines_list:
             new_message = get_message_structure()
@@ -141,15 +143,18 @@ class MQTTService(asab.Service):
             new_message["remaining_subscription_count"] = count - 1
             client.publish(f"/c/{self.App.HostName}/topology", json.dumps(new_message))
 
-
         # Get components of one pipeline
-        if pipeline_components:            
+        if pipeline_components:
             pipeline = pipeline_components.group("pipeline_identifier")
             new_message = get_message_structure()
-            new_message["data"] = get_pipeline_topology(json.loads(self.dumper(svc.Pipelines)), pipeline)
+            new_message["data"] = get_pipeline_topology(
+                json.loads(self.dumper(svc.Pipelines)), pipeline
+            )
             new_message["count"] = 1
             new_message["remaining_subscription_count"] = count - 1
-            client.publish(f"/c/{self.App.HostName}/c/{pipeline}/topology", json.dumps(new_message))
+            client.publish(
+                f"/c/{self.App.HostName}/c/{pipeline}/topology", json.dumps(new_message)
+            )
 
         if events:
             pipeline = events.group("pipeline_identifier")
@@ -161,7 +166,9 @@ class MQTTService(asab.Service):
                 source.EventsToPublish = count
             else:
                 L.info(f"adding {processor} to {pipeline.Id}")
-                pipeline.PublishingProcessors[processor] = max(count, pipeline.PublishingProcessors[processor])
+                pipeline.PublishingProcessors[processor] = max(
+                    count, pipeline.PublishingProcessors[processor]
+                )
 
     # Callback when connected to the MQTT broker
     def on_connect(self, client, userdata, flags, rc):
