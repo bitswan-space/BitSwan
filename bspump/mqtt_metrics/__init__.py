@@ -107,7 +107,7 @@ class MQTTService(asab.Service):
             L.warning(
                 "MQTTService: The max_count parameter is not set in the configuration file or is not an integer. Default value is 100."
             )
-            self.max_count = 10000
+            self.max_count = 100
 
         self.dumper = JSONDumper(pretty=False)
 
