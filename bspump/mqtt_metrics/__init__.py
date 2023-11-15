@@ -101,6 +101,13 @@ class MQTTService(asab.Service):
         self.client.connect(self.host, int(self.port), 60)
         self.client.loop_start()
         self.connected = False
+        try:
+            self.max_count = int(asab.Config["MQTTMetrics"].get("max_count"))
+        except Exception:
+            L.warning(
+                "MQTTService: The max_count parameter is not set in the configuration file or is not an integer. Default value is 10000."
+            )
+            self.max_count = 10000
 
         self.dumper = JSONDumper(pretty=False)
 
@@ -135,7 +142,7 @@ class MQTTService(asab.Service):
         if count is None or count < 0:
             return
 
-        count = min(count, 2000)
+        count = min(count, self.max_count)
         if pipelines_list:
             new_message = get_message_structure()
             new_message["data"] = get_pipelines(json.loads(self.dumper(svc.Pipelines)))
