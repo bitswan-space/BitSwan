@@ -55,16 +55,15 @@ def get_pipeline_topology(pipelines: dict, pipeline):
     if "metrics" not in output["topology"][components[0]["Id"]]:
         if "eps.out" in output["topology"][components[1]["Id"]]["metrics"]:
             output["topology"][components[0]["Id"]]["metrics"] = {}
-            output["topology"][components[0]["Id"]]["metrics"]["eps.out"] = int(output["topology"][components[1]["Id"]]["metrics"]["eps.out"])
+            output["topology"][components[0]["Id"]]["metrics"]["eps.out"] = int(
+                output["topology"][components[1]["Id"]]["metrics"]["eps.out"]
+            )
 
     return output
 
+
 def get_pipelines(pipelines: dict):
-    output = {
-        "topology" : {},
-        "display-style": "graph",
-        "display-priority": "hidden"
-    }
+    output = {"topology": {}, "display-style": "graph", "display-priority": "hidden"}
     for pipeline in pipelines.values():
         pipeline_dict = {
             "wires": [],
@@ -75,6 +74,15 @@ def get_pipelines(pipelines: dict):
         output["topology"][pipeline["Id"]] = pipeline_dict
 
     return output
+
+
+def get_message_structure():
+    return {
+        "timestamp": time.time_ns(),
+        "data": {},
+        "count": 0,
+        "remaining_subscription_count": 0,
+    }
 
 
 class MQTTService(asab.Service):
@@ -93,20 +101,27 @@ class MQTTService(asab.Service):
         self.client.connect(self.host, int(self.port), 60)
         self.client.loop_start()
         self.connected = False
+        try:
+            self.max_count = int(asab.Config["MQTTMetrics"].get("max_count"))
+        except Exception:
+            L.warning(
+                "MQTTService: The max_count parameter is not set in the configuration file or is not an integer. Default value is 100."
+            )
+            self.max_count = 100
 
         self.dumper = JSONDumper(pretty=False)
-
 
     def on_message(self, client, userdata, message):
         payload = message.payload.decode("utf-8")
         svc = self.App.get_service("bspump.PumpService")
         topic = message.topic
 
-
         # Regex patterns
-        pipelines_list_pattern = r"^c/(?P<deployment_identifier>[^/]+)/topology/get$"
-        pipeline_components_pattern = r"^c/(?P<deployment_identifier>[^/]+)/c/(?P<pipeline_identifier>[^/]+)/topology/get$"
-        events_pattern = r"^c/(?P<deployment_identifier>[^/]+)/c/(?P<pipeline_identifier>[^/]+)/c/(?P<component_identifier>[^/]+)/events/subscribe$"
+        pipelines_list_pattern = (
+            r"^/c/(?P<deployment_identifier>[^/]+)/topology/subscribe$"
+        )
+        pipeline_components_pattern = r"^/c/(?P<deployment_identifier>[^/]+)/c/(?P<pipeline_identifier>[^/]+)/topology/subscribe$"
+        events_pattern = r"^/c/(?P<deployment_identifier>[^/]+)/c/(?P<pipeline_identifier>[^/]+)/c/(?P<component_identifier>[^/]+)/events/subscribe$"
 
         # Matching
         pipelines_list = re.match(pipelines_list_pattern, topic)
@@ -114,55 +129,53 @@ class MQTTService(asab.Service):
         events = re.match(events_pattern, topic)
 
         # Get list of pipelines from application
-        if pipelines_list:
-            try:
-                payload = json.loads(payload)
-            except json.decoder.JSONDecodeError:
-                payload = message.payload.decode("utf-8")
-                L.warning(f"Payload sent to {topic} is not a valid JSON. Payload: {payload}")
-                return
+        try:
+            payload = json.loads(payload)
+        except json.decoder.JSONDecodeError:
+            payload = message.payload.decode("utf-8")
+            L.warning(
+                f"Payload sent to {topic} is not a valid JSON. Payload: {payload}"
+            )
+            return
 
-            method = payload.get("method")
-            if method is not None and method == "get":
-                pump_topology = get_pipelines(json.loads(self.dumper(svc.Pipelines)))
-                client.publish(f"c/{self.App.HostName}/topology", json.dumps(pump_topology))
+        count = payload.get("count")
+        if count is None or count < 0:
+            return
+
+        count = min(count, self.max_count)
+        if pipelines_list:
+            new_message = get_message_structure()
+            new_message["data"] = get_pipelines(json.loads(self.dumper(svc.Pipelines)))
+            new_message["count"] = 1
+            new_message["remaining_subscription_count"] = count - 1
+            client.publish(f"/c/{self.App.HostName}/topology", json.dumps(new_message))
 
         # Get components of one pipeline
         if pipeline_components:
-            try:
-                payload = json.loads(payload)
-            except json.decoder.JSONDecodeError:
-                payload = message.payload.decode("utf-8")
-                L.warning(f"Payload sent to {topic} is not a valid JSON. Payload: {payload}")
-                return
-            
-            method = payload.get("method")
-            if method is not None and method == "get":
-                pipeline = pipeline_components.group("pipeline_identifier")
-                pipeline_topology = get_pipeline_topology(json.loads(self.dumper(svc.Pipelines)), pipeline)
-                client.publish(f"c/{self.App.HostName}/c/{pipeline}/topology", json.dumps(pipeline_topology))
+            pipeline = pipeline_components.group("pipeline_identifier")
+            new_message = get_message_structure()
+            new_message["data"] = get_pipeline_topology(
+                json.loads(self.dumper(svc.Pipelines)), pipeline
+            )
+            new_message["count"] = 1
+            new_message["remaining_subscription_count"] = count - 1
+            client.publish(
+                f"/c/{self.App.HostName}/c/{pipeline}/topology", json.dumps(new_message)
+            )
 
         if events:
-            try:
-                payload = json.loads(payload)
-            except json.decoder.JSONDecodeError:
-                payload = message.payload.decode("utf-8")
-                L.warning(f"Payload sent to {topic} is not a valid JSON. Payload: {payload}")
-                return
-
             pipeline = events.group("pipeline_identifier")
             processor = events.group("component_identifier")
             pipeline = svc.locate(f"{pipeline}")
 
-            num_of_events = payload.get("event_count")
-
-            if num_of_events is not None and num_of_events > 0:
-                source = pipeline.locate_source(f"{processor}")
-                if source is not None:
-                    source.EventsToPublish = num_of_events
-                else:
-                    L.info(f"adding {processor} to {pipeline.Id}")
-                    pipeline.PublishingProcessors[processor] = max(num_of_events, pipeline.PublishingProcessors[processor])
+            source = pipeline.locate_source(f"{processor}")
+            if source is not None:
+                source.EventsToPublish = count
+            else:
+                L.info(f"adding {processor} to {pipeline.Id}")
+                pipeline.PublishingProcessors[processor] = max(
+                    count, pipeline.PublishingProcessors[processor]
+                )
 
     # Callback when connected to the MQTT broker
     def on_connect(self, client, userdata, flags, rc):
@@ -170,13 +183,13 @@ class MQTTService(asab.Service):
         self.connected = True
 
     def apply_subscriptions(self):
-        self.client.subscribe(f"c/{self.App.HostName}/topology/get")
+        self.client.subscribe(f"/c/{self.App.HostName}/topology/subscribe")
 
         for sub in self.sub_queue:
-            self.client.subscribe(f"c/{self.App.HostName}/{sub}")
+            self.client.subscribe(f"/c/{self.App.HostName}/{sub}")
 
     def add_pipeline(self, pipeline):
-        self.sub_queue.append(f"c/{pipeline}/topology/get")
+        self.sub_queue.append(f"c/{pipeline}/topology/subscribe")
         if self.connected:
             self.apply_subscriptions()
 
@@ -186,13 +199,11 @@ class MQTTService(asab.Service):
             self.apply_subscriptions()
 
     def publish_event(self, pipeline, component, event, count_remaining):
-        data = {
-            "timestamp": time.time_ns(),
-            "data": event,
-            "event_number": component.EventCount,
-            "remaining_subscription_count": count_remaining,
-        }
+        data = get_message_structure()
+        data["data"] = event
+        data["count"] = component.EventCount
+        data["remaining_subscription_count"] = count_remaining
         self.client.publish(
-            f"c/{self.App.HostName}/c/{pipeline}/c/{component.Id}/events",
+            f"/c/{self.App.HostName}/c/{pipeline}/c/{component.Id}/events",
             json.dumps(data),
         )
