@@ -47,7 +47,7 @@ You can write stream processors using Jupyter notebook and bind mounting that ju
 
   bitswan-pipeline-1:
     restart: always
-    image: public.ecr.aws/bitswan/bitswan-pre:sha256_7e88d9274ddd85cc2afecda8f863c57d6ef998478f56dddb3d4ceb13d55804b7
+    image: public.ecr.aws/bitswan/bitswan-pre:sha256_e5f1008d7cdcc5d322a5c50751874b6a9f855bb8e8fa35d4aedc6700ac57511d
     volumes:
       - ${PWD}/bitswan-pipeline-1/pipelines.conf:/conf/pipelines.conf:ro
       - ${PWD}/bitswan-pipeline-1/main.ipynb:/opt/pipelines/main.ipynb:ro
