@@ -133,6 +133,7 @@ class FileCSVSink(Sink):
 			# Open CSV file if needed
 			fieldnames = event.keys()
 			fname = self.get_file_name(context, event)
+			import pdb; pdb.set_trace()
 			self.fd = open(fname, 'w', newline='')
 			self._csv_writer = self.writer(self.fd, fieldnames)
 			self._csv_writer.writeheader()
