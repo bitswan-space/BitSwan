@@ -107,6 +107,7 @@ setup(
 		'pyjq>=2.6.0',
 		'croniter>=1.4.1',
         'paho-mqtt',
+        'jupyter',
 	],
 	extras_require={
 		'ldap': 'python-ldap',

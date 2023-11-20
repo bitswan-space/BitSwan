@@ -25,10 +25,13 @@ FROM python:3.10-slim-bullseye
 MAINTAINER LibertyAces Ltd
 LABEL "space.bitswan.pipeline.protocol-version"="2023.8-1"
 LABEL src=https://github.com/bitswan-space/BitSwanPump
-ENV CONTAINER_ID_FILE=/container_id
 
 COPY --from=0 /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
+COPY pre/entrypoint.sh /entrypoint.sh
+COPY pre/main.py /opt/pipelines/main.py
+COPY pre/main.ipynb /opt/pipelines/main.ipynb
+COPY pre/pipelines.conf /conf/pipelines.conf
 
 EXPOSE 80/tcp
 
-CMD ["python3", "-m", "bspump", "-w"]
+CMD ["sh", "/entrypoint.sh"]
