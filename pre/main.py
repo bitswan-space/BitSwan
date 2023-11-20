@@ -1,5 +1,8 @@
 import json
 
+config = None
+__bitswan_dev = False
+
 with open("./main.ipynb") as nb:
     notebook = json.load(nb)
     for cell in notebook["cells"]:
