@@ -1,40 +1,16 @@
 BSPump: A real-time stream processor for Python 3.5+
 ====================================================
 
-.. image:: https://readthedocs.org/projects/bspump/badge/?version=latest
-    :target: https://docs.libertyaces.com/?badge=latest
-    :alt: Documentation Status
-
-.. image:: https://codecov.io/gh/LibertyAces/BitSwanPump/branch/master/graph/badge.svg?sanitize=true
-    :alt: Code coverage
-    :target: https://codecov.io/gh/LibertyAces/BitSwanPump
-
-.. image:: https://badges.gitter.im/TeskaLabs/bspump.svg
-    :alt: Join the chat at https://gitter.im/TeskaLabs/bspump
-    :target: https://gitter.im/TeskaLabs/bspump?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
-    
-
-Documentation
--------------
-
-https://bitswanpump.readthedocs.io/en/latest/index.html
-
 Principles
 ----------
 
-* Write once, use many times
 * Everything is a stream
-* Schema-less
 * Kappa architecture
 * Real-Time
 * High performance
-* Simple to use and well documented, so anyone can write their own stream processor
 * Asynchronous via Python 3.5+ ``async``/``await`` and ``asyncio``
 * `Event driven Architecture <https://en.wikipedia.org/wiki/Event-driven_architecture>`_ / `Reactor pattern <https://en.wikipedia.org/wiki/Reactor_pattern>`_
-* Single-threaded core but compatible with threads
 * Compatible with `pypy <http://pypy.org>`_, Just-In-Time compiler capable of boosting Python code performace more then 5x times
-* Good citizen of the Python ecosystem 
-* Modularized
 
 
 Stream processor example
@@ -47,7 +23,7 @@ Stream processor example
     import bspump.socket
     import bspump.common
     import bspump.elasticsearch
-    
+
     class MyPipeline(bspump.Pipeline):
         def __init__(self, app):
             super().__init__(app)
@@ -56,8 +32,8 @@ Stream processor example
                 bspump.common.JSONParserProcessor(app, self),
                 bspump.elasticsearch.ElasticSearchSink(app, self, "ESConnection")
             )
-    
-    
+
+
     if __name__ == '__main__':
         app = bspump.BSPumpApplication()
         svc = app.get_service("bspump.PumpService")
@@ -65,33 +41,17 @@ Stream processor example
         svc.add_pipeline(MyPipeline(app))
         app.run()
 
+You can write stream processors using Jupyter notebook and bind mounting that jupyter notebook into the bitswan-pre docker image at the path ``/opt/pipelines/main.ipynb``. Here is an example docker-compose entry.
 
-Video tutorial
-^^^^^^^^^^^^^^
+.. code:: yaml
 
-.. image:: http://img.youtube.com/vi/QvjiPxO4w6w/0.jpg
-   :target: https://www.youtube.com/watch?v=QvjiPxO4w6w&list=PLb0LvCJCZKt_1QcQwpJXqsm-AY_ty4udo
-
-Build
------
-
-Docker build
-^^^^^^^^^^^^
-Dockerfile and instructions are in `separate repository <https://github.com/LibertyAces/docker-bspump/>`_.
-
-
-PyPI release
-^^^^^^^^^^^^
-Releases are happening from a git tag (format: ``vYY.MM``)
-``git tag -a v19.07``
-
-Following the `PyPI packaging <https://packaging.python.org/tutorials/packaging-projects/#generating-distribution-archives>`_, generate `distribution package <https://packaging.python.org/glossary/#term-distribution-package>`_ and `upload it <https://packaging.python.org/tutorials/packaging-projects/#uploading-the-distribution-archives>`_ using following command ``python -m twine upload dist/*``
-
-
-Blank application setup
------------------------
-
-You can clone blank application from it's `own repository <https://github.com/LibertyAces/BitSwanTelco-BlankApp>`_.
+  bitswan-pipeline-1:
+    restart: always
+    image: public.ecr.aws/bitswan/bitswan-pre:sha256_7e88d9274ddd85cc2afecda8f863c57d6ef998478f56dddb3d4ceb13d55804b7
+    volumes:
+      - ${PWD}/bitswan-pipeline-1/pipelines.conf:/conf/pipelines.conf:ro
+      - ${PWD}/bitswan-pipeline-1/main.ipynb:/opt/pipelines/main.ipynb:ro
+      - ${PWD}/bitswan-pipeline-1/extra-dependencies.txt:/opt/extra-dependencies:ro
 
 
 Available technologies
@@ -141,62 +101,8 @@ Available technologies
 Google Sheet with technological compatiblity matrix:
 https://docs.google.com/spreadsheets/d/1L1DvSuHuhKUyZ3FEFxqEKNpSoamPH2Z1ZaFuHyageoI/edit?usp=sharing
 
-
-High-level architecture
------------------------
-
-
-.. image:: ./doc/_static/bspump-architecture.png
-    :alt: Schema of BSPump high-level achitecture
-
-
-Unit test
----------
-
-.. code:: python
-
-    from unittest.mock import MagicMock
-    from bspump.unittest import ProcessorTestCase
-
-
-    class MyProcessorTestCase(ProcessorTestCase):
-
-        def test_my_processor(self):
-
-            # setup processor for test
-            self.set_up_processor(my_project.processor.MyProcessor, "proc-arg", proc="key_arg")
-
-            # mock methods to suit your needs on pipeline ..
-            self.Pipeline.method = MagicMock()
-
-            # .. or instance of processor
-            self.Pipeline.Processor.method = MagicMock()
-
-            output = self.execute(
-                [(None, {'foo': 'bar'})]  # Context, event
-            )
-
-            # assert output
-            self.assertEqual(
-                [event for context, event in output],
-                [{'FOO': 'BAR'}]
-            )
-
-            # asssert expected calls on `self.Pipeline.method` or `self.Pipeline.Processor.method`
-            self.Pipeline.Processor.method.assert_called_with(**expected)
-
-
-
-Running of unit tests
----------------------
-
-``python3 -m unittest test``
-
-You can replace ``test`` with a location of your unit test module.
-
-
 Licence
 -------
 
-BSPump is an open-source software, available under BSD 3-Clause License.
+Bitswan is open-source software, available under BSD 3-Clause License.
 
