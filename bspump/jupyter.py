@@ -26,6 +26,7 @@ __bitswan_current_pipeline = None
 __bitswan_dev_old_events = []
 __bitswan_dev_events = []
 __bitswan_connections = []
+__bitswan_lookups = []
 
 
 def test_events(events):
@@ -42,6 +43,17 @@ def declare_connection(func):
     """
     global __bitswan_connections
     __bitswan_connections.append(func)
+
+
+def declare_lookup(func):
+    """
+    Ex:
+    @declare_lookup
+    def lookup(app):
+      return ENodeBLookup(app, id='ENodeBLookup')
+    """
+    global __bitswan_lookups
+    __bitswan_lookups.append(func)
 
 
 def new_pipeline(name):
@@ -159,9 +171,16 @@ def _init_connections(app, service):
         service.add_connection(connection(app))
 
 
+def _init_lookups(app, service):
+    global __bitswan_lookups
+    for lookup in __bitswan_lookups:
+        service.add_lookup(lookup(app))
+
+
 class App(bspump.BSPumpApplication):
     def __init__(self):
         super().__init__()
         svc = self.get_service("bspump.PumpService")
         _init_connections(self, svc)
+        _init_lookups(self, svc)
         _init_pipelines(self, svc)
