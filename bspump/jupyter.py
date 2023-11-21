@@ -25,11 +25,23 @@ __bitswan_dev = is_running_in_jupyter()
 __bitswan_current_pipeline = None
 __bitswan_dev_old_events = []
 __bitswan_dev_events = []
+__bitswan_connections = []
 
 
 def test_events(events):
     global __bitswan_dev_events
     __bitswan_dev_events = events
+
+
+def declare_connection(func):
+    """
+    Ex:
+    @declare_connection
+    def connection(app):
+        return bspump.kafka.KafkaConnection(app, "KafkaConnection")
+    """
+    global __bitswan_connections
+    __bitswan_connections.append(func)
 
 
 def new_pipeline(name):
@@ -141,8 +153,15 @@ def _init_pipelines(app, service):
         service.add_pipeline(pipeline(app, name))
 
 
+def _init_connections(app, service):
+    global __bitswan_connections
+    for connection in __bitswan_connections:
+        service.add_connection(connection(app))
+
+
 class App(bspump.BSPumpApplication):
     def __init__(self):
         super().__init__()
         svc = self.get_service("bspump.PumpService")
         _init_pipelines(self, svc)
+        _init_connections(self, svc)
