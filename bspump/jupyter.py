@@ -163,5 +163,5 @@ class App(bspump.BSPumpApplication):
     def __init__(self):
         super().__init__()
         svc = self.get_service("bspump.PumpService")
-        _init_pipelines(self, svc)
         _init_connections(self, svc)
+        _init_pipelines(self, svc)
