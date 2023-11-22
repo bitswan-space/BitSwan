@@ -34,10 +34,10 @@ def test_events(events):
     __bitswan_dev_events = events
 
 
-def declare_connection(func):
+def register_connection(func):
     """
     Ex:
-    @declare_connection
+    @register_connection
     def connection(app):
         return bspump.kafka.KafkaConnection(app, "KafkaConnection")
     """
@@ -45,10 +45,10 @@ def declare_connection(func):
     __bitswan_connections.append(func)
 
 
-def declare_lookup(func):
+def register_lookup(func):
     """
     Ex:
-    @declare_lookup
+    @register_lookup
     def lookup(app):
       return ENodeBLookup(app, id='ENodeBLookup')
     """
@@ -88,10 +88,10 @@ def end_pipeline():
     __bitswan_pipelines[__bitswan_current_pipeline] = Pipeline
 
 
-def declare_source(func):
+def register_source(func):
     """
     Ex:
-    @declare_source
+    @register_source
     def source(app, pipeline):
         return bspump.socket.TCPStreamSource(app, pipeline)
     """
@@ -99,10 +99,10 @@ def declare_source(func):
     __bitswan_processors.append(func)
 
 
-def declare_processor(func):
+def register_processor(func):
     """
     Ex:
-    @declare_processor
+    @register_processor
     def processor(app, pipeline):
         return bspump.socket.TCPStreamProcessor(app, pipeline)
     """
@@ -110,10 +110,10 @@ def declare_processor(func):
     __bitswan_processors.append(func)
 
 
-def declare_sink(func):
+def register_sink(func):
     """
     Ex:
-    @declare_sink
+    @register_sink
     def sink(app, pipeline):
         return bspump.socket.TCPStreamSink(app, pipeline)
     """
