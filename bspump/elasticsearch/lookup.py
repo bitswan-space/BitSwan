@@ -56,6 +56,7 @@ class ElasticSearchLookup(MappingLookup, AsyncLookupMixin):
 	ConfigDefaults = {
 		'index': '',  # Specify an index
 		'key': '',  # Specify field name to match
+		'cache_non_existent': False,  # True - if key is not found, it will be cached as None
 		'scroll_timeout': '1m',
 	}
 
@@ -88,6 +89,7 @@ class ElasticSearchLookup(MappingLookup, AsyncLookupMixin):
 		self.Index = self.Config['index']
 		self.ScrollTimeout = self.Config['scroll_timeout']
 		self.Key = self.Config['key']
+		self.CacheNonExistent = self.Config['cache_non_existent']
 
 		self.Count = -1
 		if cache is None:
@@ -152,6 +154,9 @@ class ElasticSearchLookup(MappingLookup, AsyncLookupMixin):
 				value = await self._find_one(key)
 				if value is not None:
 					self.Cache[key] = value
+					self.CacheCounter.add('miss', 1)
+				elif self.CacheNonExistent:
+					self.Cache[key] = None
 					self.CacheCounter.add('miss', 1)
 			except Exception as e:
 				L.warn("There was an exception {}".format(e))
