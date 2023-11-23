@@ -27,12 +27,23 @@ __bitswan_dev_old_events = []
 __bitswan_dev_events = []
 __bitswan_connections = []
 __bitswan_lookups = []
+__bitswan_app_post_inits = []
 
 
 def test_events(events):
     global __bitswan_dev_events
     __bitswan_dev_events = events
 
+
+def register_app_post_init(func):
+    """
+    Ex:
+    @register_app_post_init
+    def post_init(app):
+        app.PubSub.subscribe("Application.tick!", app.tick)
+    """
+    global __bitswan_app_post_inits
+    __bitswan_app_post_inits.append(func)
 
 def register_connection(func):
     """
@@ -184,3 +195,5 @@ class App(bspump.BSPumpApplication):
         _init_connections(self, svc)
         _init_lookups(self, svc)
         _init_pipelines(self, svc)
+        for func in __bitswan_app_post_inits:
+            func(self)

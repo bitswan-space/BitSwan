@@ -1,9 +1,11 @@
 import json
+import os
 
 config = None
 __bitswan_dev = False
 
-with open("./main.ipynb") as nb:
+notebook_path = os.environ.get("JUPYTER_NOTEBOOK", "./main.ipynb")
+with open(notebook_path) as nb:
     notebook = json.load(nb)
     for cell in notebook["cells"]:
         if cell["cell_type"] == "code":
