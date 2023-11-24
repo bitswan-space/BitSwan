@@ -106,7 +106,9 @@ class Application(metaclass=Singleton):
 
 
 		# Obtain HostName
-		if container_id_file := os.environ.get('CONTAINER_ID_FILE'):
+		if deployment_id := os.environ.get('DEPLOYMENT_ID'):
+			self.HostName = deployment_id
+		elif container_id_file := os.environ.get('CONTAINER_ID_FILE'):
 			while True:
 				try:
 					with open(container_id_file, "r") as f:
