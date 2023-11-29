@@ -3,6 +3,11 @@ import copy
 import os
 
 
+class AsabObjMocker:
+    def __init__(self):
+        self.Id = None
+        self.Loop = None
+
 def is_running_in_jupyter():
     try:
         from IPython import get_ipython
@@ -107,7 +112,22 @@ def register_processor(func):
         return bspump.socket.TCPStreamProcessor(app, pipeline)
     """
     global __bitswan_processors
-    __bitswan_processors.append(func)
+    global __bitswan_dev
+    global __bitswan_dev_events
+    global __bitswan_dev_old_events
+    if not __bitswan_dev:
+        __bitswan_processors.append(func)
+    else:
+        processor = func(AsabObjMocker(), AsabObjMocker())
+        for name, events in __bitswan_dev_old_events:
+            if name == func.__name__:
+                __bitswan_dev_events = events
+        __bitswan_dev_old_events.append(
+            (func.__name__, copy.deepcopy(__bitswan_dev_events))
+        )
+        __bitswan_dev_events = [processor.process(None, event) for event in __bitswan_dev_events]
+        for event in __bitswan_dev_events:
+            print(event)
 
 
 def register_sink(func):
