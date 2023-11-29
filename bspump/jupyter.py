@@ -172,11 +172,10 @@ def register_generator(func):
                 __bitswan_dev_new_events.extend(pipeline.items)
                 pipeline.clear()
 
-
-            for event in __bitswan_dev_new_events:
-                print(event)
-
             __bitswan_dev_events = __bitswan_dev_new_events
+
+            for event in __bitswan_dev_events:
+                print(event)
 
         return func
 
