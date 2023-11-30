@@ -148,7 +148,7 @@ class MQTTService(asab.Service):
             new_message["data"] = get_pipelines(json.loads(self.dumper(svc.Pipelines)))
             new_message["count"] = 1
             new_message["remaining_subscription_count"] = count - 1
-            client.publish(f"/c/{self.App.HostName}/topology", json.dumps(new_message))
+            client.publish(f"/c/{self.App.DeploymentId}/topology", json.dumps(new_message))
 
         # Get components of one pipeline
         if pipeline_components:
@@ -160,7 +160,7 @@ class MQTTService(asab.Service):
             new_message["count"] = 1
             new_message["remaining_subscription_count"] = count - 1
             client.publish(
-                f"/c/{self.App.HostName}/c/{pipeline}/topology", json.dumps(new_message)
+                f"/c/{self.App.DeploymentId}/c/{pipeline}/topology", json.dumps(new_message)
             )
 
         if events:
@@ -183,10 +183,10 @@ class MQTTService(asab.Service):
         self.connected = True
 
     def apply_subscriptions(self):
-        self.client.subscribe(f"/c/{self.App.HostName}/topology/subscribe")
+        self.client.subscribe(f"/c/{self.App.DeploymentId}/topology/subscribe")
 
         for sub in self.sub_queue:
-            self.client.subscribe(f"/c/{self.App.HostName}/{sub}")
+            self.client.subscribe(f"/c/{self.App.DeploymentId}/{sub}")
 
     def add_pipeline(self, pipeline):
         self.sub_queue.append(f"c/{pipeline}/topology/subscribe")
@@ -204,6 +204,6 @@ class MQTTService(asab.Service):
         data["count"] = component.EventCount
         data["remaining_subscription_count"] = count_remaining
         self.client.publish(
-            f"/c/{self.App.HostName}/c/{pipeline}/c/{component.Id}/events",
+            f"/c/{self.App.DeploymentId}/c/{pipeline}/c/{component.Id}/events",
             json.dumps(data),
         )
