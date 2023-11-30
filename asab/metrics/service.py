@@ -31,6 +31,8 @@ class MetricsService(Service):
 			"host": app.HostName,
 			"appclass": app.__class__.__name__,
 		}
+		if app.DeploymentId:
+			self.Tags["deployment_id"] = app.DeploymentId
 
 		# A identified of the host machine (node); added if available at environment variables
 		node_id = os.getenv('NODE_ID', None)
