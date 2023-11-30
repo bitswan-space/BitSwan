@@ -60,7 +60,7 @@ class BSPumpApplication(asab.Application):
 			self.WebContainer = initialize_web(self.WebService.WebContainer)
 			self.ASABApiService.initialize_web()
 
-		if "MQTTMetrics" in asab.Config and asab.Config["MQTTMetrics"].get("broker"):
+		if "MQTTMetrics" in asab.Config and asab.Config["MQTTMetrics"].get("broker") and self.DeploymentId:
 			from .mqtt_metrics import MQTTService
 			self.MQTTService = MQTTService(self)
 
