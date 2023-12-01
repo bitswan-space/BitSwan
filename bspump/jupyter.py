@@ -3,6 +3,20 @@ import copy
 import os
 
 
+class AsabObjMocker:
+    def __init__(self):
+        self.Id = None
+        self.Loop = None
+        self.items = []
+
+    def inject(self, context, event, depth):
+        self.items.append(event)
+        return event
+
+    def clear(self):
+        self.items = []
+
+
 def is_running_in_jupyter():
     try:
         from IPython import get_ipython
@@ -118,7 +132,74 @@ def register_processor(func):
         return bspump.socket.TCPStreamProcessor(app, pipeline)
     """
     global __bitswan_processors
-    __bitswan_processors.append(func)
+    global __bitswan_dev
+    global __bitswan_dev_events
+    global __bitswan_dev_old_events
+    if not __bitswan_dev:
+        __bitswan_processors.append(func)
+    else:
+        processor = func(AsabObjMocker(), AsabObjMocker())
+        for name, events in __bitswan_dev_old_events:
+            if name == func.__name__:
+                __bitswan_dev_events = events
+        __bitswan_dev_old_events.append(
+            (func.__name__, copy.deepcopy(__bitswan_dev_events))
+        )
+        __bitswan_dev_events = [processor.process(None, event) for event in __bitswan_dev_events]
+        for event in __bitswan_dev_events:
+            print(event)
+
+
+def register_generator(func):
+    """
+    Ex:
+    @register_source
+    def source(app, pipeline):
+        return MyGeneratorClass(app, pipeline)
+    """
+
+    async def _fn():
+        global __bitswan_processors
+        global __bitswan_dev
+        global __bitswan_dev_events
+        global __bitswan_dev_old_events
+        if not __bitswan_dev:
+            # TODO: check this
+            __bitswan_processors.append(func)
+        else:
+            app, pipeline = AsabObjMocker(), AsabObjMocker()
+            generator = func(app, pipeline)
+
+            for name, events in __bitswan_dev_old_events:
+                if name == func.__name__:
+                    __bitswan_dev_events = events
+
+            __bitswan_dev_old_events.append(
+                (func.__name__, copy.deepcopy(__bitswan_dev_events))
+            )
+            __bitswan_dev_new_events = []
+            for event in __bitswan_dev_events:
+                await generator.generate(None, event, 0)
+                __bitswan_dev_new_events.extend(pipeline.items)
+                pipeline.clear()
+
+            __bitswan_dev_events = __bitswan_dev_new_events
+
+            for event in __bitswan_dev_events:
+                print(event)
+
+        return func
+
+    def wrapper(*args, **kwargs):
+        import asyncio
+        if not asyncio.get_event_loop().is_running():
+            # If the loop is not running, start a new event loop and run _fn
+            asyncio.run(_fn())
+        else:
+            # If the loop is already running, create a task for _fn
+            asyncio.create_task(_fn())
+
+    wrapper()
 
 
 def register_sink(func):
