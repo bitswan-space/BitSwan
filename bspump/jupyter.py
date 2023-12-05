@@ -19,7 +19,7 @@ class AsabObjMocker:
         self.items = []
 
 
-class DevEventsStorage:
+class DevRuntime:
     def __init__(self):
         self.old_events: dict[str, list[Any]] = {}
         self.events: list[Any] = []
@@ -47,15 +47,29 @@ class DevEventsStorage:
         self.events = []
 
     def print_events(self):
+        """Prints latest events
+        """
         for event in self.events:
             print(event)
 
     def update_current_events(self, curr_name: str) -> None:
+        """Updates current events to the events of the function with name curr_name
+
+        Args:
+            curr_name (str): name of the function
+        """
         for name, events in self.old_events.items():
             if name == curr_name:
                 self.set_current_events(events)
     
     def step(self, name: str, func: Callable) -> None:
+        """Steps through the function with name name and updates current events
+
+        Args:
+            name (str): name of the function
+            func (Callable): function to be stepped through
+        """
+        #TODO: check if __name__ cant be given to partial
         self.update_current_events(name)
         self.cycle(name)
         self.set_current_events([func(event) for event in self.events])
@@ -82,15 +96,15 @@ __bitswan_processors = []
 __bitswan_pipelines = {}
 __bitswan_dev = is_running_in_jupyter()
 __bitswan_current_pipeline = None
-__bitswan_dev_events = DevEventsStorage()
+__bitswan_dev_runtime = DevRuntime()
 __bitswan_connections = []
 __bitswan_lookups = []
 __bitswan_app_post_inits = []
 
 
 def test_events(events):
-    global __bitswan_dev_events
-    __bitswan_dev_events.set_current_events(events)
+    global __bitswan_dev_runtime
+    __bitswan_dev_runtime.set_current_events(events)
 
 
 def register_app_post_init(func):
@@ -177,14 +191,14 @@ def register_processor(func):
     """
     global __bitswan_processors
     global __bitswan_dev
-    global __bitswan_dev_events
+    global __bitswan_dev_runtime
     if not __bitswan_dev:
         __bitswan_processors.append(func)
     else:
         processor = func(AsabObjMocker(), AsabObjMocker())
 
         callable_process = partial(processor.process, None)
-        __bitswan_dev_events.step(func.__name__, callable_process)
+        __bitswan_dev_runtime.step(func.__name__, callable_process)
 
 
 def register_generator(func):
@@ -198,7 +212,7 @@ def register_generator(func):
     async def _fn():
         global __bitswan_processors
         global __bitswan_dev
-        global __bitswan_dev_events
+        global __bitswan_dev_runtime
         if not __bitswan_dev:
             # TODO: check this
             __bitswan_processors.append(func)
@@ -206,18 +220,18 @@ def register_generator(func):
             app, pipeline = AsabObjMocker(), AsabObjMocker()
             generator = func(app, pipeline)
 
-            __bitswan_dev_events.update_current_events(func.__name__)
+            __bitswan_dev_runtime.update_current_events(func.__name__)
 
-            __bitswan_dev_events.cycle(func.__name__)
+            __bitswan_dev_runtime.cycle(func.__name__)
             __bitswan_dev_new_events = []
-            for event in __bitswan_dev_events.events:
+            for event in __bitswan_dev_runtime.events:
                 await generator.generate(None, event, 0)
                 __bitswan_dev_new_events.extend(pipeline.items)
                 pipeline.clear()
 
-            __bitswan_dev_events.set_current_events(__bitswan_dev_new_events)
+            __bitswan_dev_runtime.set_current_events(__bitswan_dev_new_events)
 
-            __bitswan_dev_events.print_events()
+            __bitswan_dev_runtime.print_events()
 
         return func
 
@@ -252,7 +266,7 @@ def snake_to_camel_case(name):
 def step(func):
     global __bitswan_processors
     global __bitswan_dev
-    global __bitswan_dev_events
+    global __bitswan_dev_runtime
     if not __bitswan_dev:
         # Convert function name from snake case to CamelCase and create a unique class name
         class_name = snake_to_camel_case(func.__name__) + 'Processor'
@@ -267,7 +281,7 @@ def step(func):
         # Append the new Processor to the __bitswan_processors list
         __bitswan_processors.append(CustomProcessor)
     else:
-        __bitswan_dev_events.step(func.__name__, func)
+        __bitswan_dev_runtime.step(func.__name__, func)
 
 
     # Return the original function unmodified
