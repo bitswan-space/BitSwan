@@ -1,6 +1,7 @@
 import bspump
 import copy
 import os
+from typing import Any
 
 
 class AsabObjMocker:
@@ -15,6 +16,34 @@ class AsabObjMocker:
 
     def clear(self):
         self.items = []
+
+
+class DevEventsStorage:
+    def __init__(self):
+        self.old_events: dict[str, list[Any]] = {}
+        self.events: list[Any] = []
+
+    def set_current_events(self, events: list[Any]) -> None:
+        """Sets current events to list passed in
+
+        Args:
+            events (list[Any]): list to be set as current events
+        """
+        self.events = events
+
+    def cycle(self, name: str) -> None:
+        """Cycles current events to old events with name as key
+
+        Args:
+            name (str): name of the function
+        """
+        self.old_events[name] = copy.deepcopy(self.events)
+
+    def clear(self) -> None:
+        """Resets the state to the initial
+        """
+        self.old_events = {}
+        self.events = []
 
 
 def is_running_in_jupyter():
@@ -37,8 +66,7 @@ __bitswan_processors = []
 __bitswan_pipelines = {}
 __bitswan_dev = is_running_in_jupyter()
 __bitswan_current_pipeline = None
-__bitswan_dev_old_events = []
-__bitswan_dev_events = []
+__bitswan_dev_events = DevEventsStorage()
 __bitswan_connections = []
 __bitswan_lookups = []
 __bitswan_app_post_inits = []
@@ -46,7 +74,7 @@ __bitswan_app_post_inits = []
 
 def test_events(events):
     global __bitswan_dev_events
-    __bitswan_dev_events = events
+    __bitswan_dev_events.set_current_events(events)
 
 
 def register_app_post_init(func):
@@ -134,19 +162,17 @@ def register_processor(func):
     global __bitswan_processors
     global __bitswan_dev
     global __bitswan_dev_events
-    global __bitswan_dev_old_events
     if not __bitswan_dev:
         __bitswan_processors.append(func)
     else:
         processor = func(AsabObjMocker(), AsabObjMocker())
-        for name, events in __bitswan_dev_old_events:
+        for name, events in __bitswan_dev_events.old_events.items():
             if name == func.__name__:
-                __bitswan_dev_events = events
-        __bitswan_dev_old_events.append(
-            (func.__name__, copy.deepcopy(__bitswan_dev_events))
-        )
-        __bitswan_dev_events = [processor.process(None, event) for event in __bitswan_dev_events]
-        for event in __bitswan_dev_events:
+                __bitswan_dev_events.set_current_events(events)
+
+        __bitswan_dev_events.cycle(func.__name__)
+        __bitswan_dev_events.set_current_events([processor.process(None, event) for event in __bitswan_dev_events.events])
+        for event in __bitswan_dev_events.events:
             print(event)
 
 
@@ -162,7 +188,6 @@ def register_generator(func):
         global __bitswan_processors
         global __bitswan_dev
         global __bitswan_dev_events
-        global __bitswan_dev_old_events
         if not __bitswan_dev:
             # TODO: check this
             __bitswan_processors.append(func)
@@ -170,22 +195,20 @@ def register_generator(func):
             app, pipeline = AsabObjMocker(), AsabObjMocker()
             generator = func(app, pipeline)
 
-            for name, events in __bitswan_dev_old_events:
+            for name, events in __bitswan_dev_events.old_events.items():
                 if name == func.__name__:
-                    __bitswan_dev_events = events
+                    __bitswan_dev_events.set_current_events(events)
 
-            __bitswan_dev_old_events.append(
-                (func.__name__, copy.deepcopy(__bitswan_dev_events))
-            )
+            __bitswan_dev_events.cycle(func.__name__)
             __bitswan_dev_new_events = []
-            for event in __bitswan_dev_events:
+            for event in __bitswan_dev_events.events:
                 await generator.generate(None, event, 0)
                 __bitswan_dev_new_events.extend(pipeline.items)
                 pipeline.clear()
 
-            __bitswan_dev_events = __bitswan_dev_new_events
+            __bitswan_dev_events.set_current_events(__bitswan_dev_new_events)
 
-            for event in __bitswan_dev_events:
+            for event in __bitswan_dev_events.events:
                 print(event)
 
         return func
@@ -237,14 +260,12 @@ def step(func):
         # Append the new Processor to the __bitswan_processors list
         __bitswan_processors.append(CustomProcessor)
     else:
-        for name, events in __bitswan_dev_old_events:
+        for name, events in __bitswan_dev_events.old_events.items():
             if name == func.__name__:
-                __bitswan_dev_events = events
-        __bitswan_dev_old_events.append(
-            (func.__name__, copy.deepcopy(__bitswan_dev_events))
-        )
-        __bitswan_dev_events = [func(event) for event in __bitswan_dev_events]
-        for event in __bitswan_dev_events:
+                __bitswan_dev_events.set_current_events(events)
+        __bitswan_dev_events.cycle(func.__name__)
+        __bitswan_dev_events.set_current_events([func(event) for event in __bitswan_dev_events.events])
+        for event in __bitswan_dev_events.events:
             print(event)
 
     # Return the original function unmodified
