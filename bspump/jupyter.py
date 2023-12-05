@@ -1,7 +1,8 @@
+from functools import partial
 import bspump
 import copy
 import os
-from typing import Any
+from typing import Any, Callable
 
 
 class AsabObjMocker:
@@ -44,6 +45,21 @@ class DevEventsStorage:
         """
         self.old_events = {}
         self.events = []
+
+    def print_events(self):
+        for event in self.events:
+            print(event)
+
+    def update_current_events(self, curr_name: str) -> None:
+        for name, events in self.old_events.items():
+            if name == curr_name:
+                self.set_current_events(events)
+    
+    def step(self, name: str, func: Callable) -> None:
+        self.update_current_events(name)
+        self.cycle(name)
+        self.set_current_events([func(event) for event in self.events])
+        self.print_events()
 
 
 def is_running_in_jupyter():
@@ -166,14 +182,9 @@ def register_processor(func):
         __bitswan_processors.append(func)
     else:
         processor = func(AsabObjMocker(), AsabObjMocker())
-        for name, events in __bitswan_dev_events.old_events.items():
-            if name == func.__name__:
-                __bitswan_dev_events.set_current_events(events)
 
-        __bitswan_dev_events.cycle(func.__name__)
-        __bitswan_dev_events.set_current_events([processor.process(None, event) for event in __bitswan_dev_events.events])
-        for event in __bitswan_dev_events.events:
-            print(event)
+        callable_process = partial(processor.process, None)
+        __bitswan_dev_events.step(func.__name__, callable_process)
 
 
 def register_generator(func):
@@ -195,9 +206,7 @@ def register_generator(func):
             app, pipeline = AsabObjMocker(), AsabObjMocker()
             generator = func(app, pipeline)
 
-            for name, events in __bitswan_dev_events.old_events.items():
-                if name == func.__name__:
-                    __bitswan_dev_events.set_current_events(events)
+            __bitswan_dev_events.update_current_events(func.__name__)
 
             __bitswan_dev_events.cycle(func.__name__)
             __bitswan_dev_new_events = []
@@ -208,8 +217,7 @@ def register_generator(func):
 
             __bitswan_dev_events.set_current_events(__bitswan_dev_new_events)
 
-            for event in __bitswan_dev_events.events:
-                print(event)
+            __bitswan_dev_events.print_events()
 
         return func
 
@@ -245,7 +253,6 @@ def step(func):
     global __bitswan_processors
     global __bitswan_dev
     global __bitswan_dev_events
-    global __bitswan_dev_old_events
     if not __bitswan_dev:
         # Convert function name from snake case to CamelCase and create a unique class name
         class_name = snake_to_camel_case(func.__name__) + 'Processor'
@@ -260,13 +267,8 @@ def step(func):
         # Append the new Processor to the __bitswan_processors list
         __bitswan_processors.append(CustomProcessor)
     else:
-        for name, events in __bitswan_dev_events.old_events.items():
-            if name == func.__name__:
-                __bitswan_dev_events.set_current_events(events)
-        __bitswan_dev_events.cycle(func.__name__)
-        __bitswan_dev_events.set_current_events([func(event) for event in __bitswan_dev_events.events])
-        for event in __bitswan_dev_events.events:
-            print(event)
+        __bitswan_dev_events.step(func.__name__, func)
+
 
     # Return the original function unmodified
     return func
