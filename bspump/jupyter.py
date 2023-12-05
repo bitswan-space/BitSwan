@@ -192,14 +192,14 @@ def register_generator(func):
 
     def wrapper(*args, **kwargs):
         import asyncio
-        if not asyncio.get_event_loop().is_running():
-            # If the loop is not running, start a new event loop and run _fn
-            asyncio.run(_fn())
-        else:
-            # If the loop is already running, create a task for _fn
-            asyncio.create_task(_fn())
+        import nest_asyncio
+        nest_asyncio.apply()
+        loop = asyncio.get_event_loop()
+        task = asyncio.ensure_future(_fn())
+        loop.run_until_complete(task)
 
     wrapper()
+    return _fn
 
 
 def register_sink(func):
