@@ -89,7 +89,7 @@ class ElasticSearchLookup(MappingLookup, AsyncLookupMixin):
 		self.Index = self.Config['index']
 		self.ScrollTimeout = self.Config['scroll_timeout']
 		self.Key = self.Config['key']
-		self.CacheNonExistent = {"True": True, "False": False}.get(self.Config['cache_non_existent'])
+		self.CacheNonExistent = {"True": True, "False": False}.get(self.Config['cache_non_existent'], False)
 
 		self.Count = -1
 		if cache is None:
