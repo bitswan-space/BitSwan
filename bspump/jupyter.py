@@ -272,6 +272,7 @@ def _init_lookups(app, service):
 class App(bspump.BSPumpApplication):
     def __init__(self):
         super().__init__()
+        global __bitswan_app_post_inits
         svc = self.get_service("bspump.PumpService")
         _init_connections(self, svc)
         _init_lookups(self, svc)
