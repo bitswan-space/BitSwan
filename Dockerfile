@@ -5,9 +5,6 @@ RUN set -ex \
 	&& apt-get -y update \
 	&& apt-get -y upgrade
 
-# RUN set -ex \
-# 	&& apt-get -y install lsof
-
 RUN apt-get -y install \
 	git \
 	gcc \
@@ -20,6 +17,7 @@ RUN apt-get -y install \
 
 COPY . /app/
 RUN cd /app/ ; pip3 install .
+
 
 FROM python:3.10-slim-bullseye
 MAINTAINER LibertyAces Ltd
