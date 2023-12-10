@@ -204,8 +204,8 @@ def register_processor(func):
 def register_generator(func):
     """
     Ex:
-    @register_source
-    def source(app, pipeline):
+    @register_generator
+    def generator(app, pipeline):
         return MyGeneratorClass(app, pipeline)
     """
 
@@ -286,6 +286,29 @@ def step(func):
 
     # Return the original function unmodified
     return func
+
+
+def async_step(func):
+    global __bitswan_dev
+    # Convert function name from snake case to CamelCase and create a unique class name
+    class_name = snake_to_camel_case(func.__name__) + 'Generator'
+
+    # Dynamically create a new Generator class with the custom class name
+    async def _generate(self, context, event, depth):
+        async def injector(event):
+            return self.Pipeline.inject(context, event, depth)
+        return await func(injector, event)
+
+    CustomGenerator = type(
+        class_name,
+        (bspump.Generator,),
+        # Async generate function calls func with injector and event. The injector is taken from the pipeline.
+        {'generate': _generate}
+    )
+    if __bitswan_dev:
+        @register_generator
+        def generator(app, pipeline):
+            return CustomGenerator(app, pipeline)
 
 
 def _init_pipelines(app, service):
