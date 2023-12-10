@@ -102,7 +102,7 @@ __bitswan_lookups = []
 __bitswan_app_post_inits = []
 
 
-def test_events(events):
+def sample_events(events):
     global __bitswan_dev_runtime
     __bitswan_dev_runtime.set_current_events(events)
 
