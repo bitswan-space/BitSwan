@@ -258,7 +258,7 @@ class Pipeline(abc.ABC, asab.Configurable):
 				self._evaluate_ready()
 
 		else:
-			tb_text = "".join(traceback.format_exception(etype=type(exc), value=exc, tb=exc.__traceback__))
+			tb_text = "".join(traceback.format_exception(None, exc, exc.__traceback__))
 
 			# send alert
 			self.App.AlertService.trigger(
