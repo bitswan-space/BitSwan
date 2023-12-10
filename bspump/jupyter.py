@@ -1,6 +1,8 @@
+from functools import partial
 import bspump
 import copy
 import os
+from typing import Any, Callable
 
 
 class AsabObjMocker:
@@ -15,6 +17,63 @@ class AsabObjMocker:
 
     def clear(self):
         self.items = []
+
+
+class DevRuntime:
+    def __init__(self):
+        self.old_events: dict[str, list[Any]] = {}
+        self.events: list[Any] = []
+
+    def set_current_events(self, events: list[Any]) -> None:
+        """Sets current events to list passed in
+
+        Args:
+            events (list[Any]): list to be set as current events
+        """
+        self.events = events
+
+    def cycle(self, name: str) -> None:
+        """Cycles current events to old events with name as key
+
+        Args:
+            name (str): name of the function
+        """
+        self.old_events[name] = copy.deepcopy(self.events)
+
+    def clear(self) -> None:
+        """Resets the state to the initial
+        """
+        self.old_events = {}
+        self.events = []
+
+    def print_events(self):
+        """Prints latest events
+        """
+        for event in self.events:
+            print(event)
+
+    def update_current_events(self, curr_name: str) -> None:
+        """Updates current events to the events of the function with name curr_name
+
+        Args:
+            curr_name (str): name of the function
+        """
+        for name, events in self.old_events.items():
+            if name == curr_name:
+                self.set_current_events(events)
+    
+    def step(self, name: str, func: Callable) -> None:
+        """Steps through the function with name name and updates current events
+
+        Args:
+            name (str): name of the function
+            func (Callable): function to be stepped through
+        """
+        #TODO: check if __name__ cant be given to partial
+        self.update_current_events(name)
+        self.cycle(name)
+        self.set_current_events([func(event) for event in self.events])
+        self.print_events()
 
 
 def is_running_in_jupyter():
@@ -37,16 +96,15 @@ __bitswan_processors = []
 __bitswan_pipelines = {}
 __bitswan_dev = is_running_in_jupyter()
 __bitswan_current_pipeline = None
-__bitswan_dev_old_events = []
-__bitswan_dev_events = []
+__bitswan_dev_runtime = DevRuntime()
 __bitswan_connections = []
 __bitswan_lookups = []
 __bitswan_app_post_inits = []
 
 
-def test_events(events):
-    global __bitswan_dev_events
-    __bitswan_dev_events = events
+def sample_events(events):
+    global __bitswan_dev_runtime
+    __bitswan_dev_runtime.set_current_events(events)
 
 
 def register_app_post_init(func):
@@ -133,36 +191,28 @@ def register_processor(func):
     """
     global __bitswan_processors
     global __bitswan_dev
-    global __bitswan_dev_events
-    global __bitswan_dev_old_events
+    global __bitswan_dev_runtime
     if not __bitswan_dev:
         __bitswan_processors.append(func)
     else:
         processor = func(AsabObjMocker(), AsabObjMocker())
-        for name, events in __bitswan_dev_old_events:
-            if name == func.__name__:
-                __bitswan_dev_events = events
-        __bitswan_dev_old_events.append(
-            (func.__name__, copy.deepcopy(__bitswan_dev_events))
-        )
-        __bitswan_dev_events = [processor.process(None, event) for event in __bitswan_dev_events]
-        for event in __bitswan_dev_events:
-            print(event)
+
+        callable_process = partial(processor.process, None)
+        __bitswan_dev_runtime.step(func.__name__, callable_process)
 
 
 def register_generator(func):
     """
     Ex:
-    @register_source
-    def source(app, pipeline):
+    @register_generator
+    def generator(app, pipeline):
         return MyGeneratorClass(app, pipeline)
     """
 
     async def _fn():
         global __bitswan_processors
         global __bitswan_dev
-        global __bitswan_dev_events
-        global __bitswan_dev_old_events
+        global __bitswan_dev_runtime
         if not __bitswan_dev:
             # TODO: check this
             __bitswan_processors.append(func)
@@ -170,36 +220,31 @@ def register_generator(func):
             app, pipeline = AsabObjMocker(), AsabObjMocker()
             generator = func(app, pipeline)
 
-            for name, events in __bitswan_dev_old_events:
-                if name == func.__name__:
-                    __bitswan_dev_events = events
+            __bitswan_dev_runtime.update_current_events(func.__name__)
 
-            __bitswan_dev_old_events.append(
-                (func.__name__, copy.deepcopy(__bitswan_dev_events))
-            )
+            __bitswan_dev_runtime.cycle(func.__name__)
             __bitswan_dev_new_events = []
-            for event in __bitswan_dev_events:
+            for event in __bitswan_dev_runtime.events:
                 await generator.generate(None, event, 0)
                 __bitswan_dev_new_events.extend(pipeline.items)
                 pipeline.clear()
 
-            __bitswan_dev_events = __bitswan_dev_new_events
+            __bitswan_dev_runtime.set_current_events(__bitswan_dev_new_events)
 
-            for event in __bitswan_dev_events:
-                print(event)
+            __bitswan_dev_runtime.print_events()
 
         return func
 
     def wrapper(*args, **kwargs):
         import asyncio
-        if not asyncio.get_event_loop().is_running():
-            # If the loop is not running, start a new event loop and run _fn
-            asyncio.run(_fn())
-        else:
-            # If the loop is already running, create a task for _fn
-            asyncio.create_task(_fn())
+        import nest_asyncio
+        nest_asyncio.apply()
+        loop = asyncio.get_event_loop()
+        task = asyncio.ensure_future(_fn())
+        loop.run_until_complete(task)
 
     wrapper()
+    return _fn
 
 
 def register_sink(func):
@@ -221,8 +266,7 @@ def snake_to_camel_case(name):
 def step(func):
     global __bitswan_processors
     global __bitswan_dev
-    global __bitswan_dev_events
-    global __bitswan_dev_old_events
+    global __bitswan_dev_runtime
     if not __bitswan_dev:
         # Convert function name from snake case to CamelCase and create a unique class name
         class_name = snake_to_camel_case(func.__name__) + 'Processor'
@@ -237,18 +281,34 @@ def step(func):
         # Append the new Processor to the __bitswan_processors list
         __bitswan_processors.append(CustomProcessor)
     else:
-        for name, events in __bitswan_dev_old_events:
-            if name == func.__name__:
-                __bitswan_dev_events = events
-        __bitswan_dev_old_events.append(
-            (func.__name__, copy.deepcopy(__bitswan_dev_events))
-        )
-        __bitswan_dev_events = [func(event) for event in __bitswan_dev_events]
-        for event in __bitswan_dev_events:
-            print(event)
+        __bitswan_dev_runtime.step(func.__name__, func)
+
 
     # Return the original function unmodified
     return func
+
+
+def async_step(func):
+    global __bitswan_dev
+    # Convert function name from snake case to CamelCase and create a unique class name
+    class_name = snake_to_camel_case(func.__name__) + 'Generator'
+
+    # Dynamically create a new Generator class with the custom class name
+    async def _generate(self, context, event, depth):
+        async def injector(event):
+            return self.Pipeline.inject(context, event, depth)
+        return await func(injector, event)
+
+    CustomGenerator = type(
+        class_name,
+        (bspump.Generator,),
+        # Async generate function calls func with injector and event. The injector is taken from the pipeline.
+        {'generate': _generate}
+    )
+    if __bitswan_dev:
+        @register_generator
+        def generator(app, pipeline):
+            return CustomGenerator(app, pipeline)
 
 
 def _init_pipelines(app, service):
