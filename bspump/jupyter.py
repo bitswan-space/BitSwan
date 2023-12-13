@@ -61,7 +61,7 @@ class DevRuntime:
         for name, events in self.old_events.items():
             if name == curr_name:
                 self.set_current_events(events)
-    
+
     def step(self, name: str, func: Callable) -> None:
         """Steps through the function with name name and updates current events
 
@@ -104,6 +104,7 @@ _bitswan_app_post_inits = []
 
 def sample_events(events):
     global __bitswan_dev_runtime
+    __bitswan_dev_runtime = DevRuntime()
     __bitswan_dev_runtime.set_current_events(events)
 
 
