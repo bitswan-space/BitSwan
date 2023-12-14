@@ -1,15 +1,21 @@
-import paho.mqtt.client as mqtt
-import time
 import json
 import logging
-from asab.web.rest.json import JSONDumper
-import asab
 import re
+import time
+
+import asab
+import paho.mqtt.client as mqtt
+from asab.web.rest.json import JSONDumper
 
 L = logging.getLogger(__name__)
 
 
-def get_pipeline_topology(pipelines: dict, pipeline):
+def get_pipeline_topology(pump, pipeline):
+    dumper = JSONDumper(pretty=False)
+    pipelines = json.loads(dumper(pump.Pipelines))
+
+    pipeline_obj = pump.Pipelines[pipeline]
+
     pipeline_data = pipelines[pipeline]
     components = []
     metrics_components = []
@@ -32,6 +38,10 @@ def get_pipeline_topology(pipelines: dict, pipeline):
     for i in range(len(components)):
         component_data = {}
 
+        component_obj = pipeline_obj.locate_source(components[i]["Id"])
+        if component_obj is None:
+            component_obj = pipeline_obj.locate_processor(components[i]["Id"])
+
         # If it's not the last element, add the "wires" key
         if i < len(components) - 1:
             component_data["wires"] = [components[i + 1]["Id"]]
@@ -39,7 +49,9 @@ def get_pipeline_topology(pipelines: dict, pipeline):
             component_data["wires"] = []
 
         # Implement getting properties
-        component_data["properties"] = {}
+        component_data["properties"] = {
+            key: value for key, value in component_obj.Config.items()
+        }
         component_data["capabilities"] = ["subscribable-events"]
 
         for metric in metrics_components:
@@ -148,19 +160,21 @@ class MQTTService(asab.Service):
             new_message["data"] = get_pipelines(json.loads(self.dumper(svc.Pipelines)))
             new_message["count"] = 1
             new_message["remaining_subscription_count"] = count - 1
-            client.publish(f"/c/{self.App.DeploymentId}/topology", json.dumps(new_message))
+            client.publish(
+                f"/c/{self.App.DeploymentId}/topology", json.dumps(new_message)
+            )
 
         # Get components of one pipeline
         if pipeline_components:
             pipeline = pipeline_components.group("pipeline_identifier")
             new_message = get_message_structure()
-            new_message["data"] = get_pipeline_topology(
-                json.loads(self.dumper(svc.Pipelines)), pipeline
-            )
+
+            new_message["data"] = get_pipeline_topology(svc, pipeline)
             new_message["count"] = 1
             new_message["remaining_subscription_count"] = count - 1
             client.publish(
-                f"/c/{self.App.DeploymentId}/c/{pipeline}/topology", json.dumps(new_message)
+                f"/c/{self.App.DeploymentId}/c/{pipeline}/topology",
+                json.dumps(new_message),
             )
 
         if events:
