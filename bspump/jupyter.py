@@ -290,7 +290,6 @@ def step(func):
 
 
 def async_step(func):
-    global __bitswan_dev
     # Convert function name from snake case to CamelCase and create a unique class name
     class_name = snake_to_camel_case(func.__name__) + 'Generator'
 
@@ -306,10 +305,9 @@ def async_step(func):
         # Async generate function calls func with injector and event. The injector is taken from the pipeline.
         {'generate': _generate}
     )
-    if __bitswan_dev:
-        @register_generator
-        def generator(app, pipeline):
-            return CustomGenerator(app, pipeline)
+    @register_generator
+    def generator(app, pipeline):
+        return CustomGenerator(app, pipeline)
 
 
 def _init_pipelines(app, service):
