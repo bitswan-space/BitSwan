@@ -14,7 +14,12 @@ class PeriodicTrigger(Trigger):
 		super().__init__(app, id)
 		self.Timer = asab.Timer(app, self.on_timer, autorestart=True)
 		self.Timer.start(interval)
-		asyncio.ensure_future(self.Timer.Handler())
+		async def run_on_ready():
+			for pipeline in app.PumpService.Pipelines.values():
+				while not pipeline.is_ready():
+					await asyncio.sleep(0.1)
+			await self.Timer.Handler()
+		asyncio.ensure_future(run_on_ready())
 
 
 	async def on_timer(self):
