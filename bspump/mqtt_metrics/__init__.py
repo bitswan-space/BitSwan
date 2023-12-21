@@ -214,6 +214,8 @@ class MQTTService(asab.Service):
 
     def publish_event(self, pipeline, component, event, count_remaining):
         data = get_message_structure()
+        if isinstance(event, bytes):
+            event = event.decode("utf-8")
         data["data"] = event
         data["count"] = component.EventCount
         data["remaining_subscription_count"] = count_remaining
