@@ -31,6 +31,7 @@ RUN apt-get -y install \
 
 LABEL "space.bitswan.pipeline.protocol-version"="2023.12-1"
 LABEL src=https://github.com/bitswan-space/BitSwanPump
+ENV ASABFORCECONSOLE=1
 
 COPY --from=0 /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
 COPY pre/ /opt/pipelines/
