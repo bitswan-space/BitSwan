@@ -6,7 +6,7 @@ fi
 cd /opt/pipelines/
 
 if [ -f /conf/pipelines.conf ]; then
-    python3 main.py -c /opt/pipelines/pipelines.conf
+    python3 -u main.py -c /opt/pipelines/pipelines.conf
 else
-    python3 main.py
+    python3 -u main.py
 fi
