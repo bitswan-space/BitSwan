@@ -1,4 +1,5 @@
 import asab
+import asyncio
 from .trigger import Trigger
 
 
@@ -12,8 +13,8 @@ class PeriodicTrigger(Trigger):
 
 		super().__init__(app, id)
 		self.Timer = asab.Timer(app, self.on_timer, autorestart=True)
-		self.fire()
 		self.Timer.start(interval)
+		asyncio.ensure_future(self.Timer.Handler())
 
 
 	async def on_timer(self):
