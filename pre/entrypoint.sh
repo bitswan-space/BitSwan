@@ -5,8 +5,4 @@ if [ -f /opt/extra-dependencies.txt ]; then
 fi
 cd /opt/pipelines/
 
-if [ -f /conf/pipelines.conf ]; then
-    python3 -u main.py -c /opt/pipelines/pipelines.conf
-else
-    python3 -u main.py
-fi
+python3 -u main.py -c /opt/pipelines/pipelines.conf
