@@ -12,6 +12,7 @@ class PeriodicTrigger(Trigger):
 
 		super().__init__(app, id)
 		self.Timer = asab.Timer(app, self.on_timer, autorestart=True)
+		self.fire()
 		self.Timer.start(interval)
 
 
