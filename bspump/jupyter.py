@@ -9,71 +9,62 @@ class AsabObjMocker:
     def __init__(self):
         self.Id = None
         self.Loop = None
-        self.items = []
-
-    def inject(self, context, event, depth):
-        self.items.append(event)
-        return event
-
-    def clear(self):
-        self.items = []
 
 
 class DevRuntime:
     def __init__(self):
-        self.old_events: dict[str, list[Any]] = {}
-        self.events: list[Any] = []
+        self.events: list[tuple[str, list[Any]]] = {}
 
-    def set_current_events(self, events: list[Any]) -> None:
-        """Sets current events to list passed in
+    def clear(self, name: str, event: list[Any]) -> None:
+        self.events = [(name, event)]
 
-        Args:
-            events (list[Any]): list to be set as current events
-        """
-        self.events = events
-
-    def cycle(self, name: str) -> None:
-        """Cycles current events to old events with name as key
-
-        Args:
-            name (str): name of the function
-        """
-        self.old_events[name] = copy.deepcopy(self.events)
-
-    def clear(self) -> None:
-        """Resets the state to the initial
-        """
-        self.old_events = {}
-        self.events = []
-
-    def print_events(self):
-        """Prints latest events
-        """
+    def get_prev_events(self, name) -> tuple[list[tuple[str, list[Any]]], list[Any]]:
+        new_eventss = []
+        prev_events = None
         for event in self.events:
-            print(event)
+            if event[0] == name:
+                break
+            prev_events = event[1]
+            new_eventss.append(event)
+        return new_eventss, prev_events
 
-    def update_current_events(self, curr_name: str) -> None:
-        """Updates current events to the events of the function with name curr_name
+    def step(self, name: str, func) -> None:
+        new_eventss, prev_events = self.get_prev_events(name)
+        new_events = [func(prev_event) for prev_event in prev_events]
+        [print(event) for event in new_events]
+        new_eventss.append((name, new_events))
+        self.events = new_eventss
 
-        Args:
-            curr_name (str): name of the function
-        """
-        for name, events in self.old_events.items():
-            if name == curr_name:
-                self.set_current_events(events)
+    async def async_step(self, name: str, func) -> None:
+        new_eventss, prev_events = self.get_prev_events(name)
+        new_events = []
+        def inject(event):
+            new_events.append(event)
+        [await func(inject, prev_event) for prev_event in prev_events]
+        [print(event) for event in new_events]
+        new_eventss.append((name, new_events))
+        self.events = new_eventss
 
-    def step(self, name: str, func: Callable) -> None:
-        """Steps through the function with name name and updates current events
 
-        Args:
-            name (str): name of the function
-            func (Callable): function to be stepped through
-        """
-        #TODO: check if __name__ cant be given to partial
-        self.update_current_events(name)
-        self.cycle(name)
-        self.set_current_events([func(event) for event in self.events])
-        self.print_events()
+async def test_devruntime():
+    test_runtime = DevRuntime()
+    def test_func(prev_event):
+        return prev_event + 1
+    tr = test_runtime
+    tr.clear("sample", [1, 2, 3])
+    tr.step("step1", test_func)
+    tr.step("step2", test_func)
+    tr.step("step3", test_func)
+    assert tr.events == [("sample", [1, 2, 3]), ("step1", [2, 3, 4]), ("step2", [3, 4, 5]), ("step3", [4, 5, 6])]
+    def test_func1(prev_event):
+        return prev_event + 7
+    tr.step("step2", test_func1)
+    assert tr.events == [("sample", [1, 2, 3]), ("step1", [2, 3, 4]), ("step2", [9, 10, 11])]
+    async def test_func2(injector, prev_event):
+        if prev_event % 2 == 0:
+            injector(prev_event + 1)
+    await tr.async_step("step3", test_func2)
+    assert tr.events == [("sample", [1, 2, 3]), ("step1", [2, 3, 4]), ("step2", [9, 10, 11]), ("step3", [11])]
 
 
 def is_running_in_jupyter():
@@ -102,10 +93,10 @@ __bitswan_lookups = []
 _bitswan_app_post_inits = []
 
 
+
 def sample_events(events):
     global __bitswan_dev_runtime
-    __bitswan_dev_runtime = DevRuntime()
-    __bitswan_dev_runtime.set_current_events(events)
+    __bitswan_dev_runtime.clear("__sample", events)
 
 
 def register_app_post_init(func):
@@ -220,19 +211,12 @@ def register_generator(func):
         else:
             app, pipeline = AsabObjMocker(), AsabObjMocker()
             generator = func(app, pipeline)
-
-            __bitswan_dev_runtime.update_current_events(func.__name__)
-
-            __bitswan_dev_runtime.cycle(func.__name__)
-            __bitswan_dev_new_events = []
-            for event in __bitswan_dev_runtime.events:
-                await generator.generate(None, event, 0)
-                __bitswan_dev_new_events.extend(pipeline.items)
-                pipeline.clear()
-
-            __bitswan_dev_runtime.set_current_events(__bitswan_dev_new_events)
-
-            __bitswan_dev_runtime.print_events()
+            async def asfunc(inject, event):
+                def super_inject(context, event, depth):
+                    inject(event)
+                pipeline.inject = super_inject
+                return await generator.generate(None, event, 0)
+            await __bitswan_dev_runtime.async_step(func.__name__, asfunc)
 
         return func
 
