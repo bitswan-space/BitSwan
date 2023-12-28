@@ -289,9 +289,11 @@ def async_step(func):
         # Async generate function calls func with injector and event. The injector is taken from the pipeline.
         {'generate': _generate}
     )
-    @register_generator
     def generator(app, pipeline):
         return CustomGenerator(app, pipeline)
+
+    generator.__name__ = func.__name__
+    register_generator(generator)
 
 
 def _init_pipelines(app, service):
