@@ -65,8 +65,9 @@ class MongoDBChangeStreamSource(Source):
 				if event is not None:
 					await self.process(event, context={})
 
-			except asyncio.CancelledError:
-				running = False
+			except asyncio.CancelledError as e:
+				L.warning(f"Mongo change stream task cancled or timed out: {e}. Restarting connection.")
+                                return await self.main()
 			except pymongo.errors.OperationFailure as e:
-				L.warning("Recoverable error encountered while reading changestream: {}.".format(e))
-				continue
+				L.warning(f"Recoverable error encountered while reading changestream: {}. Restarting connection.")
+                                return await self.main()
