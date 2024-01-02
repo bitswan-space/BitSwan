@@ -21,11 +21,21 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
 
-    - name: Build and push
+    - name: Get Year and Commit Hash
+      id: vars
+      run: |
+        echo "::set-output name=year::$(date +%Y)"
+        echo "::set-output name=commit_hash::$(git rev-parse --short HEAD)"
+
+    - name: Build and push Docker images
       uses: docker/build-push-action@v2
       with:
         context: .
         file: ./Dockerfile
         push: true
-        tags: bitswan/pipeline-runtime-environment:latest
+        tags: |
+          $DOCKER_REGISTRY/$DOCKER_IMAGE:latest
+          $DOCKER_REGISTRY/$DOCKER_IMAGE:${{ steps.vars.outputs.year }}-${{ github.run_id }}-git-${{ steps.vars.outputs.commit_hash }}
+          $DOCKER_REGISTRY/$DOCKER_IMAGE:$(docker images --no-trunc -q $DOCKER_REGISTRY/$DOCKER_IMAGE:latest | sed 's/:/_/g')
+
 
