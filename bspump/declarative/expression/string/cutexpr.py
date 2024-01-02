@@ -11,42 +11,41 @@ L = logging.getLogger(__name__)
 
 
 class CUT(Expression):
+    Attributes = {
+        "Value": ["str"],
+        "Delimiter": ["str"],
+        "Field": ["*"],  # TODO: This ...
+    }
 
-	Attributes = {
-		"Value": ["str"],
-		"Delimiter": ["str"],
-		"Field": ["*"],  # TODO: This ...
-	}
+    Category = "String"
 
-	Category = "String"
+    def __init__(self, app, *, arg_what, arg_delimiter, arg_field):
+        super().__init__(app)
 
+        self.Value = arg_what
 
-	def __init__(self, app, *, arg_what, arg_delimiter, arg_field):
-		super().__init__(app)
+        # TODO: Delimiter must be a single character string
+        self.Delimiter = arg_delimiter
 
-		self.Value = arg_what
+        # Must be an integer
+        self.Field = arg_field
 
-		# TODO: Delimiter must be a single character string
-		self.Delimiter = arg_delimiter
+    def get_outlet_type(self):
+        return str.__name__
 
-		# Must be an integer
-		self.Field = arg_field
+    def consult_inlet_type(self, key, child):
+        return str.__name__
 
-	def get_outlet_type(self):
-		return str.__name__
+    def __call__(self, context, event, *args, **kwargs):
+        try:
+            value = self.Value(context, event, *args, **kwargs)
+            x = value.split(self.Delimiter, self.Field + 1)
+            return x[self.Field]
 
-	def consult_inlet_type(self, key, child):
-		return str.__name__
-
-	def __call__(self, context, event, *args, **kwargs):
-
-		try:
-			value = self.Value(context, event, *args, **kwargs)
-			x = value.split(self.Delimiter, self.Field + 1)
-			return x[self.Field]
-
-		except Exception as e:
-			L.exception("The following exception ocurred in !CUT expression [delimiter: {}, field: {}]".format(
-				self.Delimiter, self.Field
-			))
-			raise DeclarationError(original_exception=e, location=self.get_location())
+        except Exception as e:
+            L.exception(
+                "The following exception ocurred in !CUT expression [delimiter: {}, field: {}]".format(
+                    self.Delimiter, self.Field
+                )
+            )
+            raise DeclarationError(original_exception=e, location=self.get_location())

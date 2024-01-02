@@ -4,25 +4,18 @@ from unittest.mock import patch
 
 
 class TestTimeDriftAnalyzer(bspump.unittest.ProcessorTestCase):
+    @patch("asab.application.Application.time")
+    def test_time_drift_analyzer(self, mocked_time):
+        mocked_time.return_value = 100
+        events = [
+            (None, {"@timestamp": 30}),
+            (None, {"foo": "bar"}),
+        ]
+        self.set_up_processor(bspump.analyzer.TimeDriftAnalyzer)
 
-	@patch("asab.application.Application.time")
-	def test_time_drift_analyzer(self, mocked_time):
-		mocked_time.return_value = 100
-		events = [
-			(None, {"@timestamp": 30}),
-			(None, {"foo": "bar"}),
-		]
-		self.set_up_processor(bspump.analyzer.TimeDriftAnalyzer)
+        output = self.execute(events)
 
-		output = self.execute(
-			events
-		)
-
-		self.assertEqual(
-			[event for context, event in output],
-			[{'@timestamp': 30}, {'foo': 'bar'}]
-		)
-		self.assertEqual(
-			self.Pipeline.Processor.History,
-			[70]
-		)
+        self.assertEqual(
+            [event for context, event in output], [{"@timestamp": 30}, {"foo": "bar"}]
+        )
+        self.assertEqual(self.Pipeline.Processor.History, [70])

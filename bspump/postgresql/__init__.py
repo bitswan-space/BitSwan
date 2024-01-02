@@ -5,9 +5,9 @@ from .lookup import PostgreSQLLookup
 from .source import PostgreSQLSource
 
 __all__ = (
-	'PostgreSQLConnection',
-	'PostgreSQLSink',
-	'PostgreSQLLogicalReplicationSource',
-	'PostgreSQLLookup',
-	'PostgreSQLSource',
+    "PostgreSQLConnection",
+    "PostgreSQLSink",
+    "PostgreSQLLogicalReplicationSource",
+    "PostgreSQLLookup",
+    "PostgreSQLSource",
 )

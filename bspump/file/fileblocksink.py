@@ -7,93 +7,87 @@ L = logging.getLogger(__file__)
 
 
 class FileBlockSink(Sink):
-	"""
-	Description:
+    """
+    Description:
 
-	** Config Defaults **
+    ** Config Defaults **
 
-	path : ''
+    path : ''
 
-	mode : wb
+    mode : wb
 
-	flags : O_CREAT
+    flags : O_CREAT
 
-	"""
+    """
 
-	ConfigDefaults = {
-		'path': '',
-		'mode': "wb",
-		'flags': "O_CREAT",
-	}
+    ConfigDefaults = {
+        "path": "",
+        "mode": "wb",
+        "flags": "O_CREAT",
+    }
 
-	OFlagDict = {
-		'O_CREAT': os.O_CREAT,
-		'O_EXCL': os.O_EXCL
-	}
+    OFlagDict = {"O_CREAT": os.O_CREAT, "O_EXCL": os.O_EXCL}
 
+    def __init__(self, app, pipeline, id=None, config=None):
+        """
 
-	def __init__(self, app, pipeline, id=None, config=None):
-		"""
+        **Parameters**
 
-		**Parameters**
+        app : Application
+                Name of the Application
 
-		app : Application
-			Name of the Application
+        pipeline : Pipeline
+                Name of the Pipeline.
 
-		pipeline : Pipeline
-			Name of the Pipeline.
+        id : ID, default = None
+                ID
 
-		id : ID, default = None
-			ID
+        config : JSON, default = None
+                Configuration file with additional information.
 
-		config : JSON, default = None
-			Configuration file with additional information.
+        """
+        super().__init__(app, pipeline, id=id, config=config)
 
-		"""
-		super().__init__(app, pipeline, id=id, config=config)
+        self._oflags = 0
+        for flag in self.Config["flags"].split(","):
+            flag = flag.strip()
+            try:
+                self._oflags |= self.OFlagDict[flag]
+            except KeyError:
+                L.warning("Unknown oflag '{}'".format(flag))
 
-		self._oflags = 0
-		for flag in self.Config["flags"].split(","):
-			flag = flag.strip()
-			try:
-				self._oflags |= self.OFlagDict[flag]
-			except KeyError:
-				L.warning("Unknown oflag '{}'".format(flag))
+    def get_file_name(self, context, event):
+        """
+        Override this method to gain control over output file name.
 
+        **Parameters**
 
-	def get_file_name(self, context, event):
-		"""
-		Override this method to gain control over output file name.
+        context :
 
-		**Parameters**
+        event : any type
+                a single unit of information that is propagated through the pipeline
 
-		context :
+        :return: config path
 
-		event : any type
-			a single unit of information that is propagated through the pipeline
+        |
 
-		:return: config path
+        """
+        return self.Config["path"]
 
-		|
+    def process(self, context, event):
+        """
+        Opens a file.
 
-		"""
-		return self.Config['path']
+        **Parameters**
 
+        context :
 
-	def process(self, context, event):
-		"""
-		Opens a file.
+        event : any type
+                a single unit of information that is propagated through the pipeline
 
-		**Parameters**
+        """
+        fname = self.get_file_name(context, event)
 
-		context :
-
-		event : any type
-			a single unit of information that is propagated through the pipeline
-
-		"""
-		fname = self.get_file_name(context, event)
-
-		fd = os.open(fname, os.O_WRONLY | self._oflags)
-		with os.fdopen(fd, self.Config['mode']) as fo:
-			fo.write(event)
+        fd = os.open(fname, os.O_WRONLY | self._oflags)
+        with os.fdopen(fd, self.Config["mode"]) as fo:
+            fo.write(event)

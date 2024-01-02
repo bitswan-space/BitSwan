@@ -15,27 +15,25 @@ from .abc import SequenceExpression
 from .dot import declaration_to_dot, declaration_to_dot_stream
 
 
-asab.Config.add_defaults({
-	"declarations": {
-		"timezone": ""  # Default timezone to be used by DATETIME expression, such as Europe/Prague
-	}
-})
+asab.Config.add_defaults(
+    {
+        "declarations": {
+            "timezone": ""  # Default timezone to be used by DATETIME expression, such as Europe/Prague
+        }
+    }
+)
 
 
 __all__ = [
-	"DeclarativeProcessor",
-	"DeclarativeGenerator",
-	"DeclarativeTimeWindowAnalyzer",
-
-	"ExpressionBuilder",
-	"DeclarationError",
-	"SegmentBuilder",
-
-	"ExpressionOptimizer",
-
-	"Expression",
-	"SequenceExpression",
-
-	"declaration_to_dot",
-	"declaration_to_dot_stream",
+    "DeclarativeProcessor",
+    "DeclarativeGenerator",
+    "DeclarativeTimeWindowAnalyzer",
+    "ExpressionBuilder",
+    "DeclarationError",
+    "SegmentBuilder",
+    "ExpressionOptimizer",
+    "Expression",
+    "SequenceExpression",
+    "declaration_to_dot",
+    "declaration_to_dot_stream",
 ]

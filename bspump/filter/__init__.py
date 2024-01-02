@@ -3,7 +3,7 @@ from .contentfilter import ContentFilter
 from .timedriftfilter import TimeDriftFilter
 
 __all__ = [
-	'AttributeFilter',
-	'ContentFilter',
-	'TimeDriftFilter',
+    "AttributeFilter",
+    "ContentFilter",
+    "TimeDriftFilter",
 ]

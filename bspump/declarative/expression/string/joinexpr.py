@@ -12,71 +12,67 @@ L = logging.getLogger(__name__)
 
 
 class JOIN(Expression):
+    Attributes = {
+        "Char": ["str"],
+        "Miss": ["*"],  # TODO: This ...
+    }
 
-	Attributes = {
-		"Char": ["str"],
-		"Miss": ["*"],  # TODO: This ...
-	}
+    Category = "String"
 
-	Category = "String"
+    def __init__(self, app, *, arg_items, arg_delimiter=" ", arg_miss=""):
+        super().__init__(app)
+        self.App = app
 
+        self.Items = arg_items
+        self.ItemsNormalized = []
 
-	def __init__(self, app, *, arg_items, arg_delimiter=" ", arg_miss=""):
-		super().__init__(app)
-		self.App = app
+        self.Char = arg_delimiter
 
-		self.Items = arg_items
-		self.ItemsNormalized = []
+        if not isinstance(arg_miss, Expression):
+            self.Miss = VALUE(app, value=arg_miss)
+        else:
+            self.Miss = arg_miss
 
-		self.Char = arg_delimiter
+    def get_outlet_type(self):
+        return str.__name__
 
-		if not isinstance(arg_miss, Expression):
-			self.Miss = VALUE(app, value=arg_miss)
-		else:
-			self.Miss = arg_miss
+    def consult_inlet_type(self, key, child):
+        return str.__name__
 
-	def get_outlet_type(self):
-		return str.__name__
+    def set(self, key, value):
+        setattr(self, key, value)
 
-	def consult_inlet_type(self, key, child):
-		return str.__name__
+        if "Item" in key:
+            self.ItemsNormalized[int(key[4:])] = value
 
-	def set(self, key, value):
-		setattr(self, key, value)
+    def initialize(self):
+        for n, item in enumerate(self.Items):
+            if not isinstance(item, Expression):
+                item = VALUE(self.App, value=item)
 
-		if "Item" in key:
-			self.ItemsNormalized[int(key[4:])] = value
+            attr_name = "Item{}".format(n)
+            setattr(self, attr_name, item)
+            self.Attributes[attr_name] = str.__name__
 
-	def initialize(self):
+            self.ItemsNormalized.append(item)
 
-		for n, item in enumerate(self.Items):
+    def __call__(self, context, event, *args, **kwargs):
+        try:
+            arr = []
+            for item in self.ItemsNormalized:
+                v = item(context, event, *args, **kwargs)
+                if v is None:
+                    v = self.Miss(context, event, *args, **kwargs)
+                    if v is None:
+                        return None
+                arr.append(str(v))
 
-			if not isinstance(item, Expression):
-				item = VALUE(self.App, value=item)
+            return self.Char.join(arr)
 
-			attr_name = 'Item{}'.format(n)
-			setattr(self, attr_name, item)
-			self.Attributes[attr_name] = str.__name__
-
-			self.ItemsNormalized.append(item)
-
-	def __call__(self, context, event, *args, **kwargs):
-		try:
-
-			arr = []
-			for item in self.ItemsNormalized:
-
-				v = item(context, event, *args, **kwargs)
-				if v is None:
-					v = self.Miss(context, event, *args, **kwargs)
-					if v is None:
-						return None
-				arr.append(str(v))
-
-			return self.Char.join(arr)
-
-		except Exception as e:
-			L.exception("The following exception ocurred in !JOIN expression [delimiter: {}]".format(
-				self.Char
-			))
-			raise DeclarationError(original_exception=e, location=self.get_location())
+        except Exception as e:
+            L.exception(
+                "The following exception ocurred in !JOIN expression [delimiter: {}]".format(
+                    self.Char
+                )
+            )
+            raise DeclarationError(original_exception=e, location=self.get_location())

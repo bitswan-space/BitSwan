@@ -14,45 +14,45 @@ L = logging.getLogger(__name__)
 
 
 class MyTransformator(bspump.common.MappingTransformator):
+    def build(self, app):
+        return {
+            "color": self.color,
+            "category": self.category,
+        }
 
-	def build(self, app):
-		return {
-			'color': self.color,
-			'category': self.category,
-		}
+    def color(self, key, value):
+        return key.upper(), 1.0
 
-	def color(self, key, value):
-		return key.upper(), 1.0
-
-	def category(self, key, value):
-		return key, value.upper()
+    def category(self, key, value):
+        return key, value.upper()
 
 
 class SamplePipeline(bspump.Pipeline):
+    def __init__(self, app, pipeline_id):
+        super().__init__(app, pipeline_id)
 
-	def __init__(self, app, pipeline_id):
-		super().__init__(app, pipeline_id)
+        self.build(
+            bspump.file.FileJSONSource(
+                app,
+                self,
+                config={
+                    "path": "./data/sample.json",
+                    "post": "noop",
+                },
+            ).on(bspump.trigger.PubSubTrigger(app, "Application.tick!")),
+            MyTransformator(app, self),
+            bspump.common.MappingItemsProcessor(app, self),
+            bspump.common.PPrintSink(app, self),
+        )
 
-		self.build(
 
-			bspump.file.FileJSONSource(app, self, config={
-				'path': './data/sample.json',
-				'post': 'noop',
-			}).on(bspump.trigger.PubSubTrigger(app, "Application.tick!")),
+if __name__ == "__main__":
+    app = bspump.BSPumpApplication()
 
-			MyTransformator(app, self),
-			bspump.common.MappingItemsProcessor(app, self),
-			bspump.common.PPrintSink(app, self),
-		)
+    svc = app.get_service("bspump.PumpService")
 
+    # Construct and register Pipeline
+    pl = SamplePipeline(app, "SamplePipeline")
+    svc.add_pipeline(pl)
 
-if __name__ == '__main__':
-	app = bspump.BSPumpApplication()
-
-	svc = app.get_service("bspump.PumpService")
-
-	# Construct and register Pipeline
-	pl = SamplePipeline(app, 'SamplePipeline')
-	svc.add_pipeline(pl)
-
-	app.run()
+    app.run()

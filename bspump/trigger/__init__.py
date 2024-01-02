@@ -6,10 +6,10 @@ from .trigger import Trigger
 from .crontrig import CronTrigger
 
 __all__ = (
-	'Trigger',
-	'OpportunisticTrigger',
-	'RunOnceTrigger',
-	'PubSubTrigger',
-	'PeriodicTrigger',
-	'CronTrigger'
+    "Trigger",
+    "OpportunisticTrigger",
+    "RunOnceTrigger",
+    "PubSubTrigger",
+    "PeriodicTrigger",
+    "CronTrigger",
 )

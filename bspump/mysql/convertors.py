@@ -10,10 +10,10 @@ def convert_numpy_int(value, mapping=None):
 
 def convert_numpy_float(value, mapping=None):
     s = repr(value)
-    if s in ('inf', 'nan'):
+    if s in ("inf", "nan"):
         raise ValueError("%s can not be used with MySQL" % s)
-    if 'e' not in s:
-        s += 'e0'
+    if "e" not in s:
+        s += "e0"
     return s
 
 

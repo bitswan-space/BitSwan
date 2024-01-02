@@ -1,5 +1,3 @@
-from .model import Model   # noqa: F401
+from .model import Model  # noqa: F401
 
-__all__ = (
-	"Model"
-)
+__all__ = "Model"

@@ -8,12 +8,12 @@ from .web.wssource import WebSocketSource
 from .lookupprovider import HTTPBatchLookupProvider
 
 __all__ = (
-	'HTTPClientSource',
-	'HTTPClientTextSource',
-	'HTTPClientLineSource',
-	'HTTPClientWebSocketSink',
-	'WebServiceSource',
-	'WebServiceSink',
-	'WebSocketSource',
-	'HTTPBatchLookupProvider',
+    "HTTPClientSource",
+    "HTTPClientTextSource",
+    "HTTPClientLineSource",
+    "HTTPClientWebSocketSink",
+    "WebServiceSource",
+    "WebServiceSink",
+    "WebSocketSource",
+    "HTTPBatchLookupProvider",
 )

@@ -7,356 +7,368 @@ L = logging.getLogger(__file__)
 
 
 class BSPumpService(asab.Service):
-	"""
-	Service registry based on Service object. Read more in ASAB documentation `Service <https://asab.readthedocs.io/en/latest/asab/service.html`_.
+    """
+    Service registry based on Service object. Read more in ASAB documentation `Service <https://asab.readthedocs.io/en/latest/asab/service.html`_.
 
-	"""
+    """
 
-	def __init__(self, app, service_name="bspump.PumpService"):
-		"""
-		Initializes parameters passed to the Service class.
+    def __init__(self, app, service_name="bspump.PumpService"):
+        """
+        Initializes parameters passed to the Service class.
 
-		**Parameters**
+        **Parameters**
 
-		app : Application
-				Name of the `Application <https://asab.readthedocs.io/en/latest/asab/application.html>`_.
+        app : Application
+                        Name of the `Application <https://asab.readthedocs.io/en/latest/asab/application.html>`_.
 
-		service_name : str, Service name
-				string variable containing ""bspump.PumpService
+        service_name : str, Service name
+                        string variable containing ""bspump.PumpService
 
 
-		|
+        |
 
-		"""
-		super().__init__(app, service_name)
+        """
+        super().__init__(app, service_name)
 
-		self.Pipelines = dict()
-		self.Connections = dict()
-		self.Lookups = dict()
-		self.LookupFactories = []
-		self.Matrixes = dict()
+        self.Pipelines = dict()
+        self.Connections = dict()
+        self.Lookups = dict()
+        self.LookupFactories = []
+        self.Matrixes = dict()
 
-		self.App = app
+        self.App = app
 
+    def locate(self, address):
+        """
+        Locates a pipeline, source or processor based on the addressed parameter.
 
-	def locate(self, address):
-		"""
-		Locates a pipeline, source or processor based on the addressed parameter.
+        **Parameters**
 
-		**Parameters**
+        address : str, ID
+                        Address of an pipeline component.
+                        1. To locate a Pipeline, use the pipeline ID.
+                        2. To locate a Processor or a Sink, use the pipeline ID and the component ID separated by a dot, like 'pipelineId.componentId'.
+                        3. To locate a Source, add '*' before ID of the source, like 'pipeline.*SourceId'.
 
-		address : str, ID
-				Address of an pipeline component.
-				1. To locate a Pipeline, use the pipeline ID.
-				2. To locate a Processor or a Sink, use the pipeline ID and the component ID separated by a dot, like 'pipelineId.componentId'.
-				3. To locate a Source, add '*' before ID of the source, like 'pipeline.*SourceId'.
+        **Returns**
 
-		**Returns**
+        Pipeline, Source or Processor object if it is found in the components list, otherwise None.
 
-		Pipeline, Source or Processor object if it is found in the components list, otherwise None.
+        **Usage**
 
-		**Usage**
+        >>> pipeline = service.locate("SuperCoolPipeline")
+        >>> pipeline.Id
+        SuperCoolPipeline
 
-		>>> pipeline = service.locate("SuperCoolPipeline")
-		>>> pipeline.Id
-		SuperCoolPipeline
+        >>> processor = service.locate("SuperCoolPipeline.PPrintProcessor")
+        >>> processor.Id
+        PPrintProcessor
 
-		>>> processor = service.locate("SuperCoolPipeline.PPrintProcessor")
-		>>> processor.Id
-		PPrintProcessor
+        >>> source = service.locate("SuperCoolPipeline.*MySource")
+        >>> source.Id
+        MySource
+        """
+        if "." in address:
+            p, t = address.split(".", 1)
+        else:
+            p = address
+            t = None
+        pipeline = self.Pipelines.get(p)
+        if pipeline is None:
+            return None
+        elif t is None:
+            return pipeline
 
-		>>> source = service.locate("SuperCoolPipeline.*MySource")
-		>>> source.Id
-		MySource
-		"""
-		if '.' in address:
-			p, t = address.split('.', 1)
-		else:
-			p = address
-			t = None
-		pipeline = self.Pipelines.get(p)
-		if pipeline is None:
-			return None
-		elif t is None:
-			return pipeline
+        if t[:1] == "*":
+            for source in pipeline.Sources:
+                if source.Id == t[1:]:
+                    return source
+        else:
+            for processor in pipeline.iter_processors():
+                if processor.Id == t:
+                    return processor
 
-		if t[:1] == '*':
-			for source in pipeline.Sources:
-				if source.Id == t[1:]:
-					return source
-		else:
-			for processor in pipeline.iter_processors():
-				if processor.Id == t:
-					return processor
+        return None
 
-		return None
+    # Pipelines
 
-	# Pipelines
+    def add_pipeline(self, pipeline):
+        """
+        Adds a pipeline to the BSPump.
 
-	def add_pipeline(self, pipeline):
-		"""
-		Adds a pipeline to the BSPump.
+        **Parameters**
 
-		**Parameters**
+        pipeline : Pipeline
+                        Name of the Pipeline.
 
-		pipeline : Pipeline
-				Name of the Pipeline.
+        """
+        if pipeline.Id in self.Pipelines:
+            raise RuntimeError(
+                "Pipeline with id '{}' is already registered".format(pipeline.Id)
+            )
 
-		"""
-		if pipeline.Id in self.Pipelines:
-			raise RuntimeError("Pipeline with id '{}' is already registered".format(pipeline.Id))
-		
-		if self.App.MQTTService is not None:
-			self.App.MQTTService.add_pipeline(pipeline.Id)
-		
-		self.Pipelines[pipeline.Id] = pipeline
+        if self.App.MQTTService is not None:
+            self.App.MQTTService.add_pipeline(pipeline.Id)
 
-	def add_pipelines(self, *pipelines):
-		"""
-		Adds a pipelines the BSPump.
+        self.Pipelines[pipeline.Id] = pipeline
 
-		**Parameters**
+    def add_pipelines(self, *pipelines):
+        """
+        Adds a pipelines the BSPump.
 
-		*pipelines : list
-				List of pipelines that are add to the BSPump.
+        **Parameters**
 
-		"""
-		for pipeline in pipelines:
-			self.add_pipeline(pipeline)
+        *pipelines : list
+                        List of pipelines that are add to the BSPump.
 
-	def del_pipeline(self, pipeline):
-		"""
-		Deletes a pipeline from a list of Pipelines.
+        """
+        for pipeline in pipelines:
+            self.add_pipeline(pipeline)
 
-		**Parameters*
+    def del_pipeline(self, pipeline):
+        """
+        Deletes a pipeline from a list of Pipelines.
 
-		pipeline : str, ID
-				ID of a pipeline.
+        **Parameters*
 
-		"""
-		del self.Pipelines[pipeline.Id]
+        pipeline : str, ID
+                        ID of a pipeline.
 
-	# Connections
+        """
+        del self.Pipelines[pipeline.Id]
 
-	def add_connection(self, connection):
-		"""
-		Adds a connection to the Connection dictionary.
+    # Connections
 
-		**Parameters**
+    def add_connection(self, connection):
+        """
+        Adds a connection to the Connection dictionary.
 
-		connection : str, ID
-				ID of a connection.
+        **Parameters**
 
+        connection : str, ID
+                        ID of a connection.
 
-		:return: connection
 
-		"""
-		if connection.Id in self.Connections:
-			raise RuntimeError("Connection '{}' already created".format(connection.Id))
-		self.Connections[connection.Id] = connection
-		return connection
+        :return: connection
 
-	def add_connections(self, *connections):
-		"""
-		Adds a connections to the Connection dictionary.
+        """
+        if connection.Id in self.Connections:
+            raise RuntimeError("Connection '{}' already created".format(connection.Id))
+        self.Connections[connection.Id] = connection
+        return connection
 
-		**Parameters**
+    def add_connections(self, *connections):
+        """
+        Adds a connections to the Connection dictionary.
 
-		*connection : str, ID
-				list of IDs of a connections.
+        **Parameters**
 
-		"""
-		for connection in connections:
-			self.add_connection(connection)
+        *connection : str, ID
+                        list of IDs of a connections.
 
-	def locate_connection(self, connection_id):
-		"""
-		Locates connection based on connection ID.
+        """
+        for connection in connections:
+            self.add_connection(connection)
 
-		**Parameters**
+    def locate_connection(self, connection_id):
+        """
+        Locates connection based on connection ID.
 
-		connection_id : ID
-				Connection ID.
+        **Parameters**
 
-		"""
-		from .abc.connection import Connection
-		if isinstance(connection_id, Connection):
-			return connection_id
-		try:
-			return self.Connections[connection_id]
-		except KeyError:
-			raise KeyError(
-				"Cannot find connection id '{}' (did you call add_connection() before add_pipeline() ?)".format(connection_id)
-			)
+        connection_id : ID
+                        Connection ID.
 
-	# Lookups
+        """
+        from .abc.connection import Connection
 
-	def add_lookup(self, lookup):
-		"""
-		Sets a lookup based on Lookup.
+        if isinstance(connection_id, Connection):
+            return connection_id
+        try:
+            return self.Connections[connection_id]
+        except KeyError:
+            raise KeyError(
+                "Cannot find connection id '{}' (did you call add_connection() before add_pipeline() ?)".format(
+                    connection_id
+                )
+            )
 
-		**Parameters**
+    # Lookups
 
-		lookup : Lookup
-				Name of the Lookup.
+    def add_lookup(self, lookup):
+        """
+        Sets a lookup based on Lookup.
 
-		:return: lookup
+        **Parameters**
 
-		"""
-		if lookup.Id in self.Lookups:
-			raise RuntimeError("Lookup '{}' already created".format(lookup.Id))
-		self.Lookups[lookup.Id] = lookup
-		return lookup
+        lookup : Lookup
+                        Name of the Lookup.
 
-	def add_lookups(self, *lookups):
-		"""
-		Adds a list of lookups to the Pipeline.
+        :return: lookup
 
-		**Parameters**
+        """
+        if lookup.Id in self.Lookups:
+            raise RuntimeError("Lookup '{}' already created".format(lookup.Id))
+        self.Lookups[lookup.Id] = lookup
+        return lookup
 
-		lookup : Lookup
-				List of Lookups.
+    def add_lookups(self, *lookups):
+        """
+        Adds a list of lookups to the Pipeline.
 
-		"""
-		for lookup in lookups:
-			self.add_lookup(lookup)
+        **Parameters**
 
-	def locate_lookup(self, lookup_id, context=None):
-		"""
-		Locates lookup based on ID.
+        lookup : Lookup
+                        List of Lookups.
 
-		**Parameters**
+        """
+        for lookup in lookups:
+            self.add_lookup(lookup)
 
-		lookup_id : ID
-				ID of a Lookup.
+    def locate_lookup(self, lookup_id, context=None):
+        """
+        Locates lookup based on ID.
 
-		context : ,default = None
-				Additional information.
+        **Parameters**
 
-		:return: lookup from the lookup service or form the internal dictionary.
+        lookup_id : ID
+                        ID of a Lookup.
 
-		"""
-		from .abc.lookup import Lookup
-		if isinstance(lookup_id, Lookup):
-			return lookup_id
+        context : ,default = None
+                        Additional information.
 
-		# TODO: Make sure the lookup is always properly returned
-		# #1 - Return lookup from the lookup service
-		for lookup_factory in self.LookupFactories:
-			lookup = lookup_factory.locate_lookup(lookup_id, context)
-			if lookup is not None:
-				return lookup
+        :return: lookup from the lookup service or form the internal dictionary.
 
-		# #2 - Return lookup from the internal dictionary
-		try:
-			return self.Lookups[lookup_id]
-		except KeyError:
-			pass
+        """
+        from .abc.lookup import Lookup
 
-		raise KeyError("Cannot find lookup id '{}' (did you call add_lookup() ?)".format(lookup_id))
+        if isinstance(lookup_id, Lookup):
+            return lookup_id
 
-	def add_lookup_factory(self, lookup_factory):
-		"""
-		Adds a lookup factory
+        # TODO: Make sure the lookup is always properly returned
+        # #1 - Return lookup from the lookup service
+        for lookup_factory in self.LookupFactories:
+            lookup = lookup_factory.locate_lookup(lookup_id, context)
+            if lookup is not None:
+                return lookup
 
-		**Parameters**
+        # #2 - Return lookup from the internal dictionary
+        try:
+            return self.Lookups[lookup_id]
+        except KeyError:
+            pass
 
-		lookup_factory :
-				Name of lookup factory.
+        raise KeyError(
+            "Cannot find lookup id '{}' (did you call add_lookup() ?)".format(lookup_id)
+        )
 
-		"""
-		self.LookupFactories.append(lookup_factory)
+    def add_lookup_factory(self, lookup_factory):
+        """
+        Adds a lookup factory
 
+        **Parameters**
 
-	# Matrixes
+        lookup_factory :
+                        Name of lookup factory.
 
-	def add_matrix(self, matrix):
-		"""
-		Adds a matrix to the Pipeline.
+        """
+        self.LookupFactories.append(lookup_factory)
 
-		**Parameters**
+    # Matrixes
 
-		matrix : Matrix
-				Name of Matrix.
+    def add_matrix(self, matrix):
+        """
+        Adds a matrix to the Pipeline.
 
-		:return: matrix
+        **Parameters**
 
-		"""
-		if matrix.Id in self.Matrixes:
-			raise RuntimeError("Matrix '{}' already created".format(matrix.Id))
+        matrix : Matrix
+                        Name of Matrix.
 
-		self.Matrixes[matrix.Id] = matrix
-		return matrix
+        :return: matrix
 
-	def add_matrixes(self, *matrixes):
-		"""
-		Adds a list of Matrices to the Pipeline.
+        """
+        if matrix.Id in self.Matrixes:
+            raise RuntimeError("Matrix '{}' already created".format(matrix.Id))
 
-		**Parameters**
+        self.Matrixes[matrix.Id] = matrix
+        return matrix
 
-		*matrixes : list
-				List of matrices.
+    def add_matrixes(self, *matrixes):
+        """
+        Adds a list of Matrices to the Pipeline.
 
-		"""
-		for matrix in matrixes:
-			self.add_matrix(matrix)
+        **Parameters**
 
-	def locate_matrix(self, matrix_id):
-		"""
-		Locates a matrix based on matrix ID
+        *matrixes : list
+                        List of matrices.
 
-		**Parameters**
+        """
+        for matrix in matrixes:
+            self.add_matrix(matrix)
 
-		matrix_id : str, ID
-				ID of a matrix.
+    def locate_matrix(self, matrix_id):
+        """
+        Locates a matrix based on matrix ID
 
-		"""
-		from .matrix.matrix import Matrix
-		if isinstance(matrix_id, Matrix):
-			return matrix_id
-		try:
-			return self.Matrixes[matrix_id]
-		except KeyError:
-			raise KeyError("Cannot find matrix id '{}' (did you call add_matrix() ?)".format(matrix_id))
+        **Parameters**
 
-	#
+        matrix_id : str, ID
+                        ID of a matrix.
 
-	async def initialize(self, app):
-		"""
-		Initializes an Application based on ASAB `Application <https://asab.readthedocs.io/en/latest/asab/application.html>`_
+        """
+        from .matrix.matrix import Matrix
 
-		**Parameters**
+        if isinstance(matrix_id, Matrix):
+            return matrix_id
+        try:
+            return self.Matrixes[matrix_id]
+        except KeyError:
+            raise KeyError(
+                "Cannot find matrix id '{}' (did you call add_matrix() ?)".format(
+                    matrix_id
+                )
+            )
 
-		app : Application
-				Name of the `Application <https://asab.readthedocs.io/en/latest/asab/application.html>`_
+    #
 
-		"""
-		# Run initialization of lookups
-		lookup_update_tasks = []
-		for lookup in self.Lookups.values():
-			if not lookup.Lazy:
-				lookup_update_tasks.append(lookup.ensure_future_update(app.Loop))
+    async def initialize(self, app):
+        """
+        Initializes an Application based on ASAB `Application <https://asab.readthedocs.io/en/latest/asab/application.html>`_
 
-		# Await all lookups
-		if len(lookup_update_tasks) > 0:
-			done, pending = await asyncio.wait(lookup_update_tasks)
+        **Parameters**
 
-		# Start all pipelines
-		for pipeline in self.Pipelines.values():
-			pipeline.start()
+        app : Application
+                        Name of the `Application <https://asab.readthedocs.io/en/latest/asab/application.html>`_
 
+        """
+        # Run initialization of lookups
+        lookup_update_tasks = []
+        for lookup in self.Lookups.values():
+            if not lookup.Lazy:
+                lookup_update_tasks.append(lookup.ensure_future_update(app.Loop))
 
-	async def finalize(self, app):
-		"""
-		Stops all the pipelines
+        # Await all lookups
+        if len(lookup_update_tasks) > 0:
+            done, pending = await asyncio.wait(lookup_update_tasks)
 
-		**Parameters**
+        # Start all pipelines
+        for pipeline in self.Pipelines.values():
+            pipeline.start()
 
-		app : Application
-				Name of the `Application <https://asab.readthedocs.io/en/latest/asab/application.html>`_
+    async def finalize(self, app):
+        """
+        Stops all the pipelines
 
-		:return:
-		"""
-		# Stop all started pipelines
-		if len(self.Pipelines) > 0:
-			await asyncio.gather(*[pipeline.stop() for pipeline in self.Pipelines.values()])
+        **Parameters**
+
+        app : Application
+                        Name of the `Application <https://asab.readthedocs.io/en/latest/asab/application.html>`_
+
+        :return:
+        """
+        # Stop all started pipelines
+        if len(self.Pipelines) > 0:
+            await asyncio.gather(
+                *[pipeline.stop() for pipeline in self.Pipelines.values()]
+            )

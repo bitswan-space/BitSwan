@@ -4,7 +4,7 @@ from .blocksink import GoogleDriveBlockSink
 
 
 __all__ = (
-	'GoogleDriveConnection',
-	'GoogleDriveABCSink',
-	'GoogleDriveBlockSink',
+    "GoogleDriveConnection",
+    "GoogleDriveABCSink",
+    "GoogleDriveBlockSink",
 )

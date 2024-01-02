@@ -14,180 +14,205 @@ L = logging.getLogger(__name__)
 
 
 class InfluxDBConnection(Connection):
-	"""
-	Description: InfluxDBConnection serves to connect BSPump application with an InfluxDB database.
-	The InfluxDB server is accessed via URL, and the database is specified using the `db` parameter
-	in the configuration. Current version of InfluxDB defaultly works with timestamp in epoch nanoseconds.
-	If you want to use different epoch format, you must specify it using precision in configuration
+    """
+            Description: InfluxDBConnection serves to connect BSPump application with an InfluxDB database.
+            The InfluxDB server is accessed via URL, and the database is specified using the `db` parameter
+            in the configuration. Current version of InfluxDB defaultly works with timestamp in epoch nanoseconds.
+            If you want to use different epoch format, you must specify it using precision in configuration
 
-.. code:: python
+    .. code:: python
 
-	app = bspump.BSPumpApplication()
-	svc = app.get_service("bspump.PumpService")
-	svc.add_connection(
-		bspump.influxdb.InfluxDBConnection(app, "InfluxConnection1")
-	)
+            app = bspump.BSPumpApplication()
+            svc = app.get_service("bspump.PumpService")
+            svc.add_connection(
+                    bspump.influxdb.InfluxDBConnection(app, "InfluxConnection1")
+            )
 
-	**Config Default**
+            **Config Default**
 
-	url : http://localhost:8086/
+            url : http://localhost:8086/
 
-	db : name of db
+            db : name of db
 
-	precision : ns (epoch timestamp precision. Default is ns, but can have us,ms,s)
+            precision : ns (epoch timestamp precision. Default is ns, but can have us,ms,s)
 
-	output_queue_max_size : 10
+            output_queue_max_size : 10
 
-	output_bucket_max_size : 1000 * 1000
+            output_bucket_max_size : 1000 * 1000
 
-	timout : 30
+            timout : 30
 
-	retry_enabled : False
+            retry_enabled : False
 
-	response_codes_to_retry : 404, 502, 503, 504
+            response_codes_to_retry : 404, 502, 503, 504
 
-	"""
+    """
 
-	ConfigDefaults = {
-		"url": 'http://localhost:8086/',
-		'db': 'mydb',
-		'precision': 'ns',
-		'output_queue_max_size': 10,
-		'output_bucket_max_size': 1000 * 1000,
-		'timeout': 30,
-		'retry_enabled': False,
-		'response_codes_to_retry': '404,502,503,504'
-	}
+    ConfigDefaults = {
+        "url": "http://localhost:8086/",
+        "db": "mydb",
+        "precision": "ns",
+        "output_queue_max_size": 10,
+        "output_bucket_max_size": 1000 * 1000,
+        "timeout": 30,
+        "retry_enabled": False,
+        "response_codes_to_retry": "404,502,503,504",
+    }
 
-	def __init__(self, app, id=None, config=None):
-		"""
-		Description:
+    def __init__(self, app, id=None, config=None):
+        """
+        Description:
 
-		**Parameters**
+        **Parameters**
 
-		app : Application
-			Name of the Application.
+        app : Application
+                Name of the Application.
 
-		id : ID, default = None
+        id : ID, default = None
 
-		config : JSON, default = None
-			Configuration file with additional information.
+        config : JSON, default = None
+                Configuration file with additional information.
 
-		"""
-		super().__init__(app, id=id, config=config)
+        """
+        super().__init__(app, id=id, config=config)
 
-		self.url = self.Config["url"].strip()
-		if self.url[-1] != '/':
-			self.url += '/'
+        self.url = self.Config["url"].strip()
+        if self.url[-1] != "/":
+            self.url += "/"
 
-		self._url_write = self.url + 'write?db=' + self.Config["db"] + '&precision=' + self.Config["precision"]
+        self._url_write = (
+            self.url
+            + "write?db="
+            + self.Config["db"]
+            + "&precision="
+            + self.Config["precision"]
+        )
 
-		self._output_bucket_max_size = int(self.Config["output_bucket_max_size"])
-		self._output_queue_max_size = int(self.Config['output_queue_max_size'])
-		self._timeout = aiohttp.ClientTimeout(total=int(self.Config['timeout']))
-		self.RetryEnabled = self.Config.getboolean("retry_enabled")
+        self._output_bucket_max_size = int(self.Config["output_bucket_max_size"])
+        self._output_queue_max_size = int(self.Config["output_queue_max_size"])
+        self._timeout = aiohttp.ClientTimeout(total=int(self.Config["timeout"]))
+        self.RetryEnabled = self.Config.getboolean("retry_enabled")
 
-		self.AllowedBulkResponseCodes = frozenset(
-			[int(x) for x in re.findall(r"[0-9]+", self.Config['response_codes_to_retry'])]
-		)
+        self.AllowedBulkResponseCodes = frozenset(
+            [
+                int(x)
+                for x in re.findall(r"[0-9]+", self.Config["response_codes_to_retry"])
+            ]
+        )
 
-		self._output_queue = asyncio.Queue()
-		self._started = True
+        self._output_queue = asyncio.Queue()
+        self._started = True
 
-		self._output_bucket = ""
+        self._output_bucket = ""
 
-		self.PubSub = app.PubSub
-		self.PubSub.subscribe("Application.tick!", self._on_tick)
-		self.PubSub.subscribe("Application.exit!", self._on_exit)
+        self.PubSub = app.PubSub
+        self.PubSub.subscribe("Application.tick!", self._on_tick)
+        self.PubSub.subscribe("Application.exit!", self._on_exit)
 
-		self._future = asyncio.ensure_future(self._loader())
+        self._future = asyncio.ensure_future(self._loader())
 
-	def consume(self, data):
-		"""
-		Description: Consumes user-defined data to be stored in the InfluxDB database.
+    def consume(self, data):
+        """
+        Description: Consumes user-defined data to be stored in the InfluxDB database.
 
-		**Parameters**
+        **Parameters**
 
-		data :
+        data :
 
-		"""
-		self._output_bucket += data
-		if len(self._output_bucket) > self._output_bucket_max_size:
-			self.flush()
+        """
+        self._output_bucket += data
+        if len(self._output_bucket) > self._output_bucket_max_size:
+            self.flush()
 
-	async def _on_exit(self, event_name):
-		self._started = False
-		self.flush()
-		await self._output_queue.put(None)  # By sending None via queue, we signalize end of life
-		await self._future  # Wait till the _loader() terminates
+    async def _on_exit(self, event_name):
+        self._started = False
+        self.flush()
+        await self._output_queue.put(
+            None
+        )  # By sending None via queue, we signalize end of life
+        await self._future  # Wait till the _loader() terminates
 
-	async def _on_tick(self, event_name):
-		if self._started and self._future.done():
-			# Ups, _loader() task crashed during runtime, we need to restart it
-			try:
-				r = self._future.result()
-				# This error should never happen
-				L.error("Influx error observed, returned: '{}' (should be None)".format(r))
-			except Exception as e:
-				L.exception(f"Influx error, {e}, observed, restoring the order")
+    async def _on_tick(self, event_name):
+        if self._started and self._future.done():
+            # Ups, _loader() task crashed during runtime, we need to restart it
+            try:
+                r = self._future.result()
+                # This error should never happen
+                L.error(
+                    "Influx error observed, returned: '{}' (should be None)".format(r)
+                )
+            except Exception as e:
+                L.exception(f"Influx error, {e}, observed, restoring the order")
 
-			self._future = asyncio.ensure_future(self._loader())
-		self.flush()
+            self._future = asyncio.ensure_future(self._loader())
+        self.flush()
 
-	def flush(self, event_name=None):
-		"""
-		Description: Directly flushes the content of the internal bucket with data to InfluxDB database.
+    def flush(self, event_name=None):
+        """
+        Description: Directly flushes the content of the internal bucket with data to InfluxDB database.
 
-		**Parameters**
+        **Parameters**
 
-		event_name : ?, default = None
+        event_name : ?, default = None
 
-		"""
-		if len(self._output_bucket) == 0:
-			return
+        """
+        if len(self._output_bucket) == 0:
+            return
 
-		assert (self._output_bucket is not None)
-		self._output_queue.put_nowait(self._output_bucket)
-		self._output_bucket = ""
+        assert self._output_bucket is not None
+        self._output_queue.put_nowait(self._output_bucket)
+        self._output_bucket = ""
 
-		if self._output_queue.qsize() == self._output_queue_max_size:
-			self.PubSub.publish("InfluxDBConnection.pause!", self)
+        if self._output_queue.qsize() == self._output_queue_max_size:
+            self.PubSub.publish("InfluxDBConnection.pause!", self)
 
-	async def _loader(self):
-		# A cycle that regularly sends buckets if there are any
-		while self._started:
-			_output_bucket = await self._output_queue.get()
-			if _output_bucket is None:
-				break
+    async def _loader(self):
+        # A cycle that regularly sends buckets if there are any
+        while self._started:
+            _output_bucket = await self._output_queue.get()
+            if _output_bucket is None:
+                break
 
-			if self._output_queue.qsize() == self._output_queue_max_size - 1:
-				self.PubSub.publish("InfluxDBConnection.unpause!", self, asynchronously=True)
+            if self._output_queue.qsize() == self._output_queue_max_size - 1:
+                self.PubSub.publish(
+                    "InfluxDBConnection.unpause!", self, asynchronously=True
+                )
 
-			# Sending the data asynchronously
+            # Sending the data asynchronously
 
-			try:
-				async with aiohttp.ClientSession(timeout=self._timeout) as session:
-					async with session.post(self._url_write, data=_output_bucket) as resp:
-						resp_body = await resp.text()
-						if resp.status in self.AllowedBulkResponseCodes and self.RetryEnabled:
-							L.warning(
-								f"Retryable response code recieved, retrying. Queue size {self._output_queue.qsize()}"
-							)
-							self._output_queue.put_nowait(_output_bucket)
-							self.PubSub.publish("InfluxDBConnection.pause!", self)
-							await asyncio.sleep(3)
-							self.PubSub.publish("InfluxDBConnection.unpause!", self)
+            try:
+                async with aiohttp.ClientSession(timeout=self._timeout) as session:
+                    async with session.post(
+                        self._url_write, data=_output_bucket
+                    ) as resp:
+                        resp_body = await resp.text()
+                        if (
+                            resp.status in self.AllowedBulkResponseCodes
+                            and self.RetryEnabled
+                        ):
+                            L.warning(
+                                f"Retryable response code recieved, retrying. Queue size {self._output_queue.qsize()}"
+                            )
+                            self._output_queue.put_nowait(_output_bucket)
+                            self.PubSub.publish("InfluxDBConnection.pause!", self)
+                            await asyncio.sleep(3)
+                            self.PubSub.publish("InfluxDBConnection.unpause!", self)
 
-						elif resp.status is None:
-							L.error(
-								"Failed to insert a line into Influx status:{} body:{}".format(resp.status, resp_body))
-							raise RuntimeError("Failed to insert line into Influx")
+                        elif resp.status is None:
+                            L.error(
+                                "Failed to insert a line into Influx status:{} body:{}".format(
+                                    resp.status, resp_body
+                                )
+                            )
+                            raise RuntimeError("Failed to insert line into Influx")
 
-			# Here we define errors, that we want to retry
-			except OSError:
-				if self.RetryEnabled:
-					L.warning(f"Retryable exception raised, retrying. Queue size {self._output_queue.qsize()}")
-					self._output_queue.put_nowait(_output_bucket)
-					self.PubSub.publish("InfluxDBConnection.pause!", self)
-					await asyncio.sleep(3)
-					self.PubSub.publish("InfluxDBConnection.unpause!", self)
+            # Here we define errors, that we want to retry
+            except OSError:
+                if self.RetryEnabled:
+                    L.warning(
+                        f"Retryable exception raised, retrying. Queue size {self._output_queue.qsize()}"
+                    )
+                    self._output_queue.put_nowait(_output_bucket)
+                    self.PubSub.publish("InfluxDBConnection.pause!", self)
+                    await asyncio.sleep(3)
+                    self.PubSub.publish("InfluxDBConnection.unpause!", self)

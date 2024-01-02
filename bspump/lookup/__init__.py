@@ -3,10 +3,10 @@ from .ipgeolookup import IPGeoLookup
 from .matrixlookup import MatrixLookup
 
 __all__ = (
-	'IPGeoLookup',
-	'MatrixLookup',
-	'Index',
-	'BitMapIndex',
-	'TreeRangeIndex',
-	'SliceIndex',
+    "IPGeoLookup",
+    "MatrixLookup",
+    "Index",
+    "BitMapIndex",
+    "TreeRangeIndex",
+    "SliceIndex",
 )

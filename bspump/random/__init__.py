@@ -4,7 +4,7 @@ from .randomenricher import RandomEnricher
 
 
 __all__ = (
-	'RandomDrop',
-	'RandomSource',
-	'RandomEnricher',
+    "RandomDrop",
+    "RandomSource",
+    "RandomEnricher",
 )

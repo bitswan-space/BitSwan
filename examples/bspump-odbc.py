@@ -13,80 +13,86 @@ L = logging.getLogger(__name__)
 
 ###
 
+
 class SideSwitchProcessor(bspump.Processor):
-
-	def process(self, context, event):
-		side = event.get("side")
-		if side == "DARK":
-			event["side"] = "LIGHT"
-		else:
-			event["side"] = "DARK"
-		return event
-
+    def process(self, context, event):
+        side = event.get("side")
+        if side == "DARK":
+            event["side"] = "LIGHT"
+        else:
+            event["side"] = "DARK"
+        return event
 
 
 class SamplePipeline(bspump.Pipeline):
-	def __init__(self, app, pipeline_id):
-		super().__init__(app, pipeline_id)
+    def __init__(self, app, pipeline_id):
+        super().__init__(app, pipeline_id)
 
-		self.build(
-			bspump.odbc.ODBCSource(app, self, "ODBCConnection1",
-				config={'query':'SELECT first_name, last_name, side FROM characters;'}
-			).on(
-				bspump.trigger.PubSubTrigger(app, "runodbcpipeline!")
-			),
-			bspump.common.PPrintProcessor(app, self),
-			SideSwitchProcessor(app, self),
-			bspump.common.PPrintProcessor(app, self),
-			bspump.odbc.ODBCSink(app, self, "ODBCConnection1", config={'query': 'INSERT INTO converted_characters (first_name, last_name, side) VALUES (?, ?, ?);', 'data': 'first_name,last_name,side'})
-		)
-
-
-if __name__ == '__main__':
-	"""
-	This is a bspump odbc application example. Follow these steps to run the app:
-	
-
-	Create table and insert data
-		```
-			mysql> create database sampledb;
-			mysql> use sampledb;
-			mysql> CREATE TABLE characters (id MEDIUMINT NOT NULL AUTO_INCREMENT,first_name VARCHAR(30), last_name VARCHAR(30), side VARCHAR(30), PRIMARY KEY (id));
-			mysql> CREATE TABLE converted_characters (id MEDIUMINT NOT NULL AUTO_INCREMENT,first_name VARCHAR(30), last_name VARCHAR(30), side VARCHAR(30), PRIMARY KEY (id));
-			mysql> INSERT INTO characters (first_name, last_name, side) VALUES ("obi-wan", "kenobi", "LIGHT"),("luke", "skywalker", "LIGHT"),("darth", "vader", "DARK"),("darth", "sidious", "DARK");
-		```
-
-		Configure bspump in `./etc/site.conf`
-		Caution: Providing incorrect connection configuration terminates the program with 'Abort trap 6'
-
-		```
-			[connection:ODBCConnection1]
-			user=username
-			password=password
-			db=sampledb
-			driver=MySQL ODBC 8.0 Unicode Driver
-		```
-
-		Run bspump
-		```
-		./bspump-odbc.py -c ./etc/site.conf
-		```
+        self.build(
+            bspump.odbc.ODBCSource(
+                app,
+                self,
+                "ODBCConnection1",
+                config={"query": "SELECT first_name, last_name, side FROM characters;"},
+            ).on(bspump.trigger.PubSubTrigger(app, "runodbcpipeline!")),
+            bspump.common.PPrintProcessor(app, self),
+            SideSwitchProcessor(app, self),
+            bspump.common.PPrintProcessor(app, self),
+            bspump.odbc.ODBCSink(
+                app,
+                self,
+                "ODBCConnection1",
+                config={
+                    "query": "INSERT INTO converted_characters (first_name, last_name, side) VALUES (?, ?, ?);",
+                    "data": "first_name,last_name,side",
+                },
+            ),
+        )
 
 
-	"""
-	app = bspump.BSPumpApplication()
-	svc = app.get_service("bspump.PumpService")
+if __name__ == "__main__":
+    """
+    This is a bspump odbc application example. Follow these steps to run the app:
 
-	# Create connection
-	svc.add_connection(
-		bspump.odbc.ODBCConnection(app, "ODBCConnection1")
-	)
 
-	# Construct and register Pipeline
-	pl = SamplePipeline(app, 'SamplePipeline')
-	svc.add_pipeline(pl)
+    Create table and insert data
+            ```
+                    mysql> create database sampledb;
+                    mysql> use sampledb;
+                    mysql> CREATE TABLE characters (id MEDIUMINT NOT NULL AUTO_INCREMENT,first_name VARCHAR(30), last_name VARCHAR(30), side VARCHAR(30), PRIMARY KEY (id));
+                    mysql> CREATE TABLE converted_characters (id MEDIUMINT NOT NULL AUTO_INCREMENT,first_name VARCHAR(30), last_name VARCHAR(30), side VARCHAR(30), PRIMARY KEY (id));
+                    mysql> INSERT INTO characters (first_name, last_name, side) VALUES ("obi-wan", "kenobi", "LIGHT"),("luke", "skywalker", "LIGHT"),("darth", "vader", "DARK"),("darth", "sidious", "DARK");
+            ```
 
-	# This is how pipeline is triggered:
-	app.PubSub.publish("runodbcpipeline!", asynchronously=True)
+            Configure bspump in `./etc/site.conf`
+            Caution: Providing incorrect connection configuration terminates the program with 'Abort trap 6'
 
-	app.run()
+            ```
+                    [connection:ODBCConnection1]
+                    user=username
+                    password=password
+                    db=sampledb
+                    driver=MySQL ODBC 8.0 Unicode Driver
+            ```
+
+            Run bspump
+            ```
+            ./bspump-odbc.py -c ./etc/site.conf
+            ```
+
+
+    """
+    app = bspump.BSPumpApplication()
+    svc = app.get_service("bspump.PumpService")
+
+    # Create connection
+    svc.add_connection(bspump.odbc.ODBCConnection(app, "ODBCConnection1"))
+
+    # Construct and register Pipeline
+    pl = SamplePipeline(app, "SamplePipeline")
+    svc.add_pipeline(pl)
+
+    # This is how pipeline is triggered:
+    app.PubSub.publish("runodbcpipeline!", asynchronously=True)
+
+    app.run()

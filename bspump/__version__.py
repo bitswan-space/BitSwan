@@ -8,5 +8,5 @@
 # https://www.python.org/dev/peps/pep-0440/
 
 
-__version__ = 'devel'
-__build__ = 'devel'
+__version__ = "devel"
+__build__ = "devel"

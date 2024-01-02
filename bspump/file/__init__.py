@@ -8,12 +8,12 @@ from .filelinesource import FileMultiLineSource
 from .lookupprovider import FileBatchLookupProvider
 
 __all__ = (
-	'FileBlockSink',
-	'FileBlockSource',
-	'FileCSVSink',
-	'FileCSVSource',
-	'FileJSONSource',
-	'FileLineSource',
-	'FileMultiLineSource',
-	'FileBatchLookupProvider',
+    "FileBlockSink",
+    "FileBlockSource",
+    "FileCSVSink",
+    "FileCSVSource",
+    "FileJSONSource",
+    "FileLineSource",
+    "FileMultiLineSource",
+    "FileBatchLookupProvider",
 )

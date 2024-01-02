@@ -2,18 +2,18 @@ from ..abc.sink import Sink
 
 
 class NullSink(Sink):
-	"""
-	Description:
+    """
+    Description:
 
-	|
+    |
 
-	"""
+    """
 
-	def process(self, context, event):
-		"""
-		Description:
+    def process(self, context, event):
+        """
+        Description:
 
-		|
+        |
 
-		"""
-		pass
+        """
+        pass

@@ -3,8 +3,8 @@ from .connection import SlackConnection
 
 
 __all__ = (
-	'SlackAbcSink',
-	'SlackMessageSink',
-	'SlackTextSink',
-	'SlackConnection',
+    "SlackAbcSink",
+    "SlackMessageSink",
+    "SlackTextSink",
+    "SlackConnection",
 )

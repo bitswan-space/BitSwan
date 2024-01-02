@@ -21,32 +21,39 @@ L = logging.getLogger(__name__)
 
 
 class MyApplication(BSPumpApplication):
-
     def __init__(self):
         super().__init__()
 
         svc = self.get_service("bspump.PumpService")
 
-        #Fill in connection parameters here
-        svc.add_connection(bspump.ftp.FTPConnection(self, "FTPConnection" ,
-                                                config={ 'hostname': '127.0.0.1',
-                                                         'username': 'user',
-                                                         'password': 'password',
-                                                         'port': 21
-                                                         }) )
+        # Fill in connection parameters here
+        svc.add_connection(
+            bspump.ftp.FTPConnection(
+                self,
+                "FTPConnection",
+                config={
+                    "hostname": "127.0.0.1",
+                    "username": "user",
+                    "password": "password",
+                    "port": 21,
+                },
+            )
+        )
         svc.add_pipeline(MyPipeline0(self))
+
 
 class MyPipeline0(Pipeline):
     def __init__(self, app, pipeline_id=None):
         super().__init__(app, pipeline_id)
-        #Default is root ,fill in specific path inside FTP if any remote_path'
+        # Default is root ,fill in specific path inside FTP if any remote_path'
         self.build(
-            bspump.ftp.FTPSource(app, self, "FTPConnection", config={'remote_path': '/',
-                                                                     'mode': 'r' })
-                .on(bspump.trigger.RunOnceTrigger(app)),
+            bspump.ftp.FTPSource(
+                app, self, "FTPConnection", config={"remote_path": "/", "mode": "r"}
+            ).on(bspump.trigger.RunOnceTrigger(app)),
             bspump.common.PPrintSink(app, self),
         )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     app = MyApplication()
     app.run()

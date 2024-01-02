@@ -3,41 +3,36 @@ from ..value.valueexpr import VALUE
 
 
 class STARTSWITH(Expression):
+    Attributes = {
+        "What": ["str"],
+        "Prefix": ["str"],
+    }
 
-	Attributes = {
-		"What": ["str"],
-		"Prefix": ["str"],
-	}
+    Category = "String"
 
-	Category = "String"
+    def __init__(self, app, *, arg_what, arg_prefix):
+        super().__init__(app)
 
+        if isinstance(arg_what, Expression):
+            self.What = arg_what
+        else:
+            self.What = VALUE(app, value=arg_what)
 
-	def __init__(self, app, *, arg_what, arg_prefix):
-		super().__init__(app)
+        if isinstance(arg_prefix, Expression):
+            self.Prefix = arg_prefix
+        else:
+            self.Prefix = VALUE(app, value=arg_prefix)
 
-		if isinstance(arg_what, Expression):
-			self.What = arg_what
-		else:
-			self.What = VALUE(app, value=arg_what)
+    def __call__(self, context, event, *args, **kwargs):
+        value = self.What(context, event, *args, **kwargs)
+        if value is None:
+            return False
 
-		if isinstance(arg_prefix, Expression):
-			self.Prefix = arg_prefix
-		else:
-			self.Prefix = VALUE(app, value=arg_prefix)
+        prefix = self.Prefix(context, event, *args, **kwargs)
+        return value.startswith(prefix)
 
+    def get_outlet_type(self):
+        return bool.__name__
 
-	def __call__(self, context, event, *args, **kwargs):
-		value = self.What(context, event, *args, **kwargs)
-		if value is None:
-			return False
-
-		prefix = self.Prefix(context, event, *args, **kwargs)
-		return value.startswith(prefix)
-
-
-	def get_outlet_type(self):
-		return bool.__name__
-
-
-	def consult_inlet_type(self, key, child):
-		return str.__name__
+    def consult_inlet_type(self, key, child):
+        return str.__name__

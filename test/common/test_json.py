@@ -5,73 +5,59 @@ import bspump.common
 
 
 class TestDictToJsonParser(bspump.unittest.ProcessorTestCase):
+    def test_dict_to_json(self):
+        events = [
+            (None, {"foo": "bar"}),
+            (None, {"fizz": "buzz"}),
+            (None, {"spam": "eggs"}),
+        ]
 
-	def test_dict_to_json(self):
-		events = [
-			(None, {'foo': 'bar'}),
-			(None, {'fizz': 'buzz'}),
-			(None, {'spam': 'eggs'}),
-		]
+        self.set_up_processor(bspump.common.DictToJsonParser)
 
-		self.set_up_processor(bspump.common.DictToJsonParser)
+        output = self.execute(events)
 
-		output = self.execute(
-			events
-		)
+        self.assertEqual(
+            [event for context, event in output],
+            ['{"foo": "bar"}', '{"fizz": "buzz"}', '{"spam": "eggs"}'],
+        )
 
-		self.assertEqual(
-			[event for context, event in output],
-			['{"foo": "bar"}', '{"fizz": "buzz"}', '{"spam": "eggs"}']
-		)
+    def test_event_not_dict(self):
+        events = [
+            "Not a dictionary",
+        ]
+        bspump.pipeline.L = MagicMock()  # turn off logging
+        self.set_up_processor(bspump.common.DictToJsonParser)
 
+        output = self.execute(events)
 
-	def test_event_not_dict(self):
-		events = [
-			"Not a dictionary",
-		]
-		bspump.pipeline.L = MagicMock()  # turn off logging
-		self.set_up_processor(bspump.common.DictToJsonParser)
-
-		output = self.execute(events)
-
-		self.assertTrue(self.Pipeline.is_error())
-		self.assertEqual(
-			[event for context, event in output],
-			[]
-		)
+        self.assertTrue(self.Pipeline.is_error())
+        self.assertEqual([event for context, event in output], [])
 
 
 class TestJsonToDictParser(bspump.unittest.ProcessorTestCase):
+    def test_json_to_dict(self):
+        events = {
+            (None, '{"key": "1"}'),
+            (None, '{"key": "2"}'),
+            (None, '{"key": "3"}'),
+        }
 
-	def test_json_to_dict(self):
-		events = {
-			(None, '{"key": "1"}'),
-			(None, '{"key": "2"}'),
-			(None, '{"key": "3"}'),
-		}
+        self.set_up_processor(bspump.common.StdJsonToDictParser)
 
-		self.set_up_processor(bspump.common.StdJsonToDictParser)
+        output = self.execute(events)
 
-		output = self.execute(
-			events
-		)
+        self.assertListEqual(
+            sorted([event for context, event in output], key=lambda d: int(d["key"])),
+            [{"key": "1"}, {"key": "2"}, {"key": "3"}],
+        )
 
-		self.assertListEqual(
-			sorted([event for context, event in output], key=lambda d: int(d["key"])),
-			[{"key": "1"}, {"key": "2"}, {"key": "3"}]
-		)
+    def test_event_not_str(self):
+        events = [
+            (None, {"Not a": "string"}),
+        ]
+        self.set_up_processor(bspump.common.StdJsonToDictParser)
 
+        output = self.execute(events)
 
-	def test_event_not_str(self):
-		events = [
-			(None, {"Not a": "string"}),
-		]
-		self.set_up_processor(bspump.common.StdJsonToDictParser)
-
-		output = self.execute(events)
-
-		self.assertTrue(self.Pipeline.is_error())
-		self.assertEqual(
-			[event for context, event in output],
-			[]
-		)
+        self.assertTrue(self.Pipeline.is_error())
+        self.assertEqual([event for context, event in output], [])

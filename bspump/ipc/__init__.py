@@ -10,10 +10,10 @@ StreamSource = StreamServerSource
 StreamSink = StreamClientSink
 
 __all__ = (
-	'DatagramSource',
-	'DatagramSink',
-	'StreamServerSource',
-	'StreamClientSink',
-	'StreamSink',
-	'StreamSource',
+    "DatagramSource",
+    "DatagramSink",
+    "StreamServerSource",
+    "StreamClientSink",
+    "StreamSink",
+    "StreamSource",
 )

@@ -5,8 +5,8 @@ from .lookup import MySQLLookup
 
 
 __all__ = (
-	'MySQLConnection',
-	'MySQLSource',
-	'MySQLSink',
-	'MySQLLookup',
+    "MySQLConnection",
+    "MySQLSource",
+    "MySQLSink",
+    "MySQLLookup",
 )

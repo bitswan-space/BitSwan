@@ -128,23 +128,23 @@ The closed anomalies are periodically flushed from the storage to an external sy
 
 
 class NetworkAnomaly(bspump.Anomaly):
-	"""
-	Custom anomaly class for network anomalies, that manages the anomaly's lifecycle.
-	"""
+    """
+    Custom anomaly class for network anomalies, that manages the anomaly's lifecycle.
+    """
 
-	TYPE = "network_down"  # This anomaly class will be used only for "network_down" anomalies
+    TYPE = "network_down"  # This anomaly class will be used only for "network_down" anomalies
 
-	def __init__(self):
-		super().__init__()
+    def __init__(self):
+        super().__init__()
 
-	async def on_tick(self, current_time):
-		if self["status"] == "closed":
-			return
+    async def on_tick(self, current_time):
+        if self["status"] == "closed":
+            return
 
-		# Close the anomaly when the status closed comes
-		for symptom in self["symptoms"]:
-			if symptom.get("status", "open") == "closed":
-				self["status"] = "closed"
+        # Close the anomaly when the status closed comes
+        for symptom in self["symptoms"]:
+            if symptom.get("status", "open") == "closed":
+                self["status"] = "closed"
 
 
 anomaly_classes = [NetworkAnomaly]
@@ -154,103 +154,114 @@ anomaly_classes = [NetworkAnomaly]
 
 
 class SymptomPipeline(bspump.Pipeline):
-	"""
-	Load the symptoms and create anomalies from them.
-	"""
+    """
+    Load the symptoms and create anomalies from them.
+    """
 
-	def __init__(self, app, pipeline_id, anomaly_storage):
-		super().__init__(app, pipeline_id)
+    def __init__(self, app, pipeline_id, anomaly_storage):
+        super().__init__(app, pipeline_id)
 
-		self.build(
-			bspump.file.FileLineSource(app, self, config={
-				'path': './data/anomalies.txt',
-				'post': 'noop',
-			}).on(bspump.trigger.OpportunisticTrigger(app)),
-			bspump.common.BytesToStringParser(app, self),
-			bspump.common.StdJsonToDictParser(app, self),
-			# Map the symptom to anomalies based on their key dimensions
-			bspump.anomaly.AnomalyAnalyzer(app, self, config={
-				"key_dimensions": "default:user_id;network_down:server_id"
-			}),
-			# Manage the lifecycle of anomalies
-			bspump.anomaly.AnomalyManager(app, self, anomaly_storage, anomaly_classes=anomaly_classes),
-			# Print the processed symptoms to the terminal
-			bspump.common.PPrintSink(app, self)
-		)
+        self.build(
+            bspump.file.FileLineSource(
+                app,
+                self,
+                config={
+                    "path": "./data/anomalies.txt",
+                    "post": "noop",
+                },
+            ).on(bspump.trigger.OpportunisticTrigger(app)),
+            bspump.common.BytesToStringParser(app, self),
+            bspump.common.StdJsonToDictParser(app, self),
+            # Map the symptom to anomalies based on their key dimensions
+            bspump.anomaly.AnomalyAnalyzer(
+                app,
+                self,
+                config={"key_dimensions": "default:user_id;network_down:server_id"},
+            ),
+            # Manage the lifecycle of anomalies
+            bspump.anomaly.AnomalyManager(
+                app, self, anomaly_storage, anomaly_classes=anomaly_classes
+            ),
+            # Print the processed symptoms to the terminal
+            bspump.common.PPrintSink(app, self),
+        )
 
 
 class IDVersionEnricher(bspump.Generator):
-	"""
-	The strategy for the storage to ElasticSearch may be different for every use case.
-	The following example stores the anomalies in ElasticSearch under their custom IDs
-	and backups the closed ones.
-	"""
+    """
+    The strategy for the storage to ElasticSearch may be different for every use case.
+    The following example stores the anomalies in ElasticSearch under their custom IDs
+    and backups the closed ones.
+    """
 
+    def __init__(self, app, pipeline, id=None, config=None):
+        super().__init__(app, pipeline, id, config)
+        self.App = app
 
-	def __init__(self, app, pipeline, id=None, config=None):
-		super().__init__(app, pipeline, id, config)
-		self.App = app
+    async def generate(self, context, event, depth):
+        current_time = int(self.App.time())
 
-	async def generate(self, context, event, depth):
-		current_time = int(self.App.time())
+        context = context["ancestor"]
 
-		context = context["ancestor"]
+        assert context.get("es_id") is not None
+        context["es_version"] = current_time
+        self.Pipeline.inject(context, event, depth)
 
-		assert context.get("es_id") is not None
-		context["es_version"] = current_time
-		self.Pipeline.inject(context, event, depth)
-
-		# Duplicate the event for backup
-		if event.get("status") == "closed":
-			context["es_version"] = "b_{}_{}".format(context["es_id"], context["es_version"])
-			event["backup"] = 1
-			self.Pipeline.inject(context, event, depth)
+        # Duplicate the event for backup
+        if event.get("status") == "closed":
+            context["es_version"] = "b_{}_{}".format(
+                context["es_id"], context["es_version"]
+            )
+            event["backup"] = 1
+            self.Pipeline.inject(context, event, depth)
 
 
 class AnomalyStoragePipeline(bspump.Pipeline):
-	"""
-	Persist the anomalies in the ElasticSearch.
-	"""
+    """
+    Persist the anomalies in the ElasticSearch.
+    """
 
-	def __init__(self, app, pipeline_id):
-		super().__init__(app, pipeline_id)
+    def __init__(self, app, pipeline_id):
+        super().__init__(app, pipeline_id)
 
-		self.build(
-			bspump.common.InternalSource(app, self, config={"queue_max_size": 0}),
-			IDVersionEnricher(app, self),
-			bspump.elasticsearch.ElasticSearchSink(app, self, "ESConnection", config={
-				"index_prefix": "bs_anomaly_"
-			}),
-		)
+        self.build(
+            bspump.common.InternalSource(app, self, config={"queue_max_size": 0}),
+            IDVersionEnricher(app, self),
+            bspump.elasticsearch.ElasticSearchSink(
+                app, self, "ESConnection", config={"index_prefix": "bs_anomaly_"}
+            ),
+        )
 
 
 # Register the storage, ES connection and pipelines and run the application
 
 
-if __name__ == '__main__':
-	app = bspump.BSPumpApplication()
-	svc = app.get_service("bspump.PumpService")
+if __name__ == "__main__":
+    app = bspump.BSPumpApplication()
+    svc = app.get_service("bspump.PumpService")
 
-	# Create and register all connections here
+    # Create and register all connections here
 
-	es_connection = bspump.elasticsearch.ElasticSearchConnection(app, "ESConnection", config={
-		"url": "http://localhost:9200"
-	})
-	svc.add_connection(es_connection)
+    es_connection = bspump.elasticsearch.ElasticSearchConnection(
+        app, "ESConnection", config={"url": "http://localhost:9200"}
+    )
+    svc.add_connection(es_connection)
 
-	# Create anomaly storage
+    # Create anomaly storage
 
-	anomaly_storage = bspump.anomaly.AnomalyStorage(app, es_connection, anomaly_classes=anomaly_classes)
+    anomaly_storage = bspump.anomaly.AnomalyStorage(
+        app, es_connection, anomaly_classes=anomaly_classes
+    )
 
-	# Create and register all pipelines here
+    # Create and register all pipelines here
 
-	anomaly_storage_pipeline = AnomalyStoragePipeline(app, "AnomalyStoragePipeline")
-	svc.add_pipeline(anomaly_storage_pipeline)
+    anomaly_storage_pipeline = AnomalyStoragePipeline(app, "AnomalyStoragePipeline")
+    svc.add_pipeline(anomaly_storage_pipeline)
 
-	anomaly_pipeline = SymptomPipeline(app, "SymptomPipeline", anomaly_storage)
-	svc.add_pipeline(anomaly_pipeline)
-	anomaly_storage.set_pipeline(anomaly_pipeline)
+    anomaly_pipeline = SymptomPipeline(app, "SymptomPipeline", anomaly_storage)
+    svc.add_pipeline(anomaly_pipeline)
+    anomaly_storage.set_pipeline(anomaly_pipeline)
 
-	# Run the application
+    # Run the application
 
-	app.run()
+    app.run()

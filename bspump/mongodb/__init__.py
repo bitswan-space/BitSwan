@@ -5,9 +5,9 @@ from .sink import MongoDBSink
 from .changestreamsource import MongoDBChangeStreamSource
 
 __all__ = (
-	'MongoDBChangeStreamSource',
-	'MongoDBConnection',
-	'MongoDBLookup',
-	'MongoDBSource',
-	'MongoDBSink',
+    "MongoDBChangeStreamSource",
+    "MongoDBConnection",
+    "MongoDBLookup",
+    "MongoDBSource",
+    "MongoDBSink",
 )

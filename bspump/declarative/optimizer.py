@@ -11,55 +11,55 @@ L = logging.getLogger(__name__)
 
 
 class ExpressionOptimizer(object):
-	"""
-	Optimizes an expression using walk strategy and individual optimize methods.
-	"""
+    """
+    Optimizes an expression using walk strategy and individual optimize methods.
+    """
 
-	def __init__(self, app):
-		self.App = app
+    def __init__(self, app):
+        self.App = app
 
+    def optimize(self, expression):
+        # We run optimizations till we finish tree walk without any optimization found
+        retry = True
+        counter = 0
+        while retry:
+            retry = False
 
-	def optimize(self, expression):
+            counter += 1
 
-		# We run optimizations till we finish tree walk without any optimization found
-		retry = True
-		counter = 0
-		while retry:
-			retry = False
+            if not isinstance(expression, Expression):
+                expression = VALUE(self.App, value=expression)
 
-			counter += 1
+            # Walk the syntax tree
+            for parent, key, obj in expression.walk():
+                if not isinstance(obj, Expression):
+                    continue
 
-			if not isinstance(expression, Expression):
-				expression = VALUE(self.App, value=expression)
+                # Check if the node could be optimized
+                opt_obj = obj.optimize()
+                if opt_obj is None:
+                    continue
 
-			# Walk the syntax tree
-			for parent, key, obj in expression.walk():
+                assert obj is not opt_obj
 
-				if not isinstance(obj, Expression):
-					continue
+                if parent is None:
+                    expression = opt_obj
+                else:
+                    # If yes, replace a given node by the optimized variant
+                    parent.set(key, opt_obj)
 
-				# Check if the node could be optimized
-				opt_obj = obj.optimize()
-				if opt_obj is None:
-					continue
+                if counter > 100000:
+                    raise RuntimeError(
+                        "Optimization likely stucked at '{}'-'{}'-'{}'/'{}'".format(
+                            parent, key, obj, opt_obj
+                        )
+                    )
 
-				assert(obj is not opt_obj)
+                # ... and start again
+                retry = True
+                break
 
-				if parent is None:
-					expression = opt_obj
-				else:
-					# If yes, replace a given node by the optimized variant
-					parent.set(key, opt_obj)
+        return expression
 
-				if counter > 100000:
-					raise RuntimeError("Optimization likely stucked at '{}'-'{}'-'{}'/'{}'".format(parent, key, obj, opt_obj))
-
-				# ... and start again
-				retry = True
-				break
-
-		return expression
-
-
-	def optimize_many(self, expressions):
-		return [self.optimize(expression) for expression in expressions]
+    def optimize_many(self, expressions):
+        return [self.optimize(expression) for expression in expressions]

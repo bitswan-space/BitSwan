@@ -3,6 +3,6 @@ from .smtpconnection import SmtpConnection
 
 
 __all__ = (
-	'SmtpSink',
-	'SmtpConnection',
+    "SmtpSink",
+    "SmtpConnection",
 )

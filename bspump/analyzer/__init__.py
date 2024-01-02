@@ -9,12 +9,12 @@ from .threshold import ThresholdAnalyzer
 
 
 __all__ = (
-	'Analyzer',
-	'TimeWindowAnalyzer',
-	'TimeDriftAnalyzer',
-	'SessionAnalyzer',
-	'GeoAnalyzer',
-	'LatchAnalyzer',
-	'AnalyzingSource',
-	'ThresholdAnalyzer',
+    "Analyzer",
+    "TimeWindowAnalyzer",
+    "TimeDriftAnalyzer",
+    "SessionAnalyzer",
+    "GeoAnalyzer",
+    "LatchAnalyzer",
+    "AnalyzingSource",
+    "ThresholdAnalyzer",
 )

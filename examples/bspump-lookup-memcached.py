@@ -15,8 +15,8 @@ L = logging.getLogger(__name__)
 
 ###
 
-class FileCSVEnricher(bspump.Processor):
 
+class FileCSVEnricher(bspump.Processor):
     def process(self, context, event):
         current_time = int(self.App.time())
         # get memcached
@@ -36,25 +36,24 @@ class FileCSVEnricher(bspump.Processor):
 
 
 class SamplePipeline(bspump.Pipeline):
-
     def __init__(self, app, pipeline_id):
         super().__init__(app, pipeline_id)
         self.build(
-            bspump.file.FileCSVSource(app, self, config={
-                'path': './data/city.csv',
-                'delimiter': ';',
-                'post': 'noop'
-            }).on(bspump.trigger.RunOnceTrigger(app)),
+            bspump.file.FileCSVSource(
+                app,
+                self,
+                config={"path": "./data/city.csv", "delimiter": ";", "post": "noop"},
+            ).on(bspump.trigger.RunOnceTrigger(app)),
             FileCSVEnricher(app, self),
-            bspump.common.PPrintSink(app, self)
+            bspump.common.PPrintSink(app, self),
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app = bspump.BSPumpApplication()
 
     svc = app.get_service("bspump.PumpService")
-    pl = SamplePipeline(app, 'SamplePipeline')
+    pl = SamplePipeline(app, "SamplePipeline")
     svc.add_pipeline(pl)
     pl.PubSub.publish("go!")
 

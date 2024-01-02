@@ -1,41 +1,41 @@
 class Anomaly(dict):
-	"""
-	Description: 	Anomaly is an abstract class to be overriden for a specific anomaly and its type.
+    """
+    Description: 	Anomaly is an abstract class to be overriden for a specific anomaly and its type.
 
-	:return:
+    :return:
 
-	Implement: TYPE, on_tick
+    Implement: TYPE, on_tick
 
-	|
+    |
 
-	"""
+    """
 
-	TYPE = None
+    TYPE = None
 
-	def is_closed(self):
-		"""
-		Description:
+    def is_closed(self):
+        """
+        Description:
 
-		:return: sets status to closed
+        :return: sets status to closed
 
-		|
+        |
 
-		"""
-		return self.get("status") == "closed"
+        """
+        return self.get("status") == "closed"
 
-	def close(self, current_time):
-		"""
-		Description:
+    def close(self, current_time):
+        """
+        Description:
 
-		"""
-		self["ts_end"] = current_time
-		self["D"] = self["ts_end"] - self["@timestamp"]
-		self["status"] = "closed"
+        """
+        self["ts_end"] = current_time
+        self["D"] = self["ts_end"] - self["@timestamp"]
+        self["status"] = "closed"
 
-	async def on_tick(self, current_time):
-		"""
-		Description:
+    async def on_tick(self, current_time):
+        """
+        Description:
 
-		:hint: Implement to perform operations on the anomaly, f. e. close.
-		"""
-		raise NotImplementedError()
+        :hint: Implement to perform operations on the anomaly, f. e. close.
+        """
+        raise NotImplementedError()

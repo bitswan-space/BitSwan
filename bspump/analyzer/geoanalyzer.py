@@ -8,73 +8,91 @@ L = logging.getLogger(__name__)
 
 
 class GeoAnalyzer(Analyzer):
-	'''
-		This is the analyzer for events with geographical points dimension.
+    """
+    This is the analyzer for events with geographical points dimension.
 
-		`GeoAnalyzer` operates over the `GeoMatrix` object.
-		`matrix_id` is an id of `GeoMatrix` object defined alternatively.
+    `GeoAnalyzer` operates over the `GeoMatrix` object.
+    `matrix_id` is an id of `GeoMatrix` object defined alternatively.
 
-		**Config Defaults**
+    **Config Defaults**
 
-		max_lat : 71.26
-		min_lat : 23.33
-		min_lon : -10.10
-		max_lon : 40.6
+    max_lat : 71.26
+    min_lat : 23.33
+    min_lon : -10.10
+    max_lon : 40.6
 
-	'''
+    """
 
-	ConfigDefaults = {
-		"max_lat": 71.26,  # Europe endpoints
-		"min_lat": 23.33,
-		"min_lon": -10.10,
-		"max_lon": 40.6,
-	}
+    ConfigDefaults = {
+        "max_lat": 71.26,  # Europe endpoints
+        "min_lat": 23.33,
+        "min_lon": -10.10,
+        "max_lon": 40.6,
+    }
 
-	def __init__(self, app, pipeline, matrix_id=None, dtype="float_", analyze_on_clock=False, bbox=None, resolution=5, persistent=False, id=None, config=None):
-		"""
-		Description:
+    def __init__(
+        self,
+        app,
+        pipeline,
+        matrix_id=None,
+        dtype="float_",
+        analyze_on_clock=False,
+        bbox=None,
+        resolution=5,
+        persistent=False,
+        id=None,
+        config=None,
+    ):
+        """
+        Description:
 
-		**Parameters**
+        **Parameters**
 
-		app : Application
-			Name of the Application.
+        app : Application
+                Name of the Application.
 
-		pipeline : Pipeline
-			Name of the Pipeline.
+        pipeline : Pipeline
+                Name of the Pipeline.
 
-		matrix_id : str, default = None
+        matrix_id : str, default = None
 
-		dtype : ??, default = "float_"
+        dtype : ??, default = "float_"
 
-		analyze_on_clock : bool, default = False
+        analyze_on_clock : bool, default = False
 
-		bbox : ??, default = None
+        bbox : ??, default = None
 
-		resolution : int, default = 5
+        resolution : int, default = 5
 
-		persistent : bool, default = False
+        persistent : bool, default = False
 
-		id : str, default = None
+        id : str, default = None
 
-		config = JSON, default = None
-			configuration file with additional information
+        config = JSON, default = None
+                configuration file with additional information
 
-		"""
-		super().__init__(app, pipeline, analyze_on_clock=analyze_on_clock, id=id, config=config)
-		svc = app.get_service("bspump.PumpService")
-		if matrix_id is None:
-			g_id = self.Id + "Matrix"
-			if bbox is None:
-				bbox = {
-					"min_lat": float(self.ConfigDefaults["min_lat"]),
-					"max_lat": float(self.ConfigDefaults["max_lat"]),
-					"min_lon": float(self.ConfigDefaults["min_lon"]),
-					"max_lon": float(self.ConfigDefaults["max_lon"]),
-				}
-			if persistent:
-				self.GeoMatrix = PersistentGeoMatrix(app, dtype, bbox=bbox, resolution=resolution, id=g_id, config=config)
-			else:
-				self.GeoMatrix = GeoMatrix(app, dtype, bbox=bbox, resolution=resolution, id=g_id, config=config)
-			svc.add_matrix(self.GeoMatrix)
-		else:
-			self.GeoMatrix = svc.locate_matrix(matrix_id)
+        """
+        super().__init__(
+            app, pipeline, analyze_on_clock=analyze_on_clock, id=id, config=config
+        )
+        svc = app.get_service("bspump.PumpService")
+        if matrix_id is None:
+            g_id = self.Id + "Matrix"
+            if bbox is None:
+                bbox = {
+                    "min_lat": float(self.ConfigDefaults["min_lat"]),
+                    "max_lat": float(self.ConfigDefaults["max_lat"]),
+                    "min_lon": float(self.ConfigDefaults["min_lon"]),
+                    "max_lon": float(self.ConfigDefaults["max_lon"]),
+                }
+            if persistent:
+                self.GeoMatrix = PersistentGeoMatrix(
+                    app, dtype, bbox=bbox, resolution=resolution, id=g_id, config=config
+                )
+            else:
+                self.GeoMatrix = GeoMatrix(
+                    app, dtype, bbox=bbox, resolution=resolution, id=g_id, config=config
+                )
+            svc.add_matrix(self.GeoMatrix)
+        else:
+            self.GeoMatrix = svc.locate_matrix(matrix_id)

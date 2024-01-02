@@ -3,7 +3,7 @@ from .source import ODBCSource
 from .sink import ODBCSink
 
 __all__ = (
-	'ODBCConnection',
-	'ODBCSource',
-	'ODBCSink',
+    "ODBCConnection",
+    "ODBCSource",
+    "ODBCSink",
 )

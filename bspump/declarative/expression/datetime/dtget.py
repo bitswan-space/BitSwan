@@ -7,61 +7,66 @@ from ...abc import Expression, evaluate
 
 
 class DATETIME_GET(Expression):
+    Attributes = {
+        "Value": ["*"],  # TODO: This ...
+        "What": ["*"],  # TODO: This ...
+        "Timezone": ["*"],  # TODO: This ...
+    }
 
-	Attributes = {
-		"Value": ["*"],  # TODO: This ...
-		"What": ["*"],  # TODO: This ...
-		"Timezone": ["*"],  # TODO: This ...
-	}
+    Category = "Date/Time"
 
-	Category = "Date/Time"
+    def __init__(self, app, *, arg_with, arg_what, arg_timezone=None):
+        super().__init__(app)
 
+        self.Value = arg_with
+        self.What = arg_what
 
-	def __init__(self, app, *, arg_with, arg_what, arg_timezone=None):
-		super().__init__(app)
+        if arg_what in (
+            "year",
+            "month",
+            "day",
+            "hour",
+            "minute",
+            "second",
+            "microsecond",
+        ):
+            self.Method = 1
+            self.What = arg_what
 
-		self.Value = arg_with
-		self.What = arg_what
+        elif arg_what in ("timestamp", "weekday", "isoweekday"):
+            self.Method = 2
+            self.What = arg_what
 
-		if arg_what in ('year', 'month', 'day', 'hour', 'minute', 'second', 'microsecond'):
-			self.Method = 1
-			self.What = arg_what
+        else:
+            raise ValueError("Invalid 'what' provided: '{}'".format(arg_what))
 
-		elif arg_what in ('timestamp', 'weekday', 'isoweekday'):
-			self.Method = 2
-			self.What = arg_what
+        if arg_timezone is None:
+            timezone_from_config = asab.Config["declarations"]["timezone"]
 
-		else:
-			raise ValueError("Invalid 'what' provided: '{}'".format(arg_what))
+            if len(timezone_from_config) == 0:
+                self.Timezone = None
 
-		if arg_timezone is None:
-			timezone_from_config = asab.Config["declarations"]["timezone"]
+            else:
+                self.Timezone = pytz.timezone(timezone_from_config)
 
-			if len(timezone_from_config) == 0:
-				self.Timezone = None
+        else:
+            self.Timezone = pytz.timezone(arg_timezone)
 
-			else:
-				self.Timezone = pytz.timezone(timezone_from_config)
+    def __call__(self, context, event, *args, **kwargs):
+        value = evaluate(self.Value, context, event, *args, **kwargs)
+        if isinstance(value, int) or isinstance(value, float):
+            value = datetime.datetime.utcfromtimestamp(value)
 
-		else:
-			self.Timezone = pytz.timezone(arg_timezone)
+        # Apply the timezone
+        if self.Timezone is not None:
+            value = self.Timezone.localize(value)
 
+        if self.Method == 1:
+            try:
+                return getattr(value, self.What)
+            except AttributeError:
+                return None
 
-	def __call__(self, context, event, *args, **kwargs):
-		value = evaluate(self.Value, context, event, *args, **kwargs)
-		if isinstance(value, int) or isinstance(value, float):
-			value = datetime.datetime.utcfromtimestamp(value)
-
-		# Apply the timezone
-		if self.Timezone is not None:
-			value = self.Timezone.localize(value)
-
-		if self.Method == 1:
-			try:
-				return getattr(value, self.What)
-			except AttributeError:
-				return None
-
-		elif self.Method == 2:
-			func = getattr(value, self.What)
-			return func()
+        elif self.Method == 2:
+            func = getattr(value, self.What)
+            return func()

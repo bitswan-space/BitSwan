@@ -1,5 +1,3 @@
 from .sink import ParquetSink
 
-__all__ = (
-	'ParquetSink',
-)
+__all__ = ("ParquetSink",)

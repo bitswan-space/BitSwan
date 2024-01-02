@@ -24,7 +24,7 @@ class MongoDBSink(Sink):
 
     ConfigDefaults = {
         "output_queue_max_size": 100,
-        'collection': 'collection',  # default collection, if not specified inside context
+        "collection": "collection",  # default collection, if not specified inside context
     }
 
     def __init__(self, app, pipeline, connection, id=None, config=None):
@@ -34,9 +34,9 @@ class MongoDBSink(Sink):
         self.Pipeline = pipeline
 
         self._output_queue = asyncio.Queue()
-        self._output_queue_max_size = int(self.Config['output_queue_max_size'])
-        self.Collection = self.Config['collection']
-        assert (self._output_queue_max_size >= 1), "Output queue max size invalid"
+        self._output_queue_max_size = int(self.Config["output_queue_max_size"])
+        self.Collection = self.Config["collection"]
+        assert self._output_queue_max_size >= 1, "Output queue max size invalid"
         self._conn_future = None
 
         self._on_health_check("Connection.open!")
@@ -50,18 +50,17 @@ class MongoDBSink(Sink):
         # At this point we examine the state of the _conn_future instance variable, queueing _outfluxing
         # in case it is None, returning early if the future is not done and resetting _conn_future to None otherwise.
         if self._conn_future is not None:
-
             if not self._conn_future.done():
                 return
             try:
                 self._conn_future.result()
             except Exception:
-            # Connection future threw an error
+                # Connection future threw an error
                 L.exception("Unexpected connection future error")
 
             self._conn_future = None
 
-        assert (self._conn_future is None)
+        assert self._conn_future is None
 
         self._conn_future = asyncio.ensure_future(
             self._insert(),
@@ -86,7 +85,6 @@ class MongoDBSink(Sink):
         self._output_queue.put_nowait((context, event))
 
     async def _insert(self):
-
         db = self.Connection.Client[self.Connection.Database]
 
         while True:
@@ -116,4 +114,6 @@ class MongoDBSink(Sink):
                 await collection.insert_many(event)
                 self._output_queue.task_done()
             else:
-                raise TypeError(f"Only dict or list of dicts allowed, {type(event)} supplied")
+                raise TypeError(
+                    f"Only dict or list of dicts allowed, {type(event)} supplied"
+                )

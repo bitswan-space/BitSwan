@@ -14,35 +14,36 @@ L = logging.getLogger(__name__)
 
 
 class DeclarativeParsingPipeline(bspump.Pipeline):
+    def __init__(self, app, pipeline_id=None):
+        super().__init__(app, pipeline_id)
 
-	def __init__(self, app, pipeline_id=None):
-		super().__init__(app, pipeline_id)
+        # Load the declaration from YML file
+        file = open("./data/declarative-parser-input.yml")
+        declaration = file.read()
 
-		# Load the declaration from YML file
-		file = open("./data/declarative-parser-input.yml")
-		declaration = file.read()
-
-		self.build(
-			bspump.random.RandomSource(app, self, choice=[
-				"one two three four five",
-				"january february march april may",
-				"dollar pound frank euro jen"
-			], config={"number": 5}).on(bspump.trigger.OpportunisticTrigger(app, chilldown_period=10)),
-
-			bspump.declarative.DeclarativeProcessor(app, self, declaration=declaration),
-
-			bspump.common.PPrintSink(app, self)
-		)
+        self.build(
+            bspump.random.RandomSource(
+                app,
+                self,
+                choice=[
+                    "one two three four five",
+                    "january february march april may",
+                    "dollar pound frank euro jen",
+                ],
+                config={"number": 5},
+            ).on(bspump.trigger.OpportunisticTrigger(app, chilldown_period=10)),
+            bspump.declarative.DeclarativeProcessor(app, self, declaration=declaration),
+            bspump.common.PPrintSink(app, self),
+        )
 
 
 class MyApplication(bspump.BSPumpApplication):
+    def __init__(self):
+        super().__init__()
+        svc = self.get_service("bspump.PumpService")
+        svc.add_pipeline(DeclarativeParsingPipeline(self))
 
-	def __init__(self):
-		super().__init__()
-		svc = self.get_service("bspump.PumpService")
-		svc.add_pipeline(DeclarativeParsingPipeline(self))
 
-
-if __name__ == '__main__':
-	app = MyApplication()
-	app.run()
+if __name__ == "__main__":
+    app = MyApplication()
+    app.run()

@@ -11,6 +11,7 @@ class MappingKeysProcessor(Processor):
     |
 
     """
+
     def process(self, context, event: collections.abc.Mapping) -> list:
         """
         Description: process is a method of a Mapping Keys Processor

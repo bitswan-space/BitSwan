@@ -12,154 +12,160 @@ L = logging.getLogger(__name__)
 
 #
 
+
 class DatagramSource(Source):
-	"""
-	Description:
+    """
+    Description:
 
-	"""
+    """
 
+    ConfigDefaults = {
+        "address": "127.0.0.1 8888",  # IPv4, IPv6 or unix socket path
+        "max_packet_size": 64 * 1024,
+        "receiver_buffer_size": 0,
+    }
 
-	ConfigDefaults = {
-		'address': '127.0.0.1 8888',  # IPv4, IPv6 or unix socket path
-		'max_packet_size': 64 * 1024,
-		'receiver_buffer_size': 0,
-	}
-
-
-	def __init__(self, app, pipeline, id=None, config=None):
-		"""
-		Description:
+    def __init__(self, app, pipeline, id=None, config=None):
+        """
+        Description:
 
 
-		"""
-		super().__init__(app, pipeline, id=id, config=config)
-		self.Loop = app.Loop
+        """
+        super().__init__(app, pipeline, id=id, config=config)
+        self.Loop = app.Loop
 
-		# Create a UDP socket
-		self.Address = str(self.Config['address'])
+        # Create a UDP socket
+        self.Address = str(self.Config["address"])
 
-		# Receive Buffer Size
-		self.ReceiveBufferSize = int(self.Config['receiver_buffer_size'])
+        # Receive Buffer Size
+        self.ReceiveBufferSize = int(self.Config["receiver_buffer_size"])
 
-		addrline = self.Address.strip()
-		if addrline.count(":") == 1:
-			host, port = self.Address.rsplit(":", maxsplit=1)
-			(family, socktype, proto, canonname, sockaddr) = socket.getaddrinfo(host, port)[0]
+        addrline = self.Address.strip()
+        if addrline.count(":") == 1:
+            host, port = self.Address.rsplit(":", maxsplit=1)
+            (family, socktype, proto, canonname, sockaddr) = socket.getaddrinfo(
+                host, port
+            )[0]
 
-			self.Socket = socket.socket(family, socket.SOCK_DGRAM)
-			self.Socket.setblocking(False)
-			self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-			self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-			if self.ReceiveBufferSize > 0:
-				self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, self.ReceiveBufferSize)
+            self.Socket = socket.socket(family, socket.SOCK_DGRAM)
+            self.Socket.setblocking(False)
+            self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+            if self.ReceiveBufferSize > 0:
+                self.Socket.setsockopt(
+                    socket.SOL_SOCKET, socket.SO_RCVBUF, self.ReceiveBufferSize
+                )
 
-			self.Socket.bind(sockaddr)
+            self.Socket.bind(sockaddr)
 
-		else:
+        else:
+            self.Socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+            self.Socket.setblocking(False)
+            self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+            if self.ReceiveBufferSize > 0:
+                self.Socket.setsockopt(
+                    socket.SOL_SOCKET, socket.SO_RCVBUF, self.ReceiveBufferSize
+                )
 
-			self.Socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-			self.Socket.setblocking(False)
-			self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-			self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-			if self.ReceiveBufferSize > 0:
-				self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, self.ReceiveBufferSize)
+            self.Socket.bind(self.Address)
 
-			self.Socket.bind(self.Address)
+        self.MaxPacketSize = int(self.Config["max_packet_size"])
 
-		self.MaxPacketSize = int(self.Config['max_packet_size'])
+    async def main(self):
+        task = asyncio.ensure_future(self._receive())
 
+        await self.stopped()
 
-	async def main(self):
-		task = asyncio.ensure_future(self._receive())
+        task.cancel()
+        await task
 
-		await self.stopped()
+        self.Socket.close()
 
-		task.cancel()
-		await task
+    async def _receive(self):
+        while True:
+            try:
+                await self.Pipeline.ready()
+                event, peer = await self.Loop.sock_recvfrom(
+                    self.Socket, self.MaxPacketSize
+                )
+                await self.Pipeline.ready()
+                await self.process(event, context={"datagram": peer})
 
-		self.Socket.close()
+            except asyncio.CancelledError:
+                break
 
-
-	async def _receive(self):
-		while True:
-			try:
-				await self.Pipeline.ready()
-				event, peer = await self.Loop.sock_recvfrom(self.Socket, self.MaxPacketSize)
-				await self.Pipeline.ready()
-				await self.process(event, context={'datagram': peer})
-
-			except asyncio.CancelledError:
-				break
-
-			except Exception:
-				L.exception("Error in datagram source.")
-				raise
+            except Exception:
+                L.exception("Error in datagram source.")
+                raise
 
 
 class DatagramSink(Sink):
-	"""
-	Description:
+    """
+    Description:
 
 
-	"""
+    """
+
+    ConfigDefaults = {
+        "address": "127.0.0.1 8888",  # IPv4, IPv6 or unix socket path
+        "max_packet_size": 64 * 1024,
+        "receiver_buffer_size": 0,
+    }
+
+    def __init__(self, app, pipeline, id=None, config=None):
+        """
+        Description:
 
 
-	ConfigDefaults = {
-		'address': '127.0.0.1 8888',  # IPv4, IPv6 or unix socket path
-		'max_packet_size': 64 * 1024,
-		'receiver_buffer_size': 0,
-	}
+        """
+
+        super().__init__(app, pipeline, id=id, config=config)
+        self.Loop = app.Loop
+
+        # Create a UDP socket
+        self.Address = str(self.Config["address"])
+
+        # Receive Buffer Size
+        self.ReceiveBufferSize = int(self.Config["receiver_buffer_size"])
+
+        addrline = self.Address.strip()
+        if " " in addrline:
+            host, port = self.Address.rsplit(" ", maxsplit=1)
+        elif addrline.count(":") == 1:
+            host, port = self.Address.rsplit(":", maxsplit=1)
+            (family, socktype, proto, canonname, sockaddr) = socket.getaddrinfo(
+                host, port
+            )[0]
+
+            self.Socket = socket.socket(family, socket.SOCK_DGRAM)
+            self.Socket.setblocking(False)
+            self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+            if self.ReceiveBufferSize > 0:
+                self.Socket.setsockopt(
+                    socket.SOL_SOCKET, socket.SO_RCVBUF, self.ReceiveBufferSize
+                )
+
+            self.Socket.connect(sockaddr)
+        else:
+            self.Socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+            self.Socket.setblocking(False)
+            self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+            if self.ReceiveBufferSize > 0:
+                self.Socket.setsockopt(
+                    socket.SOL_SOCKET, socket.SO_RCVBUF, self.ReceiveBufferSize
+                )
+
+            self.Socket.connect(self.Address)
+
+        self.MaxPacketSize = int(self.Config["max_packet_size"])
+
+    def process(self, context, event):
+        """
+        Description:
 
 
-	def __init__(self, app, pipeline, id=None, config=None):
-		"""
-		Description:
-
-
-		"""
-
-		super().__init__(app, pipeline, id=id, config=config)
-		self.Loop = app.Loop
-
-		# Create a UDP socket
-		self.Address = str(self.Config['address'])
-
-		# Receive Buffer Size
-		self.ReceiveBufferSize = int(self.Config['receiver_buffer_size'])
-
-		addrline = self.Address.strip()
-		if " " in addrline:
-			host, port = self.Address.rsplit(" ", maxsplit=1)
-		elif addrline.count(":") == 1:
-			host, port = self.Address.rsplit(":", maxsplit=1)
-			(family, socktype, proto, canonname, sockaddr) = socket.getaddrinfo(host, port)[0]
-
-			self.Socket = socket.socket(family, socket.SOCK_DGRAM)
-			self.Socket.setblocking(False)
-			self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-			self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-			if self.ReceiveBufferSize > 0:
-
-				self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, self.ReceiveBufferSize)
-
-			self.Socket.connect(sockaddr)
-		else:
-			self.Socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-			self.Socket.setblocking(False)
-			self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-			self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-			if self.ReceiveBufferSize > 0:
-				self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, self.ReceiveBufferSize)
-
-			self.Socket.connect(self.Address)
-
-		self.MaxPacketSize = int(self.Config['max_packet_size'])
-
-
-	def process(self, context, event):
-		"""
-		Description:
-
-
-		"""
-		self.Socket.send(event)
+        """
+        self.Socket.send(event)

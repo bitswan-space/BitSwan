@@ -15,7 +15,7 @@ from .abc.lookup import MappingLookup
 from .abc.lookup import DictionaryLookup
 from .fileloader import load_json_file
 
-from.analyzer.analyzer import Analyzer
+from .analyzer.analyzer import Analyzer
 
 from .matrix.matrix import Matrix, PersistentMatrix
 from .matrix.namedmatrix import NamedMatrix, PersistentNamedMatrix
@@ -26,32 +26,29 @@ from .abc.anomaly import Anomaly
 from .__version__ import __version__, __build__
 
 __all__ = (
-	"BSPumpApplication",
-	"BSPumpService",
-	"Pipeline",
-	"PumpBuilder",
-	"Source",
-	"TriggerSource",
-	"Sink",
-	"Processor",
-	"Generator",
-	"Connection",
-
-	"Analyzer",
-
-	"ProcessingError",
-	"Lookup",
-	"MappingLookup",
-	"DictionaryLookup",
-	"load_json_file",
-	"Matrix",
-	"PersistentMatrix",
-	"NamedMatrix",
-	"Model",
-	"PersistentNamedMatrix",
-	"Anomaly",
-
-	"__version__",
-	"__build__",
-    "step"
+    "BSPumpApplication",
+    "BSPumpService",
+    "Pipeline",
+    "PumpBuilder",
+    "Source",
+    "TriggerSource",
+    "Sink",
+    "Processor",
+    "Generator",
+    "Connection",
+    "Analyzer",
+    "ProcessingError",
+    "Lookup",
+    "MappingLookup",
+    "DictionaryLookup",
+    "load_json_file",
+    "Matrix",
+    "PersistentMatrix",
+    "NamedMatrix",
+    "Model",
+    "PersistentNamedMatrix",
+    "Anomaly",
+    "__version__",
+    "__build__",
+    "step",
 )

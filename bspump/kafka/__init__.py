@@ -5,9 +5,9 @@ from .keyfilter import KafkaKeyFilter
 from .topic_initializer import KafkaTopicInitializer
 
 __all__ = [
-	"KafkaConnection",
-	"KafkaSource",
-	"KafkaSink",
-	"KafkaKeyFilter",
-	"KafkaTopicInitializer",
+    "KafkaConnection",
+    "KafkaSource",
+    "KafkaSink",
+    "KafkaKeyFilter",
+    "KafkaTopicInitializer",
 ]
