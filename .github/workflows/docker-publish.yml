@@ -27,15 +27,5 @@ jobs:
         echo "::set-output name=year::$(date +%Y)"
         echo "::set-output name=commit_hash::$(git rev-parse --short HEAD)"
 
-    - name: Build and push Docker images
-      uses: docker/build-push-action@v2
-      with:
-        context: .
-        file: ./Dockerfile
-        push: true
-        tags: |
-          bitswan/pipeline-runtime-environment:latest
-          bitswan/pipeline-runtime-environment:${{ steps.vars.outputs.year }}-${{ github.run_id }}-git-${{ steps.vars.outputs.commit_hash }}
-          bitswan/pipeline-runtime-environment:$(docker images --no-trunc -q bitswan/pipeline-runtime-environment:latest | sed 's/:/_/g')
-
-
+    - name: Build and Push
+      run: bash build_and_push.sh
