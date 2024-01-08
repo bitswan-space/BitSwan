@@ -30,7 +30,7 @@ RUN apt-get -y install \
   docker-compose
 
 LABEL "space.bitswan.pipeline.protocol-version"="2023.12-1"
-LABEL src=https://github.com/bitswan-space/BitSwanPump
+LABEL src=https://github.com/bitswan-space/BitSwan
 ENV ASABFORCECONSOLE=1
 ENV PYTHONUNBUFFERED=1
 
