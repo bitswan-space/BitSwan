@@ -103,6 +103,9 @@ setup(
         "croniter>=1.4.1",
         "paho-mqtt",
         "jupyter",
+        "jupyterlab",
+        "jupyterlab-git",
+        "jupyter_app_launcher"
     ],
     extras_require={
         "ldap": "python-ldap",

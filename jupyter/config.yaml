@@ -1,0 +1,15 @@
+- title: BitSwan Eland Tutorial
+  description: BitSwan Notebook for preinstalled libraries
+  source: /etc/notebooks/bs-eland-guide.ipynb
+  icon: /etc/icons/bitswan-logo.svg
+  cwd: /etc/notebooks/samples
+  type: notebook
+  catalog: BitSwan Studio
+
+- title: BitSwan Studio Notebook
+  description: Way how to start working quickly in BitSwan Studio
+  source: /etc/notebooks/bs-studio.ipynb
+  icon: /etc/icons/bitswan-logo.svg
+  cwd: /etc/notebooks/samples
+  type: notebook
+  catalog: BitSwan Studio
