@@ -40,8 +40,9 @@ RUN chmod -R 777 /etc/notebooks/ /etc/icons/ /etc/jupyter_config/
 
 RUN echo '#!/bin/sh\n\
 chown -R bitswan /mnt\n\
+chown -R bitswan /home/bitswan\n\
 cd /mnt\n\
-jupyter-lab' > /start-jupyterlab.sh
+su bitswan -c jupyter-lab' > /start-jupyterlab.sh
 
 RUN chmod +x /start-jupyterlab.sh
 
