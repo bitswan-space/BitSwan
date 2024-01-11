@@ -29,10 +29,6 @@ CMD ["sh", "/opt/pipelines/entrypoint.sh"]
 
 # Setup jupyterlab
 
-RUN useradd --uid 1000 --create-home jovyan
-ENV HOME=/home/jovyan
-USER jovyan
-
 COPY examples/Jupyter/ /etc/notebooks/
 COPY icons/*.svg /etc/icons/
 
@@ -42,14 +38,20 @@ COPY ./jupyter/config.yaml /etc/jupyter_config/config.yaml
 USER root
 RUN chmod -R 777 /etc/notebooks/ /etc/icons/ /etc/jupyter_config/
 
-RUN mkdir -p /home/jovyan/work
-RUN chown -R jovyan:jovyan /home/jovyan/work
-
 RUN echo '#!/bin/sh\n\
 git config --global user.name "$JUPYTERHUB_USER" && \n\
 git config --global user.email "$JUPYTERHUB_USER" && \n\
 cd /mnt\n\
 jupyter-lab' > /start-jupyterlab.sh
 
-# Make the startup script executable
 RUN chmod +x /start-jupyterlab.sh
+
+# Setup bitswan user
+
+RUN mkdir -p /home/bitswan/work
+RUN chown -R bitswan:bitswan /home/bitswan/work
+
+RUN useradd --uid 1000 --create-home bitswan
+ENV HOME=/home/bitswan
+USER bitswan
+
