@@ -39,8 +39,7 @@ USER root
 RUN chmod -R 777 /etc/notebooks/ /etc/icons/ /etc/jupyter_config/
 
 RUN echo '#!/bin/sh\n\
-git config --global user.name "$JUPYTERHUB_USER" && \n\
-git config --global user.email "$JUPYTERHUB_USER" && \n\
+chown -R bitswan /mnt\n\
 cd /mnt\n\
 jupyter-lab' > /start-jupyterlab.sh
 
@@ -56,4 +55,3 @@ USER root
 RUN mkdir -p /home/bitswan/work
 RUN chown -R bitswan:bitswan /home/bitswan/work
 
-USER bitswan
