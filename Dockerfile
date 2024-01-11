@@ -29,7 +29,7 @@ CMD ["sh", "/opt/pipelines/entrypoint.sh"]
 
 # Setup jupyterlab
 
-RUN useradd -m jovyan
+RUN useradd --uid 1000 --create-home jovyan
 ENV HOME=/home/jovyan
 USER jovyan
 
