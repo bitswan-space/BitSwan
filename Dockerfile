@@ -48,10 +48,12 @@ RUN chmod +x /start-jupyterlab.sh
 
 # Setup bitswan user
 
-RUN mkdir -p /home/bitswan/work
-RUN chown -R bitswan:bitswan /home/bitswan/work
-
 RUN useradd --uid 1000 --create-home bitswan
 ENV HOME=/home/bitswan
 USER bitswan
 
+USER root
+RUN mkdir -p /home/bitswan/work
+RUN chown -R bitswan:bitswan /home/bitswan/work
+
+USER bitswan
