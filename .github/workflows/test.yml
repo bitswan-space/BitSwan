@@ -15,7 +15,7 @@ jobs:
       run: |
         apt-get update
         apt-get -y install unixodbc-dev
-        git config --global --add safe.directory /__w/BitSwanPump/BitSwanPump
+        git config --global --add safe.directory /__w/BitSwan/BitSwan
         pip3 install --upgrade cython
         pip3 install .
         pip install -r requirements-dev.txt
