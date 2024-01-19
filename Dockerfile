@@ -1,6 +1,7 @@
 FROM python:3.10-slim-bullseye
 MAINTAINER LibertyAces Ltd
 LABEL "space.bitswan.pipeline.protocol-version"="2023.12-1"
+LABEL "space.bitswan.pipeline.ide"="Jupyter"
 LABEL src=https://github.com/bitswan-space/BitSwan
 ENV ASABFORCECONSOLE=1
 ENV PYTHONUNBUFFERED=1
@@ -43,9 +44,9 @@ chown -R bitswan /mnt\n\
 cp -R /ssh /home/bitswan/.ssh\n\
 chown -R bitswan /home/bitswan\n\
 cd /mnt\n\
-su bitswan -c jupyter-lab' > /start-jupyterlab.sh
+su bitswan -c jupyter-lab' > /start-ide.sh
 
-RUN chmod +x /start-jupyterlab.sh
+RUN chmod +x /start-ide.sh
 
 # Setup bitswan user
 
