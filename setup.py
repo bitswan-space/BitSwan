@@ -105,7 +105,7 @@ setup(
         "jupyter",
         "jupyterlab",
         "jupyterlab-git",
-        "jupyter_app_launcher"
+        "jupyter_app_launcher",
     ],
     extras_require={
         "ldap": "python-ldap",
