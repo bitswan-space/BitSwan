@@ -83,7 +83,7 @@ def get_pipelines(pipelines: dict):
             "metrics": [],
             "capabilities": ["has-children"],
         }
-        output["topology"][pipeline["Id"]] = pipeline_dict
+        output["topology"][pipeline.Id] = pipeline_dict
 
     return output
 
@@ -123,21 +123,30 @@ class MQTTService(asab.Service):
 
         self.dumper = JSONDumper(pretty=False)
 
+    def publish_topologies(self):
+        svc = self.App.get_service("bspump.PumpService")
+        for pipeline in svc.Pipelines.values():
+            self.client.publish(
+                f"/c/{self.App.DeploymentId}/c/{pipeline.Id}/topology",
+                json.dumps(get_pipeline_topology(svc, pipeline.Id)),
+                retain=True,
+            )
+
+        self.client.publish(
+            f"/c/{self.App.DeploymentId}/topology",
+            json.dumps(get_pipelines(svc.Pipelines)),
+            retain=True,
+        )
+
     def on_message(self, client, userdata, message):
         payload = message.payload.decode("utf-8")
         svc = self.App.get_service("bspump.PumpService")
         topic = message.topic
 
         # Regex patterns
-        pipelines_list_pattern = (
-            r"^/c/(?P<deployment_identifier>[^/]+)/topology/subscribe$"
-        )
-        pipeline_components_pattern = r"^/c/(?P<deployment_identifier>[^/]+)/c/(?P<pipeline_identifier>[^/]+)/topology/subscribe$"
         events_pattern = r"^/c/(?P<deployment_identifier>[^/]+)/c/(?P<pipeline_identifier>[^/]+)/c/(?P<component_identifier>[^/]+)/events/subscribe$"
 
         # Matching
-        pipelines_list = re.match(pipelines_list_pattern, topic)
-        pipeline_components = re.match(pipeline_components_pattern, topic)
         events = re.match(events_pattern, topic)
 
         # Get list of pipelines from application
@@ -155,27 +164,6 @@ class MQTTService(asab.Service):
             return
 
         count = min(count, self.max_count)
-        if pipelines_list:
-            new_message = get_message_structure()
-            new_message["data"] = get_pipelines(json.loads(self.dumper(svc.Pipelines)))
-            new_message["count"] = 1
-            new_message["remaining_subscription_count"] = count - 1
-            client.publish(
-                f"/c/{self.App.DeploymentId}/topology", json.dumps(new_message)
-            )
-
-        # Get components of one pipeline
-        if pipeline_components:
-            pipeline = pipeline_components.group("pipeline_identifier")
-            new_message = get_message_structure()
-
-            new_message["data"] = get_pipeline_topology(svc, pipeline)
-            new_message["count"] = 1
-            new_message["remaining_subscription_count"] = count - 1
-            client.publish(
-                f"/c/{self.App.DeploymentId}/c/{pipeline}/topology",
-                json.dumps(new_message),
-            )
 
         if events:
             pipeline = events.group("pipeline_identifier")
@@ -197,18 +185,13 @@ class MQTTService(asab.Service):
         self.connected = True
 
     def apply_subscriptions(self):
-        self.client.subscribe(f"/c/{self.App.DeploymentId}/topology/subscribe")
-
         for sub in self.sub_queue:
             self.client.subscribe(f"/c/{self.App.DeploymentId}/{sub}")
 
-    def add_pipeline(self, pipeline):
-        self.sub_queue.append(f"c/{pipeline}/topology/subscribe")
-        if self.connected:
-            self.apply_subscriptions()
-
     def subscribe(self, pipeline, component):
-        self.sub_queue.append(f"c/{pipeline}/c/{component}/events/subscribe")
+        self.sub_queue.append(
+            f"/c/{self.App.DeploymentId}/c/{pipeline}/c/{component}/events/subscribe"
+        )
         if self.connected:
             self.apply_subscriptions()
 
