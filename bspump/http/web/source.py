@@ -65,6 +65,7 @@ class WebHookSource(Source):
     ConfigDefaults = {
         "path": "webhook/",
         "port": "8080",
+        "max_body_size_bytes": 1024*1000*1000,
     }
 
     def __init__(self, app, pipeline, id=None, config=None):
@@ -91,7 +92,9 @@ class WebHookSource(Source):
     async def main(self):
         import aiohttp.web
 
-        aiohttp_app = aiohttp.web.Application()
+        aiohttp_app = aiohttp.web.Application(
+            client_max_size=self.Config["max_body_size_bytes"]
+        )
         print("Adding routes to webserver")
         aiohttp_app.add_routes(
             [aiohttp.web.post(self.Config["path"], self.handle_post)]
