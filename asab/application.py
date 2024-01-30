@@ -99,7 +99,8 @@ class Application(metaclass=Singleton):
 		self.InitModulesQueue = []
 
 		# Parse command line
-		self.Args = self.parse_arguments(args=args)
+		if args is not None:
+			self.Args = self.parse_arguments(args=args)
 
 		# Load configuration
 
