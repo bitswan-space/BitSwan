@@ -10,9 +10,14 @@ class AsabObjMocker:
         self.Loop = None
 
 
+class DevApp(bspump.BSPumpApplication):
+    pass
+
+
 class DevRuntime:
     def __init__(self):
         self.events: list[tuple[str, list[Any]]] = {}
+        self.dev_app = DevApp()
 
     def clear(self, name: str, event: list[Any]) -> None:
         self.events = [(name, event)]
@@ -126,7 +131,7 @@ def register_app_post_init(func):
     def post_init(app):
         app.PubSub.subscribe("Application.tick!", app.tick)
     """
-    global _bitswan_app_post_inits
+    global _bitswan_app_post_inits 
     _bitswan_app_post_inits.append(func)
 
 
@@ -139,6 +144,10 @@ def register_connection(func):
     """
     global __bitswan_connections
     __bitswan_connections.append(func)
+    if __bitswan_dev:
+        global __bitswan_dev_runtime
+        connection = func(app)
+        __bitswan_dev_runtime.dev_app.PumpService.add_connection(connection)
 
 
 def register_lookup(func):
@@ -150,6 +159,10 @@ def register_lookup(func):
     """
     global __bitswan_lookups
     __bitswan_lookups.append(func)
+    if __bitswan_dev:
+        global __bitswan_dev_runtime
+        lookup = func(app)
+        __bitswan_dev_runtime.dev_app.PumpService.add_lookup(lookup)
 
 
 def new_pipeline(name):
@@ -208,7 +221,7 @@ def register_processor(func):
     if not __bitswan_dev:
         __bitswan_processors.append(func)
     else:
-        processor = func(AsabObjMocker(), AsabObjMocker())
+        processor = func(__bitswan_dev_runtime.dev_app, AsabObjMocker())
 
         callable_process = partial(processor.process, None)
         __bitswan_dev_runtime.step(func.__name__, callable_process)
@@ -230,7 +243,7 @@ def register_generator(func):
             # TODO: check this
             __bitswan_processors.append(func)
         else:
-            app, pipeline = AsabObjMocker(), AsabObjMocker()
+            app, pipeline = __bitswan_dev_runtime.dev_app, AsabObjMocker()
             generator = func(app, pipeline)
 
             async def asfunc(inject, event):
