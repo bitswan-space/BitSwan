@@ -106,6 +106,8 @@ setup(
         "jupyterlab",
         "jupyterlab-git",
         "jupyter_app_launcher",
+        "dockerfile-parse",
+        "docker",
     ],
     extras_require={
         "ldap": "python-ldap",
