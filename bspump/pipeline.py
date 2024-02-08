@@ -621,11 +621,7 @@ class Pipeline(abc.ABC, asab.Configurable):
 
         exception = future.exception()
         if exception is not None:
-            try:
-                self.set_error(None, None, exception)
-            except Exception:
-                # The exception is handled by set_error
-                pass
+            self.set_error(None, None, exception)
 
     # Construction
 
@@ -997,9 +993,5 @@ class PipelineLogger(logging.Logger):
 
         :return:
         """
-        try:
-            ct = datetime.datetime.fromtimestamp(record.created)
-            return ct.isoformat()
-        except BaseException as e:
-            L.error("ERROR when logging: {}".format(e))
-            return str(record.created)
+        ct = datetime.datetime.fromtimestamp(record.created)
+        return ct.isoformat()

@@ -40,9 +40,9 @@ class GoogleDriveABCSink(Sink):
 
             try:
                 self._conn_future.result()
-            except Exception:
+            except Exception as e:
                 # Connection future threw an error
-                L.exception("Unexpected connection future error")
+                L.exception(f"Unexpected connection future error {e}")
 
             # Connection future already resulted (with or without exception)
             self._conn_future = None

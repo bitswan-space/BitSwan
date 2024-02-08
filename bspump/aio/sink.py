@@ -39,20 +39,15 @@ class AsyncSink(Sink):
 
     async def _task(self):
         while not self.Exiting:
-            try:
-                context, event = await self.Queue.get()
+            context, event = await self.Queue.get()
 
-                # Unthrottle if needed
-                if self.Queue.qsize() == (self.QueueMaxSize - 1):
-                    self.Pipeline.throttle(self.Queue, False)
+            # Unthrottle if needed
+            if self.Queue.qsize() == (self.QueueMaxSize - 1):
+                self.Pipeline.throttle(self.Queue, False)
 
-                # Consume the event
-                await self.consume(context, event)
+            # Consume the event
+            await self.consume(context, event)
 
-            except Exception as e:
-                L.exception(
-                    "The following exception occurred in async sink: '{}'".format(e)
-                )
 
     async def _on_exit(self, event_name):
         self.Exiting = True

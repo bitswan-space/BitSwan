@@ -127,8 +127,6 @@ class Source(asab.Configurable):
             await self.Task
         except asyncio.exceptions.CancelledError:
             L.warning("Task cancelled: {}".format(self))
-        except Exception:
-            L.exception("Task failed when stopping")
 
         if not self.Task.done():
             L.error("Source '{}' refused to stop: {}".format(self.Id, self.Task))

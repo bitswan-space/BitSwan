@@ -277,12 +277,7 @@ class DictionaryLookup(MappingLookup):
         |
 
         """
-        try:
-            self.Dictionary.update(json.loads(data.decode("utf-8")))
-        except Exception as e:
-            L.error(
-                "Lookup {} failed to deserialize loaded data: {}".format(self.Id, e)
-            )
+        self.Dictionary.update(json.loads(data.decode("utf-8")))
 
     # REST
 
