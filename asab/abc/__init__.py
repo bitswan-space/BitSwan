@@ -3,7 +3,7 @@ from .service import Service
 from .singleton import Singleton
 
 __all__ = [
-	"Module",
-	"Service",
-	"Singleton",
+    "Module",
+    "Service",
+    "Singleton",
 ]

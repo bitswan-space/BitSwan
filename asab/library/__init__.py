@@ -9,14 +9,8 @@ L = logging.getLogger(__name__)
 
 #
 
-Config.add_defaults(
-	{
-		'library': {
-			'providers': './library'
-		}
-	}
-)
+Config.add_defaults({"library": {"providers": "./library"}})
 
 __all__ = [
-	"LibraryService",
+    "LibraryService",
 ]

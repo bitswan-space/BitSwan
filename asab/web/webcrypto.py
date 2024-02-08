@@ -6,7 +6,7 @@ import cryptography.hazmat.primitives.ciphers.algorithms
 import cryptography.hazmat.primitives.ciphers.modes
 import cryptography.hazmat.backends
 
-'''
+"""
 This module provides AES GCM based payload protection.
 
 Flow:
@@ -54,48 +54,50 @@ Flow:
 5. Decrypt the payload on the server side
 	plaintext = aes_gcm_decrypt(key = key_from_generate, ciphertext)
 
-'''
+"""
 
 
-def aes_gcm_decrypt(key: bytes, ciphertext: bytes, associated_data: bytes = None) -> bytes:
-	'''
-	Decrypt the ciphertext that is encrypted by AES GCM.
-	'''
+def aes_gcm_decrypt(
+    key: bytes, ciphertext: bytes, associated_data: bytes = None
+) -> bytes:
+    """
+    Decrypt the ciphertext that is encrypted by AES GCM.
+    """
 
-	iv = ciphertext[:12]
-	message = ciphertext[12:-16]
-	tag = ciphertext[-16:]
+    iv = ciphertext[:12]
+    message = ciphertext[12:-16]
+    tag = ciphertext[-16:]
 
-	# Construct a Cipher object, with the key, iv, and additionally the
-	# GCM tag used for authenticating the message.
-	decryptor = cryptography.hazmat.primitives.ciphers.Cipher(
-		cryptography.hazmat.primitives.ciphers.algorithms.AES(key),
-		cryptography.hazmat.primitives.ciphers.modes.GCM(iv, tag),
-		backend=cryptography.hazmat.backends.default_backend()
-	).decryptor()
+    # Construct a Cipher object, with the key, iv, and additionally the
+    # GCM tag used for authenticating the message.
+    decryptor = cryptography.hazmat.primitives.ciphers.Cipher(
+        cryptography.hazmat.primitives.ciphers.algorithms.AES(key),
+        cryptography.hazmat.primitives.ciphers.modes.GCM(iv, tag),
+        backend=cryptography.hazmat.backends.default_backend(),
+    ).decryptor()
 
-	# We put associated_data back in or the tag will fail to verify
-	# when we finalize the decryptor.
-	if associated_data is not None:
-		decryptor.authenticate_additional_data(associated_data)
+    # We put associated_data back in or the tag will fail to verify
+    # when we finalize the decryptor.
+    if associated_data is not None:
+        decryptor.authenticate_additional_data(associated_data)
 
-	# Decryption gets us the authenticated plaintext.
-	# If the tag does not match an InvalidTag exception will be raised.
-	return decryptor.update(message) + decryptor.finalize()
+    # Decryption gets us the authenticated plaintext.
+    # If the tag does not match an InvalidTag exception will be raised.
+    return decryptor.update(message) + decryptor.finalize()
 
 
 def aes_gcm_generate_key(key: bytes = None) -> dict:
-	'''
-	Generate JWT AES 256 GCM key.
-	'''
+    """
+    Generate JWT AES 256 GCM key.
+    """
 
-	if key is None:
-		key = secrets.token_bytes(256 // 8)
+    if key is None:
+        key = secrets.token_bytes(256 // 8)
 
-	# JWT key
-	return {
-		"kty": "oct",
-		"k": base64.urlsafe_b64encode(key).decode('ascii').rstrip('='),
-		"alg": "A256GCM",
-		"ext": True,
-	}
+    # JWT key
+    return {
+        "kty": "oct",
+        "k": base64.urlsafe_b64encode(key).decode("ascii").rstrip("="),
+        "alg": "A256GCM",
+        "ext": True,
+    }

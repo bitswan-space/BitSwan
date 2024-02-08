@@ -2,80 +2,80 @@ import abc
 
 
 class Service(abc.ABC):
-	"""
-	Abstract class for ASAB services.
+    """
+    Abstract class for ASAB services.
 
-	Service objects are registered at the service registry `asab.Application.Services`, managed by an application object.
+    Service objects are registered at the service registry `asab.Application.Services`, managed by an application object.
 
-	Examples:
+    Examples:
 
-	This is how Service is created and registered:
-	```python
-	my_service = MyService(app, "my_service")
-	```
+    This is how Service is created and registered:
+    ```python
+    my_service = MyService(app, "my_service")
+    ```
 
-	This is how Service is located and used:
+    This is how Service is located and used:
 
-	```python
-	my_service = app.get_service("my_service")
-	my_service.service_method()
-	```
+    ```python
+    my_service = app.get_service("my_service")
+    my_service.service_method()
+    ```
 
-	Example of a typical Service class skeleton:
+    Example of a typical Service class skeleton:
 
-	```python
-	class MyService(asab.Service):
-		def __init__(self, app, service_name):
-			super().__init__(app, service_name)
-			...
+    ```python
+    class MyService(asab.Service):
+            def __init__(self, app, service_name):
+                    super().__init__(app, service_name)
+                    ...
 
-		async def initialize(self, app):
-			...
+            async def initialize(self, app):
+                    ...
 
-		async def finalize(self, app):
-			...
+            async def finalize(self, app):
+                    ...
 
-		def service_method(self):
-			...
-	```
-	"""
+            def service_method(self):
+                    ...
+    ```
+    """
 
-	def __init__(self, app, service_name: str):
-		"""
-		Register the service to `asab.Application.Services` dictionary with the provided `service_name`.
+    def __init__(self, app, service_name: str):
+        """
+        Register the service to `asab.Application.Services` dictionary with the provided `service_name`.
 
-		Args:
-			app (asab.Application): Reference to ASAB application.
-			service_name: Reference name of the Service.
-		"""
-		self.Name = service_name
-		"""
+        Args:
+                app (asab.Application): Reference to ASAB application.
+                service_name: Reference name of the Service.
+        """
+        self.Name = service_name
+        """
 		The reference name for the Service.
 		"""
-		self.App = app
-		"""
+        self.App = app
+        """
 		The reference to the Application object.
 		"""
-		app._register_service(self)
+        app._register_service(self)
 
-	# Lifecycle
+    # Lifecycle
 
-	async def initialize(self, app):
-		"""
-		This method is called when the Service is initialized.
-		It can be overridden by an user.
+    async def initialize(self, app):
+        """
+        This method is called when the Service is initialized.
+        It can be overridden by an user.
 
-		Args:
-			app (asab.Application): Reference to ASAB application.
-		"""
-		pass
+        Args:
+                app (asab.Application): Reference to ASAB application.
+        """
+        pass
 
-	async def finalize(self, app):
-		"""
-		This method is called when the Service is finalized, e.g., during application `exit-time`.
-		It can be overridden by an user.
+    async def finalize(self, app):
+        """
+        This method is called when the Service is finalized, e.g., during application `exit-time`.
+        It can be overridden by an user.
 
-		Args:
-			app (asab.Application): Reference to ASAB application.
-		"""
-		pass
+        Args:
+                app (asab.Application): Reference to ASAB application.
+        """
+        pass

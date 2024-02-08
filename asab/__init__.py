@@ -28,23 +28,23 @@ from .__version__ import __version__, __build__
 # Example:
 #    asab.LogObsolete.warning("Use of the obsolete function", struct_data={'eol':'2022-31-12'})
 # See https://github.com/TeskaLabs/asab/issues/240
-LogObsolete = logging.getLogger('OBSOLETE')
+LogObsolete = logging.getLogger("OBSOLETE")
 
 __all__ = (
-	'Module',
-	'Service',
-	'Singleton',
-	'Application',
-	'Config',
-	'Configurable',
-	'ConfigObject',
-	'LOG_NOTICE',
-	'PersistentDict',
-	'subscribe',
-	'PubSub',
-	'Subscriber',
-	'StreamSocketServerService',
-	'Timer',
-	'__version__',
-	'__build__',
+    "Module",
+    "Service",
+    "Singleton",
+    "Application",
+    "Config",
+    "Configurable",
+    "ConfigObject",
+    "LOG_NOTICE",
+    "PersistentDict",
+    "subscribe",
+    "PubSub",
+    "Subscriber",
+    "StreamSocketServerService",
+    "Timer",
+    "__version__",
+    "__build__",
 )

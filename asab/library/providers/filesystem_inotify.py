@@ -1,7 +1,7 @@
 import ctypes
 import struct
 
-libc6 = ctypes.cdll.LoadLibrary('libc.so.6')
+libc6 = ctypes.cdll.LoadLibrary("libc.so.6")
 
 # inotify constants
 IN_ACCESS = 0x00000001  #: File was accessed
@@ -28,7 +28,16 @@ IN_MASK_ADD = 0x20000000  #: add to the mask of an already existing watch
 IN_ISDIR = 0x40000000  #: event occurred against dir
 IN_ONESHOT = 0x80000000  #: only send event once
 
-IN_ALL_EVENTS = IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO | IN_CREATE | IN_DELETE | IN_DELETE_SELF | IN_MOVE_SELF | IN_Q_OVERFLOW
+IN_ALL_EVENTS = (
+    IN_MODIFY
+    | IN_MOVED_FROM
+    | IN_MOVED_TO
+    | IN_CREATE
+    | IN_DELETE
+    | IN_DELETE_SELF
+    | IN_MOVE_SELF
+    | IN_Q_OVERFLOW
+)
 
 # inotify function prototypes
 inotify_init = libc6.inotify_init
@@ -40,5 +49,5 @@ inotify_add_watch.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_uint32]
 inotify_add_watch.restype = ctypes.c_int
 
 
-EVENT_FMT = 'iIII'
+EVENT_FMT = "iIII"
 EVENT_SIZE = struct.calcsize(EVENT_FMT)

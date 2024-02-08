@@ -15,229 +15,212 @@ L = logging.getLogger(__name__)
 
 
 class AlertProviderABC(asab.Configurable, abc.ABC):
+    ConfigDefaults = {}
 
-	ConfigDefaults = {
-	}
+    def __init__(self, config_section_name):
+        super().__init__(config_section_name=config_section_name)
 
+    async def initialize(self, app):
+        pass
 
-	def __init__(self, config_section_name):
-		super().__init__(config_section_name=config_section_name)
+    async def finalize(self, app):
+        pass
 
-
-	async def initialize(self, app):
-		pass
-
-
-	async def finalize(self, app):
-		pass
-
-
-	@abc.abstractmethod
-	def trigger(self, tenant_id, alert_cls, alert_id, title, detail):
-		pass
+    @abc.abstractmethod
+    def trigger(self, tenant_id, alert_cls, alert_id, title, detail):
+        pass
 
 
 class AlertHTTPProviderABC(AlertProviderABC):
+    ConfigDefaults = {
+        "url": "",
+    }
 
-	ConfigDefaults = {
-		'url': '',
-	}
+    def __init__(self, config_section_name):
+        super().__init__(config_section_name=config_section_name)
+        self.Queue = asyncio.Queue()
+        self.MainTask = None
 
+        self.URL = self.Config["url"]
 
-	def __init__(self, config_section_name):
-		super().__init__(config_section_name=config_section_name)
-		self.Queue = asyncio.Queue()
-		self.MainTask = None
+    async def initialize(self, app):
+        self._start_main_task()
 
-		self.URL = self.Config['url']
+    async def finalize(self, app):
+        if self.MainTask is not None:
+            mt = self.MainTask
+            self.MainTask = None
+            mt.cancel()
 
+    def trigger(self, tenant_id, alert_cls, alert_id, title, detail, data):
+        self.Queue.put_nowait((tenant_id, alert_cls, alert_id, title, detail, data))
 
-	async def initialize(self, app):
-		self._start_main_task()
+    def _start_main_task(self):
+        assert self.MainTask is None
+        self.MainTask = asyncio.ensure_future(self._main())
+        self.MainTask.add_done_callback(self._main_done)
 
+    def _main_done(self, x):
+        if self.MainTask is None:
+            return
 
-	async def finalize(self, app):
-		if self.MainTask is not None:
-			mt = self.MainTask
-			self.MainTask = None
-			mt.cancel()
+        self.MainTask.result()
 
+        self.MainTask = None
+        self._start_main_task()
 
-	def trigger(self, tenant_id, alert_cls, alert_id, title, detail, data):
-		self.Queue.put_nowait((tenant_id, alert_cls, alert_id, title, detail, data))
-
-
-	def _start_main_task(self):
-		assert self.MainTask is None
-		self.MainTask = asyncio.ensure_future(self._main())
-		self.MainTask.add_done_callback(self._main_done)
-
-
-	def _main_done(self, x):
-		if self.MainTask is None:
-			return
-
-		self.MainTask.result()
-
-		self.MainTask = None
-		self._start_main_task()
-
-
-	@abc.abstractmethod
-	async def _main(self):
-		pass
+    @abc.abstractmethod
+    async def _main(self):
+        pass
 
 
 class OpsGenieAlertProvider(AlertHTTPProviderABC):
+    ConfigDefaults = {
+        # US: https://api.opsgenie.com
+        # EU: https://api.eu.opsgenie.com
+        "url": "https://api.eu.opsgenie.com",
+        # See https://docs.opsgenie.com/docs/authentication
+        # E.g. `eb243592-faa2-4ba2-a551q-1afdf565c889`
+        "api_key": "",
+        # Coma separated tags to be added to the request
+        "tags": "",
+    }
 
-	ConfigDefaults = {
-		# US: https://api.opsgenie.com
-		# EU: https://api.eu.opsgenie.com
-		'url': 'https://api.eu.opsgenie.com',
+    def __init__(self, config_section_name):
+        super().__init__(config_section_name=config_section_name)
+        self.APIKey = self.Config["api_key"]
+        self.Tags = re.split(r"[,\s]+", self.Config["tags"], re.MULTILINE)
+        self.Hostname = socket.gethostname()
 
-		# See https://docs.opsgenie.com/docs/authentication
-		# E.g. `eb243592-faa2-4ba2-a551q-1afdf565c889`
-		'api_key': '',
+    async def _main(self):
+        while True:
+            source, alert_cls, alert_id, title, detail, data = await self.Queue.get()
 
-		# Coma separated tags to be added to the request
-		'tags': '',
-	}
+            headers = {"Authorization": "GenieKey {}".format(self.APIKey)}
 
+            create_alert = {
+                "message": title,
+                "note": detail,
+                "alias": "{}:{}:{}".format(source, alert_cls, alert_id),
+                "tags": self.Tags,
+                "details": {
+                    "source": source,
+                    "class": alert_cls,
+                    "id": alert_id,
+                },
+                "entity": source,
+                "source": self.Hostname,
+            }
 
-	def __init__(self, config_section_name):
-		super().__init__(config_section_name=config_section_name)
-		self.APIKey = self.Config['api_key']
-		self.Tags = re.split(r"[,\s]+", self.Config['tags'], re.MULTILINE)
-		self.Hostname = socket.gethostname()
+            if data:
+                create_alert["details"].update(data)
 
-
-	async def _main(self):
-		while True:
-			source, alert_cls, alert_id, title, detail, data = await self.Queue.get()
-
-			headers = {
-				'Authorization': 'GenieKey {}'.format(self.APIKey)
-			}
-
-			create_alert = {
-				'message': title,
-				'note': detail,
-				'alias': '{}:{}:{}'.format(source, alert_cls, alert_id),
-				'tags': self.Tags,
-				'details': {
-					'source': source,
-					'class': alert_cls,
-					'id': alert_id,
-				},
-				'entity': source,
-				'source': self.Hostname,
-			}
-
-			if data:
-				create_alert["details"].update(data)
-
-			async with aiohttp.ClientSession(headers=headers) as session:
-				async with session.post(self.URL + "/v2/alerts", json=create_alert) as resp:
-					if resp.status != 202:
-						text = await resp.text()
-						L.warning("Failed to create the alert ({}):\n'{}'".format(resp.status, text))
-					else:
-						await resp.text()
+            async with aiohttp.ClientSession(headers=headers) as session:
+                async with session.post(
+                    self.URL + "/v2/alerts", json=create_alert
+                ) as resp:
+                    if resp.status != 202:
+                        text = await resp.text()
+                        L.warning(
+                            "Failed to create the alert ({}):\n'{}'".format(
+                                resp.status, text
+                            )
+                        )
+                    else:
+                        await resp.text()
 
 
 class PagerDutyAlertProvider(AlertHTTPProviderABC):
+    ConfigDefaults = {
+        "url": "https://events.pagerduty.com",
+        # Your api key generated by PagerDuty
+        "api_key": "",
+        # Integration key (or routing_key) from a Service directory
+        # Choose "Use our API directly" and "Events API v2"
+        "integration_key": "",
+    }
 
-	ConfigDefaults = {
-		'url': 'https://events.pagerduty.com',
+    def __init__(self, config_section_name):
+        super().__init__(config_section_name=config_section_name)
+        self.APIKey = self.Config["api_key"]
+        self.IntegrationKey = self.Config["integration_key"]
 
-		# Your api key generated by PagerDuty
-		'api_key': '',
+    async def _main(self):
+        while True:
+            source, alert_cls, alert_id, title, detail, data = await self.Queue.get()
 
-		# Integration key (or routing_key) from a Service directory
-		# Choose "Use our API directly" and "Events API v2"
-		'integration_key': ''
-	}
+            headers = {"Authorization": "Token token={}".format(self.APIKey)}
 
+            create_alert = {
+                "event_action": "trigger",
+                "routing_key": self.IntegrationKey,
+                "dedup_key": "{}:{}:{}".format(source, alert_cls, alert_id),
+                "client": "Asab Alert Service",
+                "payload": {
+                    "summary": title,
+                    "severity": "warning",
+                    "source": source,
+                    "group": alert_cls,
+                    "custom_details": {
+                        "source": source,
+                        "class": alert_cls,
+                        "id": alert_id,
+                    },
+                },
+            }
 
-	def __init__(self, config_section_name):
-		super().__init__(config_section_name=config_section_name)
-		self.APIKey = self.Config['api_key']
-		self.IntegrationKey = self.Config['integration_key']
+            if data:
+                create_alert["payload"]["custom_details"].update(data)
 
-
-	async def _main(self):
-		while True:
-			source, alert_cls, alert_id, title, detail, data = await self.Queue.get()
-
-			headers = {
-				'Authorization': 'Token token={}'.format(self.APIKey)
-			}
-
-			create_alert = {
-				'event_action': 'trigger',
-				"routing_key": self.IntegrationKey,
-				'dedup_key': '{}:{}:{}'.format(source, alert_cls, alert_id),
-
-				"client": "Asab Alert Service",
-
-				'payload': {
-					'summary': title,
-					'severity': 'warning',
-					'source': source,
-					'group': alert_cls,
-					"custom_details": {
-						'source': source,
-						'class': alert_cls,
-						'id': alert_id,
-					},
-				},
-			}
-
-			if data:
-				create_alert["payload"]["custom_details"].update(data)
-
-			async with aiohttp.ClientSession(headers=headers) as session:
-				async with session.post(self.URL + "/v2/enqueue", json=create_alert) as resp:
-					if resp.status != 202:
-						text = await resp.text()
-						L.warning("Failed to create the alert ({}):\n'{}'".format(resp.status, text))
-					else:
-						await resp.text()
+            async with aiohttp.ClientSession(headers=headers) as session:
+                async with session.post(
+                    self.URL + "/v2/enqueue", json=create_alert
+                ) as resp:
+                    if resp.status != 202:
+                        text = await resp.text()
+                        L.warning(
+                            "Failed to create the alert ({}):\n'{}'".format(
+                                resp.status, text
+                            )
+                        )
+                    else:
+                        await resp.text()
 
 
 class AlertService(asab.Service):
+    def __init__(self, app, service_name="asab.AlertService"):
+        super().__init__(app, service_name)
+        self.Providers = []
 
-	def __init__(self, app, service_name="asab.AlertService"):
-		super().__init__(app, service_name)
-		self.Providers = []
+        for section in asab.Config.sections():
+            if not section.startswith("asab:alert:"):
+                continue
 
-		for section in asab.Config.sections():
-			if not section.startswith("asab:alert:"):
-				continue
+            provider_cls = {
+                "asab:alert:opsgenie": OpsGenieAlertProvider,
+                "asab:alert:pagerduty": PagerDutyAlertProvider,
+            }.get(section)
+            if provider_cls is None:
+                L.warning("Unknwn alert provider: {}".format(section))
+                continue
 
-			provider_cls = {
-				'asab:alert:opsgenie': OpsGenieAlertProvider,
-				'asab:alert:pagerduty': PagerDutyAlertProvider
-			}.get(section)
-			if provider_cls is None:
-				L.warning("Unknwn alert provider: {}".format(section))
-				continue
+            self.Providers.append(provider_cls(config_section_name=section))
 
-			self.Providers.append(provider_cls(config_section_name=section))
+    async def initialize(self, app):
+        await asyncio.gather(*[p.initialize(app) for p in self.Providers])
 
+    async def finalize(self, app):
+        await asyncio.gather(*[p.finalize(app) for p in self.Providers])
 
-	async def initialize(self, app):
-		await asyncio.gather(*[
-			p.initialize(app) for p in self.Providers
-		])
-
-
-	async def finalize(self, app):
-		await asyncio.gather(*[
-			p.finalize(app) for p in self.Providers
-		])
-
-
-	def trigger(self, source, alert_cls, alert_id, title, *, detail: str = None, data: dict = None):
-		for p in self.Providers:
-			p.trigger(source, alert_cls, alert_id, title, detail, data)
+    def trigger(
+        self,
+        source,
+        alert_cls,
+        alert_id,
+        title,
+        *,
+        detail: str = None,
+        data: dict = None
+    ):
+        for p in self.Providers:
+            p.trigger(source, alert_cls, alert_id, title, detail, data)

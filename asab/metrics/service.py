@@ -6,8 +6,16 @@ import os
 from ..config import Config
 from ..abc import Service
 from .metrics import (
-	Metric, Counter, EPSCounter, Gauge, DutyCycle, AggregationCounter, Histogram,
-	CounterWithDynamicTags, AggregationCounterWithDynamicTags, HistogramWithDynamicTags
+    Metric,
+    Counter,
+    EPSCounter,
+    Gauge,
+    DutyCycle,
+    AggregationCounter,
+    Histogram,
+    CounterWithDynamicTags,
+    AggregationCounterWithDynamicTags,
+    HistogramWithDynamicTags,
 )
 from .storage import Storage
 
@@ -20,312 +28,384 @@ L = logging.getLogger(__name__)
 
 
 class MetricsService(Service):
+    def __init__(self, app, service_name):
+        super().__init__(app, service_name)
 
-	def __init__(self, app, service_name):
+        self.Metrics = []
+        self.Targets = []
+        self.Tags = {
+            "host": app.HostName,
+            "appclass": app.__class__.__name__,
+        }
+        if app.DeploymentId:
+            self.Tags["deployment_id"] = app.DeploymentId
 
-		super().__init__(app, service_name)
+        # A identified of the host machine (node); added if available at environment variables
+        node_id = os.getenv("NODE_ID", None)
+        if node_id is not None:
+            self.Tags["node_id"] = node_id
 
-		self.Metrics = []
-		self.Targets = []
-		self.Tags = {
-			"host": app.HostName,
-			"appclass": app.__class__.__name__,
-		}
-		if app.DeploymentId:
-			self.Tags["deployment_id"] = app.DeploymentId
+        service_id = os.getenv("SERVICE_ID", None)
+        if service_id is not None:
+            self.Tags["service_id"] = service_id
 
-		# A identified of the host machine (node); added if available at environment variables
-		node_id = os.getenv('NODE_ID', None)
-		if node_id is not None:
-			self.Tags["node_id"] = node_id
+        # A unique identifier of a microservice; added as an environment variable.
+        instance_id = os.getenv("INSTANCE_ID", None)
+        if instance_id is not None:
+            self.Tags["instance_id"] = instance_id
 
-		service_id = os.getenv('SERVICE_ID', None)
-		if service_id is not None:
-			self.Tags["service_id"] = service_id
+        self.Storage = Storage()
 
-		# A unique identifier of a microservice; added as an environment variable.
-		instance_id = os.getenv('INSTANCE_ID', None)
-		if instance_id is not None:
-			self.Tags["instance_id"] = instance_id
+        app.PubSub.subscribe("Application.tick/60!", self._on_flushing_event)
 
-		self.Storage = Storage()
+        if Config.has_option("asab:metrics", "target"):
+            for target in Config.get("asab:metrics", "target").split():
+                target = target.strip()
+                try:
+                    target_type = Config.get("asab:metrics:{}".format(target), "type")
+                except configparser.NoOptionError:
+                    # This allows to specify the type of the target by its name
+                    target_type = target
 
-		app.PubSub.subscribe("Application.tick/60!", self._on_flushing_event)
+                if target_type == "influxdb":
+                    from .influxdb import InfluxDBTarget
 
-		if Config.has_option('asab:metrics', 'target'):
-			for target in Config.get('asab:metrics', 'target').split():
-				target = target.strip()
-				try:
-					target_type = Config.get('asab:metrics:{}'.format(target), 'type')
-				except configparser.NoOptionError:
-					# This allows to specify the type of the target by its name
-					target_type = target
+                    target = InfluxDBTarget(self, "asab:metrics:{}".format(target))
 
-				if target_type == 'influxdb':
-					from .influxdb import InfluxDBTarget
-					target = InfluxDBTarget(self, 'asab:metrics:{}'.format(target))
+                elif target_type == "http":
+                    from .http import HTTPTarget
 
-				elif target_type == 'http':
-					from .http import HTTPTarget
-					target = HTTPTarget(self, 'asab:metrics:{}'.format(target))
+                    target = HTTPTarget(self, "asab:metrics:{}".format(target))
 
-				else:
-					raise RuntimeError("Unknown target type {}".format(target_type))
+                else:
+                    raise RuntimeError("Unknown target type {}".format(target_type))
 
-				self.Targets.append(target)
+                self.Targets.append(target)
 
-		if Config.getboolean('asab:metrics', 'native_metrics'):
-			from .native import NativeMetrics
-			self._native_svc = NativeMetrics(self.App, self)
+        if Config.getboolean("asab:metrics", "native_metrics"):
+            from .native import NativeMetrics
 
+            self._native_svc = NativeMetrics(self.App, self)
 
-	async def finalize(self, app):
-		await self._on_flushing_event("finalize!")
+    async def finalize(self, app):
+        await self._on_flushing_event("finalize!")
 
+    def clear(self):
+        self.Metrics.clear()
+        self.Storage.clear()
 
-	def clear(self):
-		self.Metrics.clear()
-		self.Storage.clear()
+    def _flush_metrics(self):
+        now = self.App.time()
 
-	def _flush_metrics(self):
-		now = self.App.time()
+        self.App.PubSub.publish("Metrics.flush!")
+        for metric in self.Metrics:
+            try:
+                metric.flush(now)
+            except Exception as e:
+                L.exception(f"Exception during metric.flush()\n{e}")
 
-		self.App.PubSub.publish("Metrics.flush!")
-		for metric in self.Metrics:
-			try:
-				metric.flush(now)
-			except Exception as e:
-				L.exception(f"Exception during metric.flush()\n{e}")
+        return now
 
-		return now
+    async def _on_flushing_event(self, event_type):
+        if len(self.Metrics) == 0:
+            return
 
-	async def _on_flushing_event(self, event_type):
-		if len(self.Metrics) == 0:
-			return
+        now = self._flush_metrics()
 
-		now = self._flush_metrics()
+        pending = set()
+        for target in self.Targets:
+            pending.add(
+                asyncio.ensure_future(target.process(self.Storage.Metrics, now))
+            )
 
-		pending = set()
-		for target in self.Targets:
-			pending.add(
-				asyncio.ensure_future(target.process(self.Storage.Metrics, now))
-			)
+        while len(pending) > 0:
+            done, pending = await asyncio.wait(
+                pending, timeout=180.0, return_when=asyncio.ALL_COMPLETED
+            )
 
-		while len(pending) > 0:
-			done, pending = await asyncio.wait(pending, timeout=180.0, return_when=asyncio.ALL_COMPLETED)
+    def _add_metric(
+        self,
+        metric: Metric,
+        metric_name: str,
+        tags=None,
+        reset=None,
+        help=None,
+        unit=None,
+    ):
+        # Add global tags
+        metric.StaticTags.update(self.Tags)
+        metric.App = self.App
 
+        # Add local static tags
+        if tags is not None:
+            for key, value in tags.items():
+                # Check if every key and value is of type string. If not, try to convert it.
+                assert isinstance(
+                    key, str
+                ), "Cannot add metrics tag: key '{}' is not a string.".format(key)
+                assert isinstance(
+                    value, str
+                ), "Cannot add metrics tag for key '{}': value '{}' is not a string.".format(
+                    key, value
+                )
+            metric.StaticTags.update(tags)
 
-	def _add_metric(self, metric: Metric, metric_name: str, tags=None, reset=None, help=None, unit=None):
-		# Add global tags
-		metric.StaticTags.update(self.Tags)
-		metric.App = self.App
+        metric._initialize_storage(
+            self.Storage.add(
+                metric_name,
+                tags=metric.StaticTags.copy(),
+                reset=reset,
+                help=help,
+                unit=unit,
+            )
+        )
 
-		# Add local static tags
-		if tags is not None:
-			for key, value in tags.items():
-				# Check if every key and value is of type string. If not, try to convert it.
-				assert isinstance(key, str), "Cannot add metrics tag: key '{}' is not a string.".format(key)
-				assert isinstance(value, str), "Cannot add metrics tag for key '{}': value '{}' is not a string.".format(key, value)
-			metric.StaticTags.update(tags)
+        self.Metrics.append(metric)
 
+    def create_gauge(
+        self,
+        metric_name: str,
+        tags: dict = None,
+        init_values: dict = None,
+        help: str = None,
+        unit: str = None,
+    ):
+        """
+        The `create_gauge` function creates and returns a Gauge metric with specified parameters.
 
-		metric._initialize_storage(
-			self.Storage.add(metric_name, tags=metric.StaticTags.copy(), reset=reset, help=help, unit=unit)
-		)
+        Args:
+                metric_name (str): The name of the metric you want to create.
+                tags (dict): Dictionary where the keys represent the tag names and the values represent the tag values. It allows you
+                        to categorize and filter metrics based on different dimensions or attributes.
+                init_values (dict): The `init_values` parameter is used to set the initial value of the gauge
+                        metric. Provide pairs of value names and their initial values. If not provided, the gauge
+                        metric will be initialized with a value of 0.
+                help (str): The "help" parameter is used to provide a description or explanation of the metric. It
+                        can be used to provide additional information about what the metric measures or how it should be
+                        interpreted.
+                unit (str): The "unit" parameter is used to specify the unit of measurement for the metric. It
+                        helps provide context and understanding for the metric being measured. For example, if the metric is
+                        measuring the temperature, the unit could be "degrees Celsius".
 
-		self.Metrics.append(metric)
+        Returns:
+                an instance of the Gauge class.
 
-	def create_gauge(self, metric_name: str, tags: dict = None, init_values: dict = None, help: str = None, unit: str = None):
-		"""
-		The `create_gauge` function creates and returns a Gauge metric with specified parameters.
+        Raises:
+                AssertionError: `tags` dictionary has to be of type 'str': 'str'.
+        """
 
-		Args:
-			metric_name (str): The name of the metric you want to create.
-			tags (dict): Dictionary where the keys represent the tag names and the values represent the tag values. It allows you
-				to categorize and filter metrics based on different dimensions or attributes.
-			init_values (dict): The `init_values` parameter is used to set the initial value of the gauge
-				metric. Provide pairs of value names and their initial values. If not provided, the gauge
-				metric will be initialized with a value of 0.
-			help (str): The "help" parameter is used to provide a description or explanation of the metric. It
-				can be used to provide additional information about what the metric measures or how it should be
-				interpreted.
-			unit (str): The "unit" parameter is used to specify the unit of measurement for the metric. It
-				helps provide context and understanding for the metric being measured. For example, if the metric is
-				measuring the temperature, the unit could be "degrees Celsius".
+        m = Gauge(init_values=init_values)
+        self._add_metric(m, metric_name, tags=tags, help=help, unit=unit)
+        return m
 
-		Returns:
-			an instance of the Gauge class.
+    def create_counter(
+        self,
+        metric_name: str,
+        tags: dict = None,
+        init_values: dict = None,
+        reset: bool = True,
+        help: str = None,
+        unit: str = None,
+        dynamic_tags: bool = False,
+    ):
+        """
+        The function creates a counter metric with optional dynamic tags and adds it to a metric collection.
 
-		Raises:
-			AssertionError: `tags` dictionary has to be of type 'str': 'str'.
-		"""
+        Args:
+                metric_name (str): The name of the metric you want to create.
+                tags (dict): Dictionary where the keys represent the tag names and the values represent the tag values. It allows you
+                        to categorize and filter metrics based on different dimensions or attributes.
+                init_values (dict): The `init_values` parameter is used to set the initial value of the
+                        metric. Provide pairs of value names and their initial values. If not provided, the
+                        metric will be initialized with a value of 0.
+                reset (bool): The "reset" parameter is a boolean value that determines whether the counter should
+                        be reset to initial values every 60 seconds. Defaults to True
+                help (str): The "help" parameter is used to provide a description or explanation of the metric. It
+                        can be used to provide additional information about what the metric measures or how it should be
+                        interpreted.
+                unit (str): The "unit" parameter is used to specify the unit of measurement for the metric. It
+                        helps provide context and understanding for the metric being measured. For example, if the metric is
+                        measuring the temperature, the unit could be "degrees Celsius".
+                dynamic_tags: Boolean flag. If set to True, the counter will be an instance of the
+                        "CounterWithDynamicTags" class, which allows tags to be added or removed dynamically. Defaults to False
 
-		m = Gauge(init_values=init_values)
-		self._add_metric(m, metric_name, tags=tags, help=help, unit=unit)
-		return m
+        Returns:
+                the created counter object.
 
-	def create_counter(self, metric_name: str, tags: dict = None, init_values: dict = None, reset: bool = True, help: str = None, unit: str = None, dynamic_tags: bool = False):
-		"""
-		The function creates a counter metric with optional dynamic tags and adds it to a metric collection.
+        Raises:
+                AssertionError: `tags` dictionary has to be of type 'str': 'str'.
+        """
+        if dynamic_tags:
+            m = CounterWithDynamicTags(init_values=init_values)
+        else:
+            m = Counter(init_values=init_values)
+        self._add_metric(m, metric_name, tags=tags, reset=reset, help=help, unit=unit)
+        return m
 
-		Args:
-			metric_name (str): The name of the metric you want to create.
-			tags (dict): Dictionary where the keys represent the tag names and the values represent the tag values. It allows you
-				to categorize and filter metrics based on different dimensions or attributes.
-			init_values (dict): The `init_values` parameter is used to set the initial value of the
-				metric. Provide pairs of value names and their initial values. If not provided, the
-				metric will be initialized with a value of 0.
-			reset (bool): The "reset" parameter is a boolean value that determines whether the counter should
-				be reset to initial values every 60 seconds. Defaults to True
-			help (str): The "help" parameter is used to provide a description or explanation of the metric. It
-				can be used to provide additional information about what the metric measures or how it should be
-				interpreted.
-			unit (str): The "unit" parameter is used to specify the unit of measurement for the metric. It
-				helps provide context and understanding for the metric being measured. For example, if the metric is
-				measuring the temperature, the unit could be "degrees Celsius".
-			dynamic_tags: Boolean flag. If set to True, the counter will be an instance of the
-				"CounterWithDynamicTags" class, which allows tags to be added or removed dynamically. Defaults to False
+    def create_eps_counter(
+        self,
+        metric_name: str,
+        tags: dict = None,
+        init_values: dict = None,
+        reset: bool = True,
+        help: str = None,
+        unit: str = None,
+    ):
+        """
+        The function creates an EPSCounter object, and returns the object.
 
-		Returns:
-			the created counter object.
+        Args:
+                metric_name (str): The name of the metric you want to create.
+                tags (dict): Dictionary where the keys represent the tag names and the values represent the tag values. It allows you
+                        to categorize and filter metrics based on different dimensions or attributes.
+                init_values (dict): The `init_values` parameter is used to set the initial value of the
+                        metric. Provide pairs of value names and their initial values. If not provided, the
+                        metric will be initialized with a value of 0.
+                reset (bool): The "reset" parameter is a boolean value that determines whether the counter should
+                        be reset to initial values every 60 seconds. Defaults to True
+                help (str): The "help" parameter is used to provide a description or explanation of the metric. It
+                        can be used to provide additional information about what the metric measures or how it should be
+                        interpreted.
+                unit (str): The "unit" parameter is used to specify the unit of measurement for the metric. It
+                        helps provide context and understanding for the metric being measured. For example, if the metric is
+                        measuring the temperature, the unit could be "degrees Celsius".
 
-		Raises:
-			AssertionError: `tags` dictionary has to be of type 'str': 'str'.
-		"""
-		if dynamic_tags:
-			m = CounterWithDynamicTags(init_values=init_values)
-		else:
-			m = Counter(init_values=init_values)
-		self._add_metric(m, metric_name, tags=tags, reset=reset, help=help, unit=unit)
-		return m
+        Returns:
+                an instance of the `EPSCounter` class.
 
-	def create_eps_counter(self, metric_name: str, tags: dict = None, init_values: dict = None, reset: bool = True, help: str = None, unit: str = None):
-		"""
-		The function creates an EPSCounter object, and returns the object.
+        Raises:
+                AssertionError: `tags` dictionary has to be of type 'str': 'str'.
+        """
+        m = EPSCounter(init_values=init_values)
+        self._add_metric(m, metric_name, tags=tags, reset=reset, help=help, unit=unit)
+        return m
 
-		Args:
-			metric_name (str): The name of the metric you want to create.
-			tags (dict): Dictionary where the keys represent the tag names and the values represent the tag values. It allows you
-				to categorize and filter metrics based on different dimensions or attributes.
-			init_values (dict): The `init_values` parameter is used to set the initial value of the
-				metric. Provide pairs of value names and their initial values. If not provided, the
-				metric will be initialized with a value of 0.
-			reset (bool): The "reset" parameter is a boolean value that determines whether the counter should
-				be reset to initial values every 60 seconds. Defaults to True
-			help (str): The "help" parameter is used to provide a description or explanation of the metric. It
-				can be used to provide additional information about what the metric measures or how it should be
-				interpreted.
-			unit (str): The "unit" parameter is used to specify the unit of measurement for the metric. It
-				helps provide context and understanding for the metric being measured. For example, if the metric is
-				measuring the temperature, the unit could be "degrees Celsius".
+    def create_duty_cycle(
+        self,
+        metric_name: str,
+        tags: dict = None,
+        init_values: dict = None,
+        help: str = None,
+        unit: str = None,
+    ):
+        """
+        The function creates a duty cycle metric and returns the object.
 
-		Returns:
-			an instance of the `EPSCounter` class.
+        Args:
+                metric_name (str): The name of the metric you want to create.
+                tags (dict): Dictionary where the keys represent the tag names and the values represent the tag values. It allows you
+                        to categorize and filter metrics based on different dimensions or attributes.
+                init_values (dict): The `init_values` parameter is used to set the initial value of the
+                        metric. Provide pairs of value names and their initial values. If not provided, the
+                        metric will be initialized with a value of 0.
+                help (str): The "help" parameter is used to provide a description or explanation of the metric. It
+                        can be used to provide additional information about what the metric measures or how it should be
+                        interpreted.
+                unit (str): The "unit" parameter is used to specify the unit of measurement for the metric. It
+                        helps provide context and understanding for the metric being measured. For example, if the metric is
+                        measuring the temperature, the unit could be "degrees Celsius".
 
-		Raises:
-			AssertionError: `tags` dictionary has to be of type 'str': 'str'.
-		"""
-		m = EPSCounter(init_values=init_values)
-		self._add_metric(m, metric_name, tags=tags, reset=reset, help=help, unit=unit)
-		return m
+        Returns:
+                an instance of the DutyCycle class.
 
-	def create_duty_cycle(self, metric_name: str, tags: dict = None, init_values: dict = None, help: str = None, unit: str = None):
-		"""
-		The function creates a duty cycle metric and returns the object.
+        Raises:
+                AssertionError: `tags` dictionary has to be of type 'str': 'str'.
+        """
+        m = DutyCycle(self.App, init_values=init_values)
+        self._add_metric(m, metric_name, tags=tags, help=help, unit=unit)
+        return m
 
-		Args:
-			metric_name (str): The name of the metric you want to create.
-			tags (dict): Dictionary where the keys represent the tag names and the values represent the tag values. It allows you
-				to categorize and filter metrics based on different dimensions or attributes.
-			init_values (dict): The `init_values` parameter is used to set the initial value of the
-				metric. Provide pairs of value names and their initial values. If not provided, the
-				metric will be initialized with a value of 0.
-			help (str): The "help" parameter is used to provide a description or explanation of the metric. It
-				can be used to provide additional information about what the metric measures or how it should be
-				interpreted.
-			unit (str): The "unit" parameter is used to specify the unit of measurement for the metric. It
-				helps provide context and understanding for the metric being measured. For example, if the metric is
-				measuring the temperature, the unit could be "degrees Celsius".
+    def create_aggregation_counter(
+        self,
+        metric_name,
+        tags=None,
+        init_values=None,
+        reset: bool = True,
+        aggregator=max,
+        help=None,
+        unit=None,
+        dynamic_tags=False,
+    ):
+        """
+        The function creates a counter metric with optional dynamic tags and adds it to a metric collection.
 
-		Returns:
-			an instance of the DutyCycle class.
+        Args:
+                metric_name (str): The name of the metric you want to create.
+                tags (dict): Dictionary where the keys represent the tag names and the values represent the tag values. It allows you
+                        to categorize and filter metrics based on different dimensions or attributes.
+                init_values (dict): The `init_values` parameter is used to set the initial value of the
+                        metric. Provide pairs of value names and their initial values. If not provided, the
+                        metric will be initialized with a value of 0.
+                reset (bool): The "reset" parameter is a boolean value that determines whether the counter should
+                        be reset to initial values every 60 seconds. Defaults to True
+                help (str): The "help" parameter is used to provide a description or explanation of the metric. It
+                        can be used to provide additional information about what the metric measures or how it should be
+                        interpreted.
+                unit (str): The "unit" parameter is used to specify the unit of measurement for the metric. It
+                        helps provide context and understanding for the metric being measured. For example, if the metric is
+                        measuring the temperature, the unit could be "degrees Celsius".
+                dynamic_tags: Boolean flag. If set to True, the counter will be an instance of the
+                        "AggregationCounterWithDynamicTags" class, which allows tags to be added or removed dynamically. Defaults to False
 
-		Raises:
-			AssertionError: `tags` dictionary has to be of type 'str': 'str'.
-		"""
-		m = DutyCycle(self.App, init_values=init_values)
-		self._add_metric(m, metric_name, tags=tags, help=help, unit=unit)
-		return m
+        Returns:
+                the created counter object.
 
-	def create_aggregation_counter(self, metric_name, tags=None, init_values=None, reset: bool = True, aggregator=max, help=None, unit=None, dynamic_tags=False):
-		"""
-		The function creates a counter metric with optional dynamic tags and adds it to a metric collection.
+        Raises:
+                AssertionError: `tags` dictionary has to be of type 'str': 'str'.
+        """
+        if dynamic_tags:
+            m = AggregationCounterWithDynamicTags(
+                init_values=init_values, aggregator=aggregator
+            )
+        else:
+            m = AggregationCounter(init_values=init_values, aggregator=aggregator)
+        self._add_metric(m, metric_name, tags=tags, reset=reset, help=help, unit=unit)
+        return m
 
-		Args:
-			metric_name (str): The name of the metric you want to create.
-			tags (dict): Dictionary where the keys represent the tag names and the values represent the tag values. It allows you
-				to categorize and filter metrics based on different dimensions or attributes.
-			init_values (dict): The `init_values` parameter is used to set the initial value of the
-				metric. Provide pairs of value names and their initial values. If not provided, the
-				metric will be initialized with a value of 0.
-			reset (bool): The "reset" parameter is a boolean value that determines whether the counter should
-				be reset to initial values every 60 seconds. Defaults to True
-			help (str): The "help" parameter is used to provide a description or explanation of the metric. It
-				can be used to provide additional information about what the metric measures or how it should be
-				interpreted.
-			unit (str): The "unit" parameter is used to specify the unit of measurement for the metric. It
-				helps provide context and understanding for the metric being measured. For example, if the metric is
-				measuring the temperature, the unit could be "degrees Celsius".
-			dynamic_tags: Boolean flag. If set to True, the counter will be an instance of the
-				"AggregationCounterWithDynamicTags" class, which allows tags to be added or removed dynamically. Defaults to False
+    def create_histogram(
+        self,
+        metric_name,
+        buckets: list,
+        tags=None,
+        init_values=None,
+        reset: bool = True,
+        help=None,
+        unit=None,
+        dynamic_tags=False,
+    ):
+        """
+        The function creates a histogram metric.
 
-		Returns:
-			the created counter object.
+        Args:
+                metric_name (str): The name of the metric you want to create.
+                buckets (list): The "buckets" parameter is a list that specifies the boundaries for the histogram
+                buckets. Each element in the list represents the upper bound of a bucket. For example, if the list
+                is [10, 20, 30], it means that the histogram will have three buckets: one for values less than 10, second for values less than 20, third for values less than 30
+                tags (dict): Dictionary where the keys represent the tag names and the values represent the tag values. It allows you
+                        to categorize and filter metrics based on different dimensions or attributes.
+                init_values (dict): The `init_values` parameter is used to set the initial value of the
+                        metric. Provide pairs of value names and their initial values. If not provided, the
+                        metric will be initialized with a value of 0.
+                reset (bool): The "reset" parameter is a boolean value that determines whether the histogram should
+                        be reset to initial values every 60 seconds. Defaults to True
+                help (str): The "help" parameter is used to provide a description or explanation of the metric. It
+                        can be used to provide additional information about what the metric measures or how it should be
+                        interpreted.
+                unit (str): The "unit" parameter is used to specify the unit of measurement for the metric. It
+                        helps provide context and understanding for the metric being measured. For example, if the metric is
+                        measuring the temperature, the unit could be "degrees Celsius".
+                dynamic_tags: Boolean flag. If set to True, the counter will be an instance of the
+                        "AggregationCounterWithDynamicTags" class, which allows tags to be added or removed dynamically. Defaults to False
 
-		Raises:
-			AssertionError: `tags` dictionary has to be of type 'str': 'str'.
-		"""
-		if dynamic_tags:
-			m = AggregationCounterWithDynamicTags(init_values=init_values, aggregator=aggregator)
-		else:
-			m = AggregationCounter(init_values=init_values, aggregator=aggregator)
-		self._add_metric(m, metric_name, tags=tags, reset=reset, help=help, unit=unit)
-		return m
+        Returns:
+                a histogram object
 
-	def create_histogram(self, metric_name, buckets: list, tags=None, init_values=None, reset: bool = True, help=None, unit=None, dynamic_tags=False):
-		"""
-		The function creates a histogram metric.
-
-		Args:
-			metric_name (str): The name of the metric you want to create.
-			buckets (list): The "buckets" parameter is a list that specifies the boundaries for the histogram
-			buckets. Each element in the list represents the upper bound of a bucket. For example, if the list
-			is [10, 20, 30], it means that the histogram will have three buckets: one for values less than 10, second for values less than 20, third for values less than 30
-			tags (dict): Dictionary where the keys represent the tag names and the values represent the tag values. It allows you
-				to categorize and filter metrics based on different dimensions or attributes.
-			init_values (dict): The `init_values` parameter is used to set the initial value of the
-				metric. Provide pairs of value names and their initial values. If not provided, the
-				metric will be initialized with a value of 0.
-			reset (bool): The "reset" parameter is a boolean value that determines whether the histogram should
-				be reset to initial values every 60 seconds. Defaults to True
-			help (str): The "help" parameter is used to provide a description or explanation of the metric. It
-				can be used to provide additional information about what the metric measures or how it should be
-				interpreted.
-			unit (str): The "unit" parameter is used to specify the unit of measurement for the metric. It
-				helps provide context and understanding for the metric being measured. For example, if the metric is
-				measuring the temperature, the unit could be "degrees Celsius".
-			dynamic_tags: Boolean flag. If set to True, the counter will be an instance of the
-				"AggregationCounterWithDynamicTags" class, which allows tags to be added or removed dynamically. Defaults to False
-
-		Returns:
-			a histogram object
-
-		Raises:
-			AssertionError: `tags` dictionary has to be of type 'str': 'str'.
-		"""
-		if dynamic_tags:
-			m = HistogramWithDynamicTags(buckets=buckets, init_values=init_values)
-		else:
-			m = Histogram(buckets=buckets, init_values=init_values)
-		self._add_metric(m, metric_name, tags=tags, reset=reset, help=help, unit=unit)
-		return m
+        Raises:
+                AssertionError: `tags` dictionary has to be of type 'str': 'str'.
+        """
+        if dynamic_tags:
+            m = HistogramWithDynamicTags(buckets=buckets, init_values=init_values)
+        else:
+            m = Histogram(buckets=buckets, init_values=init_values)
+        self._add_metric(m, metric_name, tags=tags, reset=reset, help=help, unit=unit)
+        return m
