@@ -260,8 +260,7 @@ class LibraryService(Service):
 				continue
 
 			if isinstance(ress, Exception):
-				L.exception("Error when listing items from provider", exc_info=ress)
-				continue
+				raise ress
 
 			for item in ress:
 				item.disabled = self.check_disabled(item.name, tenant=tenant)

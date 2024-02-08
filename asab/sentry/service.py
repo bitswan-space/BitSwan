@@ -101,11 +101,8 @@ class SentryService(asab.Service):
 				manifest_path = "MANIFEST.json"
 
 		if len(manifest_path) != 0:
-			try:
-				with open(manifest_path) as f:
-					manifest = json.load(f)
-			except Exception as e:
-				L.exception("Error when reading manifest for reason {}".format(e))
+			with open(manifest_path) as f:
+				manifest = json.load(f)
 
 		self.Release = "{appname}:{version}".format(  # e.g. 'LMIOParsecApplication:v23.40-alpha'
 			appname=app.__class__.__name__,

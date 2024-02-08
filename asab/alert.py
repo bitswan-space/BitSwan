@@ -77,10 +77,7 @@ class AlertHTTPProviderABC(AlertProviderABC):
 		if self.MainTask is None:
 			return
 
-		try:
-			self.MainTask.result()
-		except Exception:
-			L.exception("Exception in AlertService main task")
+		self.MainTask.result()
 
 		self.MainTask = None
 		self._start_main_task()

@@ -13,9 +13,9 @@ class ProactorService(asab.Service):
 		self.Loop = app.Loop
 
 		max_workers = asab.Config.get('asab:proactor', 'max_workers')
-		try:
+		if max_workers:
 			max_workers = int(max_workers)
-		except BaseException:
+		else:
 			max_workers = None
 		if max_workers <= 0:
 			max_workers = None

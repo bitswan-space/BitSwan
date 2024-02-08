@@ -637,10 +637,7 @@ class Application(metaclass=Singleton):
 		while len(futures) > 0:
 			done, futures = await asyncio.wait(futures, return_when=asyncio.FIRST_EXCEPTION)
 			for fut in done:
-				try:
-					fut.result()
-				except Exception:
-					L.exception("Error during finalize call")
+				fut.result()
 
 
 		# Finalize modules
@@ -653,10 +650,7 @@ class Application(metaclass=Singleton):
 		while len(futures) > 0:
 			done, futures = await asyncio.wait(futures, return_when=asyncio.FIRST_EXCEPTION)
 			for fut in done:
-				try:
-					fut.result()
-				except Exception:
-					L.exception("Error during finalize call")
+				fut.result()
 
 
 		# Wait for non-finalized tasks
@@ -693,18 +687,12 @@ class Application(metaclass=Singleton):
 		# Initialize modules
 		while len(self.InitModulesQueue) > 0:
 			module = self.InitModulesQueue.pop()
-			try:
-				await module.initialize(self)
-			except Exception:
-				L.exception("Error during module initialization")
+			await module.initialize(self)
 
 		# Initialize services
 		while len(self.InitServicesQueue) > 0:
 			service = self.InitServicesQueue.pop()
-			try:
-				await service.initialize(self)
-			except Exception:
-				L.exception("Error during service initialization")
+			await service.initialize(self)
 
 
 	def set_exit_code(self, exit_code: typing.Union[int, str], force: bool = False):

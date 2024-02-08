@@ -94,8 +94,8 @@ class MetricsService(Service):
 		for metric in self.Metrics:
 			try:
 				metric.flush(now)
-			except Exception:
-				L.exception("Exception during metric.flush()")
+			except Exception as e:
+				L.exception(f"Exception during metric.flush()\n{e}")
 
 		return now
 

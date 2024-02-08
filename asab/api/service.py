@@ -42,11 +42,8 @@ class ApiService(Service):
 				path = "MANIFEST.json"
 
 		if len(path) != 0:
-			try:
-				with open(path) as f:
-					self.Manifest = json.load(f)
-			except Exception as e:
-				L.exception("Error when reading manifest for reason {}".format(e))
+			with open(path) as f:
+				self.Manifest = json.load(f)
 
 		else:
 			self.Manifest = None

@@ -198,10 +198,7 @@ class PubSub(object):
 
 		else:
 			for callback in self._callback_iter(message_type):
-				try:
-					callback(message_type, *args, **kwargs)
-				except Exception:
-					L.exception("Error in a PubSub callback", struct_data={'message_type': message_type})
+				callback(message_type, *args, **kwargs)
 
 
 	def publish_threadsafe(self, message_type: str, *args, **kwargs):
@@ -278,8 +275,6 @@ def _deliver_async_exited(task):
 		task.result()
 	except asyncio.CancelledError:
 		pass
-	except Exception:
-		L.exception("Error during pubsub delivery", struct_data={'task': task.get_name()})
 
 
 def _deliver_async(loop, callback, message_type, *args, **kwargs):

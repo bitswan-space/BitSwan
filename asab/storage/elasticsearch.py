@@ -41,6 +41,9 @@ Config.add_defaults(
 )
 
 
+class ElasticError(Exception):
+    pass
+
 
 class StorageService(StorageServiceABC):
 	"""
@@ -251,7 +254,7 @@ class StorageService(StorageServiceABC):
 		"""
 		async with self.request("GET", "{}/_mapping".format(index)) as resp:
 			if resp.status != 200:
-				raise Exception("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
+				raise ElasticError("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
 			return await resp.json()
 
 
@@ -266,7 +269,7 @@ class StorageService(StorageServiceABC):
 		"""
 		async with self.request("GET", "_index_template/{}?format=json".format(template_name)) as resp:
 			if resp.status != 200:
-				raise Exception("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
+				raise ElasticError("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
 			return await resp.json()
 
 
@@ -281,7 +284,7 @@ class StorageService(StorageServiceABC):
 		"""
 		async with self.request("PUT", "_index_template/{}".format(template_name), json=template) as resp:
 			if resp.status != 200:
-				raise Exception("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
+				raise ElasticError("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
 
 			return await resp.json()
 
@@ -340,7 +343,7 @@ class StorageService(StorageServiceABC):
 
 		async with self.request("GET", "{}/_search?size={}&from={}&version=true".format(index, size, _from)) as resp:
 			if resp.status != 200:
-				raise Exception("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
+				raise ElasticError("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
 
 			return await resp.json()
 
@@ -356,7 +359,7 @@ class StorageService(StorageServiceABC):
 
 		async with self.request("GET", "{}/_count".format(index)) as resp:
 			if resp.status != 200:
-				raise Exception("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
+				raise ElasticError("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
 
 			return await resp.json()
 
@@ -370,7 +373,7 @@ class StorageService(StorageServiceABC):
 
 		async with self.request("GET", "_cat/indices/{}?format=json".format(search_string if search_string is not None else "*")) as resp:
 			if resp.status != 200:
-				raise Exception("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
+				raise ElasticError("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
 			return await resp.json()
 
 
@@ -385,7 +388,7 @@ class StorageService(StorageServiceABC):
 
 		async with self.request("PUT", index, json=settings) as resp:
 			if resp.status != 200:
-				raise Exception("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
+				raise ElasticError("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
 			return await resp.json()
 
 
@@ -399,7 +402,7 @@ class StorageService(StorageServiceABC):
 
 		async with self.request("PUT", "_ilm/policy/{}".format(policy_name), json=settings) as resp:
 			if resp.status != 200:
-				raise Exception("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
+				raise ElasticError("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
 
 			return await resp.json()
 
@@ -412,7 +415,7 @@ class StorageService(StorageServiceABC):
 		"""
 		async with self.request("GET", "_ilm/policy") as resp:
 			if resp.status != 200:
-				raise Exception("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
+				raise ElasticError("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
 
 			return await resp.json()
 

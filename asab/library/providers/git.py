@@ -173,8 +173,6 @@ class GitLibraryProvider(FileSystemLibraryProvider):
 				L.exception("Git repository not initialized: {}".format(err))
 			self.App.stop()
 
-		except Exception as err:
-			L.exception(err)
 
 		assert hasattr(self.GitRepository, "remotes"), "Git repository not initialized."
 		assert self.GitRepository.remotes["origin"] is not None, "Git repository not initialized."

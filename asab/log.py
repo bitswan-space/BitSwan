@@ -304,17 +304,13 @@ class StructuredDataFormatter(logging.Formatter):
 		Return the creation time of the specified LogRecord as formatted text.
 		'''
 
-		try:
-			ct = datetime.datetime.fromtimestamp(record.created)
-			if datefmt is not None:
-				s = ct.strftime(datefmt)
-			else:
-				t = ct.strftime("%Y-%m-%d %H:%M:%S")
-				s = "%s.%03d" % (t, record.msecs)
-			return s
-		except BaseException as e:
-			print("ERROR when logging: {}".format(e), file=sys.stderr)
-			return str(ct)
+		ct = datetime.datetime.fromtimestamp(record.created)
+		if datefmt is not None:
+			s = ct.strftime(datefmt)
+		else:
+			t = ct.strftime("%Y-%m-%d %H:%M:%S")
+			s = "%s.%03d" % (t, record.msecs)
+		return s
 
 
 	def render_struct_data(self, struct_data):
@@ -459,13 +455,9 @@ class AsyncIOHandler(logging.Handler):
 	def _connect(self, loop):
 		self._reset()
 
-		try:
-			self._socket = socket.socket(self._family, self._type)
-			self._socket.setblocking(0)
-			self._socket.connect(self._address)
-		except Exception as e:
-			print("Error when opening syslog connection to '{}'".format(self._address), e, file=sys.stderr)
-			return
+		self._socket = socket.socket(self._family, self._type)
+		self._socket.setblocking(0)
+		self._socket.connect(self._address)
 
 		self._loop.add_writer(self._socket, self._on_write)
 		self._loop.add_reader(self._socket, self._on_read)
@@ -477,18 +469,8 @@ class AsyncIOHandler(logging.Handler):
 
 		while not self._queue.empty():
 			msg = self._queue.get_nowait()
-			try:
-				self._socket.sendall(msg)
-			except Exception as e:
-				# Contingency dump when the socket is not ready
-				print(msg.decode("utf-8"), file=sys.stderr)
-				print(
-					"Error when writing to syslog '{}': {}".format(self._address, e),
-					traceback.format_exc(),
-					sep="\n",
-					file=sys.stderr
-				)
-
+			self._socket.sendall(msg)
+	
 	def _on_read(self):
 		try:
 			_ = self._socket.recvfrom(1024)

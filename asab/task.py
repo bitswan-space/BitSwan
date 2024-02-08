@@ -49,8 +49,6 @@ class TaskService(asab.Service):
 				await task
 			except asyncio.CancelledError:
 				pass
-			except Exception as e:
-				L.exception("Error '{}' during task service:".format(e))
 
 		for task in list(self.PendingTasks):
 			task.cancel()
@@ -59,8 +57,6 @@ class TaskService(asab.Service):
 				self.PendingTasks.remove(task)
 			except asyncio.CancelledError:
 				self.PendingTasks.remove(task)
-			except Exception as e:
-				L.exception("Error '{}' during task service:".format(e))
 
 
 		total_tasks = len(self.PendingTasks) + self.NewTasks.qsize()
@@ -75,8 +71,6 @@ class TaskService(asab.Service):
 			self.Main.result()
 		except asyncio.CancelledError:
 			pass
-		except Exception as e:
-			L.exception("Error '{}' during task service:".format(e))
 
 		self.Main = None
 		L.warning("Main task exited unexpectedly, restarting ...")
@@ -142,10 +136,7 @@ class TaskService(asab.Service):
 			else:
 				done, self.PendingTasks = await asyncio.wait(self.PendingTasks, timeout=1.0)
 				for task in done:
-					try:
-						await task
-					except Exception as e:
-						L.exception("Error '{}' during task:".format(e))
+					await task
 					self.App.PubSub.publish("TaskService.task_done!", task)
 
 
@@ -155,5 +146,3 @@ async def forever(async_fn):
 			await async_fn()
 		except asyncio.CancelledError:
 			break
-		except Exception as e:
-			L.exception("Error '{}' during forever task:".format(e))
