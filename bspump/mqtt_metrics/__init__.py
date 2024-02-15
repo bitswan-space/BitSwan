@@ -27,8 +27,9 @@ def get_pipeline_topology(pump, pipeline):
             and metric["name"] == "bspump.pipeline.eps_processor"
         ):
             metrics_components.append(metric)
-    for processor in pipeline_data["Processors"][0]:
-        components.append(processor)
+    for depth in pipeline_data["Processors"]:
+        for component in depth:
+            components.append(component)
 
     output = {
         "topology": {},
