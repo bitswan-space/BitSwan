@@ -113,7 +113,7 @@ class MQTTService(asab.Service):
         self.App = app
         broker = asab.Config["MQTTMetrics"].get("broker")
         self.host, self.port = broker.split(":")
-        self.client = mqtt.Client()
+        self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
         self.dumper = JSONDumper(pretty=False)
 
         self.sub_queue = []
