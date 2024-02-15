@@ -68,14 +68,15 @@ class Source(asab.Configurable):
         """
         # TODO: Remove this method completely, each source should call pipeline.process() method directly
 
-        await self.Pipeline.process(event, context=context)
-
         self.EventCount += 1
         if self.MQTTService and self.EventsToPublish > 0:
             self.MQTTService.publish_event(
                 self.Pipeline.Id, self, event, self.EventsToPublish
             )
             self.EventsToPublish -= 1
+        
+        await self.Pipeline.process(event, context=context)
+    
 
     def start(self, loop):
         """
