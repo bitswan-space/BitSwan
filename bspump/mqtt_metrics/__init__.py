@@ -71,7 +71,12 @@ def get_pipeline_topology(pump, pipeline):
                 output["topology"][components[1]["Id"]]["metrics"]["eps.out"]
             )
 
-    return output
+    message = get_message_structure()
+    message["data"] = output
+    message["count"] = 1
+    message["remaining_subscription_count"] = 1
+
+    return message
 
 
 def get_pipelines(pipelines: dict):
@@ -85,7 +90,12 @@ def get_pipelines(pipelines: dict):
         }
         output["topology"][pipeline.Id] = pipeline_dict
 
-    return output
+    message = get_message_structure()
+    message["data"] = output
+    message["count"] = 1
+    message["remaining_subscription_count"] = 1
+
+    return message
 
 
 def get_message_structure():
