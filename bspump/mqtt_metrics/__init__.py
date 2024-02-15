@@ -134,7 +134,7 @@ class MQTTService(asab.Service):
 
         self.dumper = JSONDumper(pretty=False)
 
-    def publish_topologies(self):
+    def components_initialize(self):
         svc = self.App.get_service("bspump.PumpService")
         for pipeline in svc.Pipelines.values():
             self.client.publish(
@@ -142,6 +142,16 @@ class MQTTService(asab.Service):
                 json.dumps(get_pipeline_topology(svc, pipeline.Id)),
                 retain=True,
             )
+
+            # subscribe processors and sources for event publishing
+            for depth in pipeline.Processors:
+                for processor in depth:
+                    pipeline.PublishingProcessors[processor.Id] = 0
+                    self.client.subscribe(f"/c/{self.App.DeploymentId}/c/{pipeline.Id}/c/{processor.Id}/events/subscribe")
+
+            for source in pipeline.Sources:
+                self.client.subscribe(f"/c/{self.App.DeploymentId}/c/{pipeline.Id}/c/{source.Id}/events/subscribe")
+            
 
         self.client.publish(
             f"/c/{self.App.DeploymentId}/topology",
@@ -192,19 +202,7 @@ class MQTTService(asab.Service):
 
     # Callback when connected to the MQTT broker
     def on_connect(self, client, userdata, flags, rc, properties):
-        self.apply_subscriptions()
         self.connected = True
-
-    def apply_subscriptions(self):
-        for sub in self.sub_queue:
-            self.client.subscribe(sub)
-
-    def subscribe(self, pipeline, component):
-        self.sub_queue.append(
-            f"/c/{self.App.DeploymentId}/c/{pipeline}/c/{component}/events/subscribe"
-        )
-        if self.connected:
-            self.apply_subscriptions()
 
     def publish_event(self, pipeline, component, event, count_remaining):
         data = get_message_structure()

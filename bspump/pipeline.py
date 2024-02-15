@@ -642,13 +642,8 @@ class Pipeline(abc.ABC, asab.Configurable):
         """
         if isinstance(source, Source):
             self.Sources.append(source)
-            if self.MQTTService:
-                self.MQTTService.subscribe(self.Id, source.Id)
         else:
             self.Sources.extend(source)
-            for s in source:
-                if self.MQTTService:
-                    self.MQTTService.subscribe(self.Id, s.Id)
 
     def append_processor(self, processor):
         """
@@ -797,10 +792,6 @@ class Pipeline(abc.ABC, asab.Configurable):
                 init_values={"duration": 0.0, "run": 0},
                 reset=self.ResetProfiler,
             )
-
-        if self.MQTTService:
-            self.PublishingProcessors[processor.Id] = 0
-            self.MQTTService.subscribe(self.Id, processor.Id)
 
     def build(self, source, *processors):
         """

@@ -106,7 +106,7 @@ class BSPumpService(asab.Service):
             raise RuntimeError(
                 "Pipeline with id '{}' is already registered".format(pipeline.Id)
             )
-
+        
         self.Pipelines[pipeline.Id] = pipeline
 
     def add_pipelines(self, *pipelines):
@@ -354,7 +354,7 @@ class BSPumpService(asab.Service):
             pipeline.start()
 
         if self.App.MQTTService is not None:
-            self.App.MQTTService.publish_topologies()
+            self.App.MQTTService.components_initialize()
 
     async def finalize(self, app):
         """
