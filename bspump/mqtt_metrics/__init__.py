@@ -197,7 +197,7 @@ class MQTTService(asab.Service):
 
     def apply_subscriptions(self):
         for sub in self.sub_queue:
-            self.client.subscribe(f"/c/{self.App.DeploymentId}/{sub}")
+            self.client.subscribe(sub)
 
     def subscribe(self, pipeline, component):
         self.sub_queue.append(
