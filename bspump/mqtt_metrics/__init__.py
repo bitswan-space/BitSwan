@@ -190,7 +190,7 @@ class MQTTService(asab.Service):
                 )
 
     # Callback when connected to the MQTT broker
-    def on_connect(self, client, userdata, flags, rc):
+    def on_connect(self, client, userdata, flags, rc, properties):
         self.apply_subscriptions()
         self.connected = True
 
