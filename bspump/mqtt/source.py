@@ -22,9 +22,8 @@ class MQTTSource(Source):
         try:
             while True:
                 await self.Pipeline.ready()
-                if not self._queue.empty():
-                    event = await self._queue.get()
-                    await self.process(event)
+                event = await self._queue.get()
+                await self.process(event)
         except asyncio.CancelledError:
             pass
 
