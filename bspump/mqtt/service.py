@@ -139,7 +139,8 @@ class MQTTService(asab.Service):
                         f"/c/{self.App.DeploymentId}/c/{pipeline.Id}/c/{component.Id}/events/subscribe"
                     )
                     self.Connection.register_handler(
-                        f"/c/{self.App.DeploymentId}/c/{pipeline.Id}/c/{component.Id}/events/subscribe", self.on_message
+                        f"/c/{self.App.DeploymentId}/c/{pipeline.Id}/c/{component.Id}/events/subscribe",
+                        self.on_message,
                     )
 
             for source in pipeline.Sources:
@@ -147,7 +148,8 @@ class MQTTService(asab.Service):
                     f"/c/{self.App.DeploymentId}/c/{pipeline.Id}/c/{source.Id}/events/subscribe"
                 )
                 self.Connection.register_handler(
-                    f"/c/{self.App.DeploymentId}/c/{pipeline.Id}/c/{source.Id}/events/subscribe", self.on_message
+                    f"/c/{self.App.DeploymentId}/c/{pipeline.Id}/c/{source.Id}/events/subscribe",
+                    self.on_message,
                 )
 
         self.Connection.publish_to_topic(
@@ -201,7 +203,7 @@ class MQTTService(asab.Service):
                 if processor is None:
                     L.warning(f"Processor {processor} not found")
                     return
-                
+
                 pipeline.PublishingProcessors[processor.Id] = max(
                     count, pipeline.PublishingProcessors[processor.Id]
                 )

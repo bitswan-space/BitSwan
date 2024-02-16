@@ -5,11 +5,9 @@ from ..abc.source import Source
 
 L = logging.getLogger(__name__)
 
+
 class MQTTSource(Source):
-    ConfigDefaults = {
-        "topic": "#",
-        "qos": 0
-    }
+    ConfigDefaults = {"topic": "#", "qos": 0}
 
     def __init__(self, app, pipeline, connection, id=None, config=None):
         super().__init__(app, pipeline, id=id, config=config)
@@ -29,13 +27,10 @@ class MQTTSource(Source):
                     await self.process(event)
         except asyncio.CancelledError:
             pass
-    
+
         except BaseException as e:
             L.exception("Error when processing message.")
             self.Pipeline.set_error(None, None, e)
 
-
     def on_message(self, client, userdata, message):
         self._queue.put_nowait(message.payload)
-
-    

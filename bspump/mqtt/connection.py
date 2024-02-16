@@ -11,7 +11,7 @@ class MQTTConnection(Connection):
         "broker": "localhost:1883",
         "keepalive": 60,
         "username": "",
-        "password": ""
+        "password": "",
     }
 
     def __init__(self, app, id=None, config=None):
@@ -21,7 +21,9 @@ class MQTTConnection(Connection):
         self._host, self._port = broker.split(":")
 
         if self.Config["username"] != "" and self.Config["password"] != "":
-            self._client.username_pw_set(self.Config["username"], self.Config["password"])
+            self._client.username_pw_set(
+                self.Config["username"], self.Config["password"]
+            )
 
         self._client.connect(self._host, int(self._port), int(self.Config["keepalive"]))
 
@@ -44,7 +46,7 @@ class MQTTConnection(Connection):
 
     def publish_to_topic(self, topic, payload, qos=0, retain=False):
         self._client.publish(topic, payload, qos, retain)
-        
+
 
 class MQTTMessageDispatcher:
     def __init__(self):
