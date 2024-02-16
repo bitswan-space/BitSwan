@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from ..abc.source import Source
@@ -17,15 +18,24 @@ class MQTTSource(Source):
         self.Connection.subscribe_topic(self.Config["topic"], self.Config["qos"])
         self.Connection.register_handler(self.Config["topic"], self.on_message)
 
-        self._queue = []
+        self._queue = asyncio.Queue()
 
     async def main(self):
-        while True:
-            if len(self._queue) > 0:
+        try:
+            while True:
                 await self.Pipeline.ready()
-                await self.process(self._queue.pop(0))
+                if not self._queue.empty():
+                    event = await self._queue.get()
+                    await self.process(event)
+        except asyncio.CancelledError:
+            pass
+    
+        except BaseException as e:
+            L.exception("Error when processing message.")
+            self.Pipeline.set_error(None, None, e)
+
 
     def on_message(self, client, userdata, message):
-        self._queue.append(message.payload)
+        self._queue.put_nowait(message.payload)
 
     
