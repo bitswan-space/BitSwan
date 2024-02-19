@@ -11,7 +11,8 @@ class AsabObjMocker:
 
 
 class DevApp(bspump.BSPumpApplication):
-    pass
+    def __init__(self):
+        super().__init__(args=[])
 
 
 class DevRuntime:
