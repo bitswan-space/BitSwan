@@ -63,14 +63,13 @@ class BSPumpApplication(asab.Application):
             self.WebContainer = initialize_web(self.WebService.WebContainer)
             self.ASABApiService.initialize_web()
 
-        if (
-            "MQTTMetrics" in asab.Config
-            and asab.Config["MQTTMetrics"].get("broker")
-            and self.DeploymentId
-        ):
-            from .mqtt_metrics import MQTTService
+        if "mqtt" in asab.Config and self.DeploymentId:
+            from .mqtt import MQTTService, MQTTConnection
 
-            self.MQTTService = MQTTService(self)
+            self.PumpService.add_connection(
+                MQTTConnection(self, "MQTTServiceConnection")
+            )
+            self.MQTTService = MQTTService(self, connection="MQTTServiceConnection")
 
         # Initialize zookeeper container
         if "zookeeper" in asab.Config.sections():

@@ -107,9 +107,7 @@ class AvroSink(Sink):
     def flush(self):
         if len(self.Events) != 0:
             if self.SchemaFile is not None:
-                is_valid = fastavro.validation.validate_many(
-                    self.Events, self.Schema
-                )
+                is_valid = fastavro.validation.validate_many(self.Events, self.Schema)
                 if is_valid is True:
                     with open(self.build_filename("-open"), self._filemode) as out:
                         fastavro.writer(out, self.Schema, self.Events)

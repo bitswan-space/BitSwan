@@ -106,7 +106,7 @@ class BSPumpService(asab.Service):
             raise RuntimeError(
                 "Pipeline with id '{}' is already registered".format(pipeline.Id)
             )
-        
+
         self.Pipelines[pipeline.Id] = pipeline
 
     def add_pipelines(self, *pipelines):

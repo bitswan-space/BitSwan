@@ -44,7 +44,7 @@ class DevRuntime:
         new_eventss, prev_events = self.get_prev_events(name)
         new_events = []
 
-        def inject(event):
+        async def inject(event):
             new_events.append(event)
 
         [await func(inject, prev_event) for prev_event in prev_events]
@@ -132,7 +132,7 @@ def register_app_post_init(func):
     def post_init(app):
         app.PubSub.subscribe("Application.tick!", app.tick)
     """
-    global _bitswan_app_post_inits 
+    global _bitswan_app_post_inits
     _bitswan_app_post_inits.append(func)
 
 
@@ -144,10 +144,11 @@ def register_connection(func):
         return bspump.kafka.KafkaConnection(app, "KafkaConnection")
     """
     global __bitswan_connections
+    global __bitswan_dev_runtime
     __bitswan_connections.append(func)
     if __bitswan_dev:
         global __bitswan_dev_runtime
-        connection = func(app)
+        connection = func(__bitswan_dev_runtime.dev_app)
         __bitswan_dev_runtime.dev_app.PumpService.add_connection(connection)
 
 
@@ -162,7 +163,7 @@ def register_lookup(func):
     __bitswan_lookups.append(func)
     if __bitswan_dev:
         global __bitswan_dev_runtime
-        lookup = func(app)
+        lookup = func(__bitswan_dev_runtime.dev_app)
         __bitswan_dev_runtime.dev_app.PumpService.add_lookup(lookup)
 
 
@@ -248,8 +249,8 @@ def register_generator(func):
             generator = func(app, pipeline)
 
             async def asfunc(inject, event):
-                def super_inject(context, event, depth):
-                    inject(event)
+                async def super_inject(context, event, depth):
+                    return await inject(event)
 
                 pipeline.inject = super_inject
                 return await generator.generate(None, event, 0)

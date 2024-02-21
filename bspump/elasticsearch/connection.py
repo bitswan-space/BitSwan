@@ -449,7 +449,9 @@ class ElasticSearchConnection(Connection):
                     if self._started:
                         L.error("ElasticSearch issue detected, will retry shortly")
                 except Exception as e:
-                    L.exception(f"ElasticSearch issue detected '{e}', will retry shortly")
+                    L.exception(
+                        f"ElasticSearch issue detected '{e}', will retry shortly"
+                    )
 
                 self._futures[i] = (url, None)
 

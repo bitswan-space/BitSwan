@@ -74,9 +74,8 @@ class Source(asab.Configurable):
                 self.Pipeline.Id, self, event, self.EventsToPublish
             )
             self.EventsToPublish -= 1
-        
+
         await self.Pipeline.process(event, context=context)
-    
 
     def start(self, loop):
         """
