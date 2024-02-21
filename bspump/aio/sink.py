@@ -48,7 +48,6 @@ class AsyncSink(Sink):
             # Consume the event
             await self.consume(context, event)
 
-
     async def _on_exit(self, event_name):
         self.Exiting = True
 

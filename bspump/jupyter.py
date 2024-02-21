@@ -132,7 +132,7 @@ def register_app_post_init(func):
     def post_init(app):
         app.PubSub.subscribe("Application.tick!", app.tick)
     """
-    global _bitswan_app_post_inits 
+    global _bitswan_app_post_inits
     _bitswan_app_post_inits.append(func)
 
 

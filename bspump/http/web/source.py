@@ -65,7 +65,7 @@ class WebHookSource(Source):
     ConfigDefaults = {
         "path": "webhook/",
         "port": "8080",
-        "max_body_size_bytes": 1024*1000*1000,
+        "max_body_size_bytes": 1024 * 1000 * 1000,
     }
 
     def __init__(self, app, pipeline, id=None, config=None):
