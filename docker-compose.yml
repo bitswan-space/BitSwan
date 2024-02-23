@@ -13,7 +13,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       BS_WEBHOOK_PORT: 8000
-      BS_BITSWAN_DIR: "/repo/"
+      BS_HOST_BASE_PATH: ${BASE_PATH:-.}
     ports:
       - "8000:8000"
     env_file:
