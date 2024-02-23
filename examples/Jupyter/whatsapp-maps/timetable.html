@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Intersections Map</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.3/css/bulma.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <style>
+        body::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1 class="title">Intersections Timetable</h1>
+    <table class="table is-striped is-narrow is-hoverable is-fullwidth">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Location</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.time }}</td>
+                <td>{{ item.name }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div id="map" style="height: 400px;"></div>
+    <script>
+    // Initialize the map without zoom controls
+    var map = L.map('map', {zoomControl: false}).setView([51.505, -0.09], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Create a feature group to hold all markers
+    var markersGroup = L.featureGroup().addTo(map);
+
+    {% for item in items %}
+    // Create a marker for each item and add it to the markers group
+    var marker = L.marker([{{ item.lat }}, {{ item.lon }}]).bindPopup("{{ item.name }}");
+    markersGroup.addLayer(marker);
+    {% endfor %}
+
+    // Adjust the map view so all markers in the group are visible
+    map.fitBounds(markersGroup.getBounds(), {
+        padding: [100, 50] // Adds padding in the view so markers are not on the edge
+    });
+    </script>
+</div>
+</body>
+</html>

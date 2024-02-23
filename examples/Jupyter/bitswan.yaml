@@ -1,0 +1,5 @@
+env-dir: /etc/bitswan-secrets/
+data-machines:
+    whatsapp-maps:
+        source: whatsapp-maps
+        container_name: whatsapp-maps
