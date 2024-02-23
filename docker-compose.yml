@@ -1,0 +1,30 @@
+volumes:
+  mosquitto_data:
+  mosquitto_log:
+
+services:
+  bitswan_gitops:
+    image: bitswan/pipeline-runtime-environment:latest
+    restart: always
+    volumes:
+      - /etc/bitswan-secrets/:/etc/bitswan-secrets/
+      - ${BASE_PATH:-.}/prod:/repo/
+      - ${HOME}/.ssh:/root/.ssh:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      BS_WEBHOOK_PORT: 8000
+      BS_BITSWAN_DIR: "/repo/"
+    ports:
+      - "8000:8000"
+    env_file:
+      ${BASE_PATH:-.}/.bitswan-gitops-env
+
+  mosquitto:
+    image: eclipse-mosquitto
+    container_name: mosquitto
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    ports:
+      - "1883:1883"
