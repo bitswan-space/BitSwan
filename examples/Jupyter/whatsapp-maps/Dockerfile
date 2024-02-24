@@ -1,4 +1,4 @@
-FROM bitswan/pipeline-runtime-environment:latest
+FROM bitswan/pipeline-runtime-environment:2024-8030723658-git-22c5054
 ARG DATA_MACHINE_SOURCE_PATH
 ENV DATA_MACHINE_SOURCE_PATH_ENV=$DATA_MACHINE_SOURCE_PATH
 COPY ${DATA_MACHINE_SOURCE_PATH_ENV} /opt/pipelines/
