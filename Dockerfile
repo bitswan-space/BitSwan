@@ -44,7 +44,7 @@ chown -R bitswan /mnt\n\
 cp -R /ssh /home/bitswan/.ssh\n\
 chown -R bitswan /home/bitswan\n\
 cd /mnt\n\
-su bitswan -c jupyter-lab --ip=*' > /start-ide.sh
+su bitswan -c jupyter notebook --port=8888 --no-browser --ip=*' > /start-ide.sh
 
 RUN chmod +x /start-ide.sh
 
