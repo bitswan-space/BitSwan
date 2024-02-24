@@ -8,4 +8,4 @@ RUN apt-get install -yqq \
  libpangoft2-1.0-0 \
  chromium-driver
 
-RUN pip3 install Jinja2 weasyprint selenium
+RUN pip3 install Jinja2 weasyprint selenium dotenv requests
