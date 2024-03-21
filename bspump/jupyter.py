@@ -1,8 +1,9 @@
+import asyncio
 from functools import partial
+import time
 import bspump
 import os
 from typing import Any
-from asab import Config
 
 
 class AsabObjMocker:
@@ -181,7 +182,7 @@ def register_connection(func):
         __bitswan_dev_runtime.dev_app.PumpService.add_connection(connection)
 
 
-def get_sample_events():
+async def get_sample_events(limit=10):
     global __bitswan_dev_runtime
     # Capture the current state of __bitswan_processors
     current_processors = list(__bitswan_processors)
@@ -194,19 +195,33 @@ def get_sample_events():
                 instance = processor(app, self)
                 processors.append(instance)
             self.build(*processors)
-            print(self.Sources)
+            self.events = []
 
         def inject(self, context, event, depth):
-            print("Injecting event", event)
+            if len(self.events) >= limit:
+                return
+
+            print(event)
+            self.events.append(event)
+
+        def get_events(self):
+            print(f"Collected {len(self.events)} events")
+            return self.events
 
     pipeline = TmpPipeline(__bitswan_dev_runtime.dev_app, "KafkaPipeline")
     pipeline.start()
-    while 1:
-        try:
-            pass
-        except KeyboardInterrupt:
-            pipeline.stop()
-            return
+
+    try:
+        while 1:
+            if len(pipeline.events) >= limit:
+                break
+            await asyncio.sleep(0.5)
+        await pipeline.stop()
+        raise asyncio.CancelledError
+    except asyncio.CancelledError:
+        await pipeline.stop()
+        __bitswan_dev_runtime.clear("__sample", pipeline.get_events())
+        return
 
 
 @ensure_bitswan_runtime
