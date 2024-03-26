@@ -214,11 +214,11 @@ async def get_sample_events(limit=10):
     try:
         while 1:
             if len(pipeline.events) >= limit:
+                await pipeline.stop()
                 break
             await asyncio.sleep(0.5)
-        await pipeline.stop()
-        raise asyncio.CancelledError
     except asyncio.CancelledError:
+        print("Stopping pipeline manually")
         await pipeline.stop()
         __bitswan_dev_runtime.clear("__sample", pipeline.get_events())
         return
