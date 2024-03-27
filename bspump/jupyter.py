@@ -1,6 +1,5 @@
 import asyncio
 from functools import partial
-import time
 import bspump
 import os
 from typing import Any
@@ -19,7 +18,7 @@ class DevApp(bspump.BSPumpApplication):
 
 class DevRuntime:
     def __init__(self, args=[]):
-        self.events: list[tuple[str, list[Any]]] = {}
+        self.events: list[tuple[str, list[Any]]] = []
         self.dev_app = DevApp(args)
 
     def clear(self, name: str, event: list[Any]) -> None:
@@ -27,7 +26,7 @@ class DevRuntime:
 
     def get_prev_events(self, name) -> tuple[list[tuple[str, list[Any]]], list[Any]]:
         new_eventss = []
-        prev_events = None
+        prev_events = []
         for event in self.events:
             if event[0] == name:
                 break
@@ -126,7 +125,6 @@ def ensure_bitswan_runtime(func):
     def wrapper(*args, **kwargs):
         global __bitswan_dev_runtime
         if not __bitswan_dev_runtime:
-            print("Bitswan runtime not initialized")
             __bitswan_dev_runtime = DevRuntime()
 
         return func(*args, **kwargs)
@@ -208,7 +206,7 @@ async def get_sample_events(limit=10):
             print(f"Collected {len(self.events)} events")
             return self.events
 
-    pipeline = TmpPipeline(__bitswan_dev_runtime.dev_app, "KafkaPipeline")
+    pipeline = TmpPipeline(__bitswan_dev_runtime.dev_app, __bitswan_current_pipeline)
     pipeline.start()
 
     try:
@@ -218,7 +216,6 @@ async def get_sample_events(limit=10):
                 break
             await asyncio.sleep(0.5)
     except asyncio.CancelledError:
-        print("Stopping pipeline manually")
         await pipeline.stop()
         __bitswan_dev_runtime.clear("__sample", pipeline.get_events())
         return
