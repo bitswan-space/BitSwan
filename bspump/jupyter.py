@@ -2,7 +2,7 @@ import asyncio
 from functools import partial
 import bspump
 import os
-from typing import Any
+from typing import Any, Callable, List
 
 
 class AsabObjMocker:
@@ -147,7 +147,12 @@ def init_bitswan_jupyter(config_path: str = None):
 
 
 @ensure_bitswan_runtime
-def sample_events(events):
+def sample_events(events: List[Any]):
+    """Inject sample events into the current pipeline for testing
+
+    Args:
+        events (List[Any]): List of events to be injected
+    """
     global __bitswan_dev_runtime
     __bitswan_dev_runtime.clear("__sample", events)
 
@@ -180,7 +185,21 @@ def register_connection(func):
         __bitswan_dev_runtime.dev_app.PumpService.add_connection(connection)
 
 
-async def get_sample_events(limit=10):
+async def retrieve_sample_events(limit: int = 10) -> None:
+    """Get sample events from the source registered to the current pipeline and register them for testing,
+    has to be awaited in Jupyter environment
+
+    Ex:
+        await retrieve_sample_events(100)
+
+    Args:
+        limit (int, optional): Number of events to retrieve. Defaults to 10.
+
+    Returns:
+        None
+
+
+    """
     global __bitswan_dev_runtime
     # Capture the current state of __bitswan_processors
     current_processors = list(__bitswan_processors)
@@ -237,7 +256,12 @@ def register_lookup(func):
         __bitswan_dev_runtime.dev_app.PumpService.add_lookup(lookup)
 
 
-def new_pipeline(name):
+def new_pipeline(name: str):
+    """Creates and registers a new pipeline
+
+    Args:
+        name (str): Name of the pipeline
+    """
     global __bitswan_processors
     global __bitswan_current_pipeline
     __bitswan_processors = []
@@ -245,6 +269,7 @@ def new_pipeline(name):
 
 
 def end_pipeline():
+    """Ends the current pipeline and appends it to the list of pipelines"""
     global __bitswan_current_pipeline
     global __bitswan_processors
     global __bitswan_pipelines
@@ -361,7 +386,17 @@ def snake_to_camel_case(name):
 
 
 @ensure_bitswan_runtime
-def step(func):
+def step(func: Callable[[Any], Any]):
+    """Decorator that registers a new processor with the given function
+
+    Ex:
+        @step
+        def my_processor(event):
+            return {"processed": event}
+
+    Args:
+        func (Callable[[Any], Any]): Function to be registered as a processor
+    """
     global __bitswan_processors
     global __bitswan_dev
     global __bitswan_dev_runtime
