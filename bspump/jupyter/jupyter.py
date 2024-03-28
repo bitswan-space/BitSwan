@@ -236,8 +236,8 @@ async def retrieve_sample_events(limit: int = 10) -> None:
             await asyncio.sleep(0.5)
     except asyncio.CancelledError:
         await pipeline.stop()
-        __bitswan_dev_runtime.clear("__sample", pipeline.get_events())
-        return
+    __bitswan_dev_runtime.clear("__sample", pipeline.get_events())
+    return
 
 
 @ensure_bitswan_runtime
