@@ -1,7 +1,8 @@
+import asyncio
 from functools import partial
 import bspump
 import os
-from typing import Any
+from typing import Any, Callable, List
 
 
 class AsabObjMocker:
@@ -11,21 +12,21 @@ class AsabObjMocker:
 
 
 class DevApp(bspump.BSPumpApplication):
-    def __init__(self):
-        super().__init__(args=[])
+    def __init__(self, args=[]):
+        super().__init__(args=args)
 
 
 class DevRuntime:
-    def __init__(self):
-        self.events: list[tuple[str, list[Any]]] = {}
-        self.dev_app = DevApp()
+    def __init__(self, args=[]):
+        self.events: list[tuple[str, list[Any]]] = []
+        self.dev_app = DevApp(args)
 
     def clear(self, name: str, event: list[Any]) -> None:
         self.events = [(name, event)]
 
     def get_prev_events(self, name) -> tuple[list[tuple[str, list[Any]]], list[Any]]:
         new_eventss = []
-        prev_events = None
+        prev_events = []
         for event in self.events:
             if event[0] == name:
                 break
@@ -114,13 +115,44 @@ __bitswan_processors = []
 __bitswan_pipelines = {}
 __bitswan_dev = is_running_in_jupyter()
 __bitswan_current_pipeline = None
-__bitswan_dev_runtime = DevRuntime()
+__bitswan_dev_runtime = None
 __bitswan_connections = []
 __bitswan_lookups = []
 _bitswan_app_post_inits = []
 
 
-def sample_events(events):
+def ensure_bitswan_runtime(func):
+    def wrapper(*args, **kwargs):
+        global __bitswan_dev_runtime
+        if not __bitswan_dev_runtime:
+            __bitswan_dev_runtime = DevRuntime()
+
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
+def init_bitswan_jupyter(config_path: str = None):
+    """Helper function to initialize Bitswan in Jupyter environment,
+    needs to be called before any other Bitswan function.
+    Does not need to be called if config file is not needed
+
+    Args:
+        config_path (str, optional): Path to the config file. Defaults to None.
+    """
+    global __bitswan_dev_runtime
+
+    args = ["-c", config_path] if config_path else []
+    __bitswan_dev_runtime = DevRuntime(args)
+
+
+@ensure_bitswan_runtime
+def sample_events(events: List[Any]):
+    """Inject sample events into the current pipeline for testing
+
+    Args:
+        events (List[Any]): List of events to be injected
+    """
     global __bitswan_dev_runtime
     __bitswan_dev_runtime.clear("__sample", events)
 
@@ -136,6 +168,7 @@ def register_app_post_init(func):
     _bitswan_app_post_inits.append(func)
 
 
+@ensure_bitswan_runtime
 def register_connection(func):
     """
     Ex:
@@ -152,6 +185,62 @@ def register_connection(func):
         __bitswan_dev_runtime.dev_app.PumpService.add_connection(connection)
 
 
+async def retrieve_sample_events(limit: int = 10) -> None:
+    """Get sample events from the source registered to the current pipeline and register them for testing,
+    has to be awaited in Jupyter environment
+
+    Ex:
+        await retrieve_sample_events(100)
+
+    Args:
+        limit (int, optional): Number of events to retrieve. Defaults to 10.
+
+    Returns:
+        None
+
+
+    """
+    global __bitswan_dev_runtime
+    # Capture the current state of __bitswan_processors
+    current_processors = list(__bitswan_processors)
+
+    class TmpPipeline(bspump.Pipeline):
+        def __init__(self, app, pipeline_id):
+            super().__init__(app, pipeline_id)
+            processors = []
+            for processor in current_processors:
+                instance = processor(app, self)
+                processors.append(instance)
+            self.build(*processors)
+            self.events = []
+
+        def inject(self, context, event, depth):
+            if len(self.events) >= limit:
+                return
+
+            print(event)
+            self.events.append(event)
+
+        def get_events(self):
+            print(f"Collected {len(self.events)} events")
+            return self.events
+
+    pipeline = TmpPipeline(__bitswan_dev_runtime.dev_app, __bitswan_current_pipeline)
+    pipeline.start()
+
+    try:
+        while 1:
+            if len(pipeline.events) >= limit:
+                await pipeline.stop()
+                break
+            await asyncio.sleep(0.5)
+    except asyncio.CancelledError:
+        await pipeline.stop()
+    __bitswan_dev_runtime.clear("__sample", pipeline.get_events())
+    return
+
+
+@ensure_bitswan_runtime
 def register_lookup(func):
     """
     Ex:
@@ -167,7 +256,12 @@ def register_lookup(func):
         __bitswan_dev_runtime.dev_app.PumpService.add_lookup(lookup)
 
 
-def new_pipeline(name):
+def new_pipeline(name: str):
+    """Creates and registers a new pipeline
+
+    Args:
+        name (str): Name of the pipeline
+    """
     global __bitswan_processors
     global __bitswan_current_pipeline
     __bitswan_processors = []
@@ -175,6 +269,7 @@ def new_pipeline(name):
 
 
 def end_pipeline():
+    """Ends the current pipeline and appends it to the list of pipelines"""
     global __bitswan_current_pipeline
     global __bitswan_processors
     global __bitswan_pipelines
@@ -210,6 +305,7 @@ def register_source(func):
     __bitswan_processors.append(func)
 
 
+@ensure_bitswan_runtime
 def register_processor(func):
     """
     Ex:
@@ -229,6 +325,7 @@ def register_processor(func):
         __bitswan_dev_runtime.step(func.__name__, callable_process)
 
 
+@ensure_bitswan_runtime
 def register_generator(func):
     """
     Ex:
@@ -288,7 +385,18 @@ def snake_to_camel_case(name):
     return "".join(word.capitalize() for word in name.split("_"))
 
 
-def step(func):
+@ensure_bitswan_runtime
+def step(func: Callable[[Any], Any]):
+    """Decorator that registers a new processor with the given function
+
+    Ex:
+        @step
+        def my_processor(event):
+            return {"processed": event}
+
+    Args:
+        func (Callable[[Any], Any]): Function to be registered as a processor
+    """
     global __bitswan_processors
     global __bitswan_dev
     global __bitswan_dev_runtime
