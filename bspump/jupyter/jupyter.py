@@ -419,15 +419,19 @@ def step(func: Callable[[Any], Any]):
     # Return the original function unmodified
     return func
 
-
 def async_step(func):
     # Convert function name from snake case to CamelCase and create a unique class name
+    global __bitswan_dev
     class_name = snake_to_camel_case(func.__name__) + "Generator"
 
     # Dynamically create a new Generator class with the custom class name
     async def _generate(self, context, event, depth):
         async def injector(event):
-            return self.Pipeline.inject(context, event, depth)
+            # TODO: do better
+            if __bitswan_dev:
+                return await self.Pipeline.inject(context, event, depth)
+            else:
+                return self.Pipeline.inject(context, event, depth)
 
         return await func(injector, event)
 

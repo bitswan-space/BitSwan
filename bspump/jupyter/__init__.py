@@ -13,6 +13,7 @@ from .jupyter import (
     register_sink,
     step,
     async_step,
+    App,
 )
 
 __all__ = [
@@ -30,4 +31,5 @@ __all__ = [
     "register_sink",
     "step",
     "async_step",
+    "App",
 ]
