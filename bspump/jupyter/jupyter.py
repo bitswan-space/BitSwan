@@ -419,6 +419,7 @@ def step(func: Callable[[Any], Any]):
     # Return the original function unmodified
     return func
 
+
 def async_step(func):
     # Convert function name from snake case to CamelCase and create a unique class name
     global __bitswan_dev
