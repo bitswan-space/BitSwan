@@ -1,5 +1,6 @@
 import json
 import os
+from bspump.jupyter import App
 
 config = None
 __bitswan_dev = False
