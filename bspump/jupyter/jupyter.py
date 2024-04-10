@@ -5,10 +5,9 @@ import os
 from typing import Any, Callable, List
 
 
-class AsabObjMocker:
-    def __init__(self):
-        self.Id = None
-        self.Loop = None
+class DevPipeline(bspump.Pipeline):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 
 class DevApp(bspump.BSPumpApplication):
@@ -316,12 +315,15 @@ def register_processor(func):
     global __bitswan_processors
     global __bitswan_dev
     global __bitswan_dev_runtime
+    global __bitswan_current_pipeline
     if not __bitswan_dev:
         __bitswan_processors.append(func)
     else:
-        processor = func(__bitswan_dev_runtime.dev_app, AsabObjMocker())
-
-        callable_process = partial(processor.process, None)
+        pipeline = DevPipeline(
+            app=__bitswan_dev_runtime.dev_app, id=__bitswan_current_pipeline
+        )
+        processor = func(__bitswan_dev_runtime.dev_app, pipeline)
+        callable_process = partial(processor.process, processor)
         __bitswan_dev_runtime.step(func.__name__, callable_process)
 
 
@@ -338,12 +340,15 @@ def register_generator(func):
         global __bitswan_processors
         global __bitswan_dev
         global __bitswan_dev_runtime
+        global __bitswan_current_pipeline
         if not __bitswan_dev:
             # TODO: check this
             __bitswan_processors.append(func)
         else:
-            app, pipeline = __bitswan_dev_runtime.dev_app, AsabObjMocker()
-            generator = func(app, pipeline)
+            pipeline = DevPipeline(
+                __bitswan_dev_runtime.dev_app, __bitswan_current_pipeline
+            )
+            generator = func(__bitswan_dev_runtime.app, pipeline)
 
             async def asfunc(inject, event):
                 async def super_inject(context, event, depth):
