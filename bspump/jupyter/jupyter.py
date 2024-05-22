@@ -348,7 +348,7 @@ def register_generator(func):
             pipeline = DevPipeline(
                 __bitswan_dev_runtime.dev_app, __bitswan_current_pipeline
             )
-            generator = func(__bitswan_dev_runtime.app, pipeline)
+            generator = func(__bitswan_dev_runtime.dev_app, pipeline)
 
             async def asfunc(inject, event):
                 async def super_inject(context, event, depth):
