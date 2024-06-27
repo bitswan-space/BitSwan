@@ -216,7 +216,6 @@ async def retrieve_sample_events(limit: int = 10) -> None:
         def inject(self, context, event, depth):
             if len(self.events) >= limit:
                 return
-
             print(event)
             self.events.append(event)
 
@@ -235,6 +234,7 @@ async def retrieve_sample_events(limit: int = 10) -> None:
             await asyncio.sleep(0.5)
     except asyncio.CancelledError:
         await pipeline.stop()
+
     __bitswan_dev_runtime.clear("__sample", pipeline.get_events())
     return
 
