@@ -804,7 +804,11 @@ class Pipeline(abc.ABC, asab.Configurable):
         """
         self.set_source(source)
         for processor in processors:
-            self.append_processor(processor)
+            if isinstance(processor, list):
+                for p in processor:
+                    self.Sinks.append((p[0], p[1]))
+            else:
+                self.append_processor(processor)
 
     def iter_processors(self):
         """
