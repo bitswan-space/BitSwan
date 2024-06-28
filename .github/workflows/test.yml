@@ -27,4 +27,4 @@ jobs:
     - name: Run linter
       run: |
         black --check bspump
-        ruff bspump
+        ruff check bspump
