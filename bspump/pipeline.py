@@ -96,6 +96,7 @@ class Pipeline(abc.ABC, asab.Configurable):
         self.Processors = [
             []
         ]  # List of lists of processors, the depth is increased by a Generator object
+        self.Sinks = []
 
         # Publish-Subscribe for this pipeline
         self.PubSub = asab.PubSub(app)
@@ -495,6 +496,17 @@ class Pipeline(abc.ABC, asab.Configurable):
                         self.ProcessorsCounter[processor.Id].add("event.drop", 1)
                         self.MetricsEPSCounter.add("eps.drop", 1)
                         self.MetricsCounter.add("event.drop", 1)
+                return
+        
+        if self.Sinks:
+            for c, s in self.Sinks:
+                if c(event):
+                    e = s.process(context, event)
+                    if e is not None:
+                        event = e
+                        break
+            else:
+                event = None
                 return
 
         assert event is not None
