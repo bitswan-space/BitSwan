@@ -96,6 +96,7 @@ class Pipeline(abc.ABC, asab.Configurable):
         self.Processors = [
             []
         ]  # List of lists of processors, the depth is increased by a Generator object
+        self.Sinks = []
 
         # Publish-Subscribe for this pipeline
         self.PubSub = asab.PubSub(app)
@@ -497,6 +498,17 @@ class Pipeline(abc.ABC, asab.Configurable):
                         self.MetricsCounter.add("event.drop", 1)
                 return
 
+        if self.Sinks:
+            for c, s in self.Sinks:
+                if c(event):
+                    e = s.process(context, event)
+                    if e is not None:
+                        event = e
+                        break
+            else:
+                event = None
+                return
+
         assert event is not None
 
         self.set_error(
@@ -777,16 +789,16 @@ class Pipeline(abc.ABC, asab.Configurable):
         )
 
         if isinstance(processor, Analyzer):
-            self.ProfilerCounter[
-                "analyzer_" + processor.Id
-            ] = self.MetricsService.create_counter(
-                "bspump.pipeline.profiler",
-                tags={
-                    "analyzer": processor.Id,
-                    "pipeline": self.Id,
-                },
-                init_values={"duration": 0.0, "run": 0},
-                reset=self.ResetProfiler,
+            self.ProfilerCounter["analyzer_" + processor.Id] = (
+                self.MetricsService.create_counter(
+                    "bspump.pipeline.profiler",
+                    tags={
+                        "analyzer": processor.Id,
+                        "pipeline": self.Id,
+                    },
+                    init_values={"duration": 0.0, "run": 0},
+                    reset=self.ResetProfiler,
+                )
             )
 
     def build(self, source, *processors):
@@ -804,7 +816,11 @@ class Pipeline(abc.ABC, asab.Configurable):
         """
         self.set_source(source)
         for processor in processors:
-            self.append_processor(processor)
+            if isinstance(processor, list):
+                for p in processor:
+                    self.Sinks.append((p[0], p[1]))
+            else:
+                self.append_processor(processor)
 
     def iter_processors(self):
         """
