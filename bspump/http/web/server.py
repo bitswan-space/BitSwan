@@ -51,13 +51,7 @@ class WebRouteSource(Source):
     WebSource is a source that listens on a specified port and serves HTTP requests.
     """
 
-    ConfigDefaults = {
-        "port": "8080",
-        "max_body_size_bytes": 1024 * 1024 * 1000,
-    }
-
-    def __init__(self, app, pipeline, connection, method, route, id=None, config=None):
-        print("WebRouteSource")
+    def __init__(self, app, pipeline, connection="DefaultWebServerConnection", method="GET", route="/", id=None, config=None):
         super().__init__(app, pipeline, id=id, config=config)
 
         self.Connection = pipeline.locate_connection(app, connection)

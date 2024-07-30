@@ -5,4 +5,9 @@ if [ -f /opt/extra-dependencies.txt ]; then
 fi
 cd /opt/pipelines/
 
-python3 -u main.py -c /opt/pipelines/pipelines.conf
+# If /opt/pipelines/pipelines.conf exists use it as conf file otherwise use /opt/pipelines.conf
+if [ -f /opt/pipelines/pipelines.conf ]; then
+    python3 -u main.py -c /opt/pipelines/pipelines.conf
+else
+    python3 -u main.py -c /opt/pipelines.conf
+fi

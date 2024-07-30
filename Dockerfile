@@ -24,9 +24,9 @@ RUN apt-get -yqq install \
 COPY . /src/
 RUN cd /src/ ; pip3 install .
 
-COPY pre/ /opt/pipelines/
+COPY pre/ /opt/
 
-CMD ["sh", "/opt/pipelines/entrypoint.sh"]
+CMD ["sh", "/opt/entrypoint.sh"]
 
 # Setup jupyterlab
 
