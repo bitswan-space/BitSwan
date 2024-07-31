@@ -14,7 +14,12 @@ if os.path.exists(notebook_path):
               source = cell["source"]
               if len(source) > 0 and "#ignore" not in source[0]:
                   code = "\n".join(cell["source"]) if isinstance(cell["source"], list) else cell["source"]
-                  exec(code)
+                  clean_code = ""
+                  for line in code.split("\n"):
+                      if line.startswith("!"):
+                          continue
+                      clean_code += line + "\n"
+                  exec(clean_code)
 else:
     print(f"Notebook {notebook_path} not found")
                   
