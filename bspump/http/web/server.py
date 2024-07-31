@@ -93,8 +93,13 @@ class WebSink(Sink):
     """
 
     def process(self, context, event):
+        content_type = event.get("content_type", "text/html")
         event["response_future"].set_result(
-            aiohttp.web.Response(status=event["status"], text=event["response"])
+            aiohttp.web.Response(
+                status=event["status"],
+                text=event["response"],
+                content_type=content_type,
+            )
         )
 
 
