@@ -3,7 +3,7 @@
 if [ -f /opt/extra-dependencies.txt ]; then
     pip install -r /opt/extra-dependencies.txt
 fi
-cd /opt/pipelines/
+cd /opt/
 
 # If /opt/pipelines/pipelines.conf exists use it as conf file otherwise use /opt/pipelines.conf
 if [ -f /opt/pipelines/pipelines.conf ]; then
