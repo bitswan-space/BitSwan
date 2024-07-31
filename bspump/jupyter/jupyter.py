@@ -550,7 +550,7 @@ if deploy_secret:
                     aiohttp.web.json_response(ctx["response"], status=ctx["status"])
                 )
                 await asyncio.sleep(0.5)
-                os.execv("/bin/sh", ["/bin/sh", "/opt/pipelines/entrypoint.sh"])
+                os.execv("/bin/sh", ["/bin/sh", "/opt/entrypoint.sh"])
             await inject(ctx)
             return
 
