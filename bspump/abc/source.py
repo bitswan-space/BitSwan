@@ -229,7 +229,6 @@ class Source(asab.Configurable):
 
 
 class TriggerSource(Source):
-
     """
     Description:
 

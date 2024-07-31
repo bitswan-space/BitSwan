@@ -7,9 +7,11 @@ from ...abc.sink import Sink
 from ...abc.connection import Connection
 
 import aiohttp.web
+
 #
 
 L = logging.getLogger(__name__)
+
 
 class WebServerConnection(Connection):
     """
@@ -20,7 +22,6 @@ class WebServerConnection(Connection):
         "port": 8080,
         "max_body_size_bytes": 1024 * 1024 * 1000,
     }
-
 
     def __init__(self, app, id=None, config=None):
         super().__init__(app, id=id, config=config)
@@ -42,8 +43,8 @@ class WebServerConnection(Connection):
         except Exception as e:
             print("Exception: {}".format(e))
             import traceback
-            traceback.print_exc()
 
+            traceback.print_exc()
 
 
 class WebRouteSource(Source):
@@ -51,7 +52,16 @@ class WebRouteSource(Source):
     WebSource is a source that listens on a specified port and serves HTTP requests.
     """
 
-    def __init__(self, app, pipeline, connection="DefaultWebServerConnection", method="GET", route="/", id=None, config=None):
+    def __init__(
+        self,
+        app,
+        pipeline,
+        connection="DefaultWebServerConnection",
+        method="GET",
+        route="/",
+        id=None,
+        config=None,
+    ):
         super().__init__(app, pipeline, id=id, config=config)
 
         self.Connection = pipeline.locate_connection(app, connection)
@@ -64,22 +74,29 @@ class WebRouteSource(Source):
     async def handle_request(self, request):
         try:
             response_future = asyncio.Future()
-            await self.process({
-                "request": request,
-                "response_future": response_future,
-                "status": 200,
-            })
+            await self.process(
+                {
+                    "request": request,
+                    "response_future": response_future,
+                    "status": 200,
+                }
+            )
             return await response_future
         except Exception as e:
             L.exception("Exception in WebSource")
             return aiohttp.web.Response(status=500)
 
+
 class WebSink(Sink):
     """
     WebSink is a sink that sends HTTP requests.
     """
+
     def process(self, context, event):
-        event["response_future"].set_result(aiohttp.web.Response(status=event["status"], text=event["response"]))
+        event["response_future"].set_result(
+            aiohttp.web.Response(status=event["status"], text=event["response"])
+        )
+
 
 class JSONWebSink(Sink):
     """
@@ -87,4 +104,6 @@ class JSONWebSink(Sink):
     """
 
     def process(self, context, event):
-        event["response_future"].set_result(aiohttp.web.json_response(event["response"], status=event["status"]))
+        event["response_future"].set_result(
+            aiohttp.web.json_response(event["response"], status=event["status"])
+        )

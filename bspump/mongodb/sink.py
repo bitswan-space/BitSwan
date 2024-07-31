@@ -7,7 +7,6 @@ L = logging.getLogger(__name__)
 
 
 class MongoDBSink(Sink):
-
     """
     MongoDBSink is a sink processor that forwards the event to a MongoDB specified
     by a MongoDBConnection object.

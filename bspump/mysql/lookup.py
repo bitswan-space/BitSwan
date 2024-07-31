@@ -16,7 +16,6 @@ L = logging.getLogger(__name__)
 
 
 class MySQLLookup(MappingLookup, AsyncLookupMixin):
-
     """
     MySQLLookup is linked with a MySQL.
     MySQLLookup provides a mapping (dictionary-like) interface to pipelines.

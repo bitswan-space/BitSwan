@@ -61,12 +61,14 @@ class WinRMSource(TriggerSource):
             transport=self.Config["transport"],
             server_cert_validation=self.Config["server_cert_validation"],
             ca_trust_path=self.Config["ca_trust_path"],
-            cert_pem=self.Config["cert_pem"]
-            if len(self.Config["cert_pem"]) > 0
-            else None,
-            cert_key_pem=self.Config["cert_key_pem"]
-            if len(self.Config["cert_key_pem"]) > 0
-            else None,
+            cert_pem=(
+                self.Config["cert_pem"] if len(self.Config["cert_pem"]) > 0 else None
+            ),
+            cert_key_pem=(
+                self.Config["cert_key_pem"]
+                if len(self.Config["cert_key_pem"]) > 0
+                else None
+            ),
             username=self.Config["username"],
             password=self.Config["password"],
         )

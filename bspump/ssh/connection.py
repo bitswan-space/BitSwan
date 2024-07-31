@@ -13,7 +13,6 @@ L = logging.getLogger(__name__)
 
 
 class SSHConnection(Connection):
-
     """
 
             SSHConnection is used to connect SFTPSink to the SFTP server and upload files to the remote folder.

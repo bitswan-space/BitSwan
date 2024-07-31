@@ -10,7 +10,6 @@ L = logging.getLogger(__name__)
 
 
 class AvroSink(Sink):
-
     """
     Apache Avro™ is a data serialization system.
 

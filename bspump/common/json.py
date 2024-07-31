@@ -55,7 +55,6 @@ class StdDictToJsonParser(Processor):
 
 
 class StdJsonToDictParser(Processor):
-
     """
     Description:
 

@@ -13,7 +13,6 @@ L = logging.getLogger(__name__)
 
 
 class BSPumpApplication(asab.Application):
-
     """
     Description: BSPumpApplication is **class** used for .....
 

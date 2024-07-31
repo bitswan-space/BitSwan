@@ -11,7 +11,6 @@ L = logging.getLogger(__name__)
 
 
 class ThresholdAnalyzer(TimeWindowAnalyzer):
-
     """
 
             Threshold Analyzer is based on TimeWindowAnalyzer and detects, if any

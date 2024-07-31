@@ -485,22 +485,34 @@ class App(bspump.BSPumpApplication):
             func(self)
 
 
-default_webserver = os.environ.get("BITSWAN_DEFAULT_WEBSERVER", "f") in ["t", "true", "True", "1"]
+default_webserver = os.environ.get("BITSWAN_DEFAULT_WEBSERVER", "f") in [
+    "t",
+    "true",
+    "True",
+    "1",
+]
 deploy_secret = os.environ.get("BITSWAN_DEPLOY_SECRET", None)
 
 if default_webserver or deploy_secret:
+
     @register_connection
     def webserver(app):
-        return bspump.http.web.server.WebServerConnection(app, "DefaultWebServerConnection")
+        return bspump.http.web.server.WebServerConnection(
+            app, "DefaultWebServerConnection"
+        )
+
 
 if deploy_secret:
     import zipfile
     from bspump.http.web.server import *
 
     new_pipeline("Deploy pipeline")
+
     @register_source
     def deploy_source(app, pipeline):
-        return WebRouteSource(app, pipeline, method="POST", route="/__jupyter-deploy-pipeline/")
+        return WebRouteSource(
+            app, pipeline, method="POST", route="/__jupyter-deploy-pipeline/"
+        )
 
     @async_step
     async def deploy_processor(inject, ctx):
@@ -534,7 +546,9 @@ if deploy_secret:
                 return
             if ctx["request"].query.get("restart") == "true":
                 ctx["response"] = {"status": "Restarting"}
-                ctx["response_future"].set_result(aiohttp.web.json_response(ctx["response"], status=ctx["status"]))
+                ctx["response_future"].set_result(
+                    aiohttp.web.json_response(ctx["response"], status=ctx["status"])
+                )
                 await asyncio.sleep(0.5)
                 os.execv("/bin/sh", ["/bin/sh", "/opt/pipelines/entrypoint.sh"])
             await inject(ctx)

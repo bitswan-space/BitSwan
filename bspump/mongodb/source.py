@@ -1,4 +1,5 @@
 """ Module for connecting to Mongo database"""
+
 import asyncio
 import logging
 from bspump.abc.source import TriggerSource

@@ -47,7 +47,6 @@ class WebServiceStreamResponse(aiohttp.web.StreamResponse):
 
 
 class WebServiceSink(Sink):
-
     """
     Example of use:
 

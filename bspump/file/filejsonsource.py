@@ -7,7 +7,6 @@ L = logging.getLogger(__file__)
 
 
 class FileJSONSource(FileABCSource):
-
     """
     Description: This file source is optimized to load even large JSONs from a file and parse that.
     The loading & parsing is off-loaded to the worker thread so that it doesn't block the IO loop.

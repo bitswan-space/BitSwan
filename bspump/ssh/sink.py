@@ -15,7 +15,6 @@ L = logging.getLogger(__name__)
 
 
 class SFTPSink(Sink):
-
     """
 
             SFTPSink is a sink processor that forwards events to a remote files created on SSH server.

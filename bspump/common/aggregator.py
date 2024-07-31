@@ -47,7 +47,6 @@ class AggregationStrategy(ABC):
 
 
 class ListAggregationStrategy(AggregationStrategy):
-
     """
     Description: ... test
 

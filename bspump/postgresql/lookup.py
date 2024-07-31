@@ -14,7 +14,6 @@ L = logging.getLogger(__name__)
 
 
 class PostgreSQLLookup(MappingLookup, AsyncLookupMixin):
-
     """
     PostgreSQLLookup is linked with a PostgreSQL database.
     PostgreSQLLookup provides a mapping (dictionary-like) interface to pipelines.

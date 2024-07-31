@@ -13,7 +13,6 @@ L = logging.getLogger(__name__)
 
 
 class MongoDBConnection(Connection):
-
     """
     Examples of configurations:
 

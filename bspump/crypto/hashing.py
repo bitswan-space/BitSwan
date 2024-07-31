@@ -51,7 +51,6 @@ class HashingBaseProcessor(Processor):
 
 
 class HashingProcessor(HashingBaseProcessor):
-
     """
     Create hash of the event.
     """
@@ -63,7 +62,6 @@ class HashingProcessor(HashingBaseProcessor):
 
 
 class CoHashingProcessor(HashingBaseProcessor):
-
     """
     Put hash of the event into a context.
     """

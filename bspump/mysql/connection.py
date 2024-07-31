@@ -19,7 +19,6 @@ L = logging.getLogger(__name__)
 
 
 class MySQLConnection(Connection):
-
     """
             MySQLConnection is a top BitSwan object, that is used to connect the application to an external MySQL database.
             MySQLConnection is thus used in MySQL-related sources, sinks, processors and lookups such as MySQLLookup.

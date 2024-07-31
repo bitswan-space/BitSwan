@@ -19,7 +19,6 @@ class TestCase(unittest.TestCase):
 
 
 class ProcessorTestCase(TestCase):
-
     """
     A class whose instances are single processor test cases.
 
