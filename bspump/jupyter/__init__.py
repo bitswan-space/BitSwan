@@ -1,4 +1,5 @@
 from .jupyter import (
+    deploy,
     init_bitswan_jupyter,
     sample_events,
     register_app_post_init,
@@ -17,6 +18,7 @@ from .jupyter import (
 )
 
 __all__ = [
+    "deploy",
     "init_bitswan_jupyter",
     "sample_events",
     "register_app_post_init",
