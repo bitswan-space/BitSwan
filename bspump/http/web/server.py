@@ -63,6 +63,7 @@ class WebRouteSource(Source):
         config=None,
     ):
         super().__init__(app, pipeline, id=id, config=config)
+        pipeline.StopOnErrors = False
 
         self.Connection = pipeline.locate_connection(app, connection)
         self.aiohttp_app = self.Connection.aiohttp_app

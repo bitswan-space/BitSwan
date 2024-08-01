@@ -51,6 +51,7 @@ class Pipeline(abc.ABC, asab.Configurable):
     ConfigDefaults = {
         "async_concurency_limit": 1000,  # TODO concurrency
         "reset_profiler": True,
+        "stop_on_errors": True,
     }
 
     def __init__(self, app, id=None, config=None):
@@ -80,6 +81,7 @@ class Pipeline(abc.ABC, asab.Configurable):
 
         self.MQTTService = app.get_service("bspump.MQTTService")
         self.PublishingProcessors = {}
+        self.StopOnErrors = self.Config["stop_on_errors"]
 
         # Ensuring the uniqueness of the alert for each pipeline
         self.Alert_id = self.Config.get("alert_id", str(uuid.uuid4()))
@@ -337,7 +339,7 @@ class Pipeline(abc.ABC, asab.Configurable):
 
         """
 
-        return False
+        return not self.StopOnErrors
 
     def link(self, ancestral_pipeline):
         """
