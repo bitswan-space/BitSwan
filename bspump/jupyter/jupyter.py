@@ -3,6 +3,8 @@ from functools import partial
 import bspump
 import os
 from typing import Any, Callable, List
+from bspump.http.web.server import WebRouteSource, JSONWebSink
+import aiohttp
 
 
 class DevPipeline(bspump.Pipeline):
@@ -504,7 +506,6 @@ if default_webserver or deploy_secret:
 
 if deploy_secret:
     import zipfile
-    from bspump.http.web.server import *
 
     new_pipeline("Deploy pipeline")
 
@@ -560,24 +561,36 @@ if deploy_secret:
 
     end_pipeline()
 
-def deploy():
-  # Obtain the notebook JSON as a string
-  from google.colab import _message
-  notebook_json_string = _message.blocking_request('get_ipynb', request='', timeout_sec=None)
 
-  # Pretty print.
-  import json
-  import os.path
-  ipynb_str = json.dumps(notebook_json_string["ipynb"], sort_keys=True, indent=2)
-  from google.colab import userdata
-  deploy_secret = userdata.get('BITSWAN_DEPLOY_SECRET')
-  deploy_url = os.path.join(userdata.get('BITSWAN_DEPLOY_URL'), "__jupyter-deploy-pipeline/", "?secret=" + deploy_secret + "&restart=true")
-  print("Packing for deployment...")
-  import zipfile
-  with zipfile.ZipFile('main.zip', 'w') as myzip:
-    myzip.writestr('main.ipynb', ipynb_str)
-  import requests
-  print("Uploading to server..")
-  with open('main.zip', 'rb') as f:
-    r = requests.post(deploy_url, data=f)
-    print(json.loads(r.text)["status"])
+def deploy():
+    # Obtain the notebook JSON as a string
+    from google.colab import _message
+
+    notebook_json_string = _message.blocking_request(
+        "get_ipynb", request="", timeout_sec=None
+    )
+
+    # Pretty print.
+    import json
+    import os.path
+
+    ipynb_str = json.dumps(notebook_json_string["ipynb"], sort_keys=True, indent=2)
+    from google.colab import userdata
+
+    deploy_secret = userdata.get("BITSWAN_DEPLOY_SECRET")
+    deploy_url = os.path.join(
+        userdata.get("BITSWAN_DEPLOY_URL"),
+        "__jupyter-deploy-pipeline/",
+        "?secret=" + deploy_secret + "&restart=true",
+    )
+    print("Packing for deployment...")
+    import zipfile
+
+    with zipfile.ZipFile("main.zip", "w") as myzip:
+        myzip.writestr("main.ipynb", ipynb_str)
+    import requests
+
+    print("Uploading to server..")
+    with open("main.zip", "rb") as f:
+        r = requests.post(deploy_url, data=f)
+        print(json.loads(r.text)["status"])

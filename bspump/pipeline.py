@@ -791,16 +791,16 @@ class Pipeline(abc.ABC, asab.Configurable):
         )
 
         if isinstance(processor, Analyzer):
-            self.ProfilerCounter["analyzer_" + processor.Id] = (
-                self.MetricsService.create_counter(
-                    "bspump.pipeline.profiler",
-                    tags={
-                        "analyzer": processor.Id,
-                        "pipeline": self.Id,
-                    },
-                    init_values={"duration": 0.0, "run": 0},
-                    reset=self.ResetProfiler,
-                )
+            self.ProfilerCounter[
+                "analyzer_" + processor.Id
+            ] = self.MetricsService.create_counter(
+                "bspump.pipeline.profiler",
+                tags={
+                    "analyzer": processor.Id,
+                    "pipeline": self.Id,
+                },
+                init_values={"duration": 0.0, "run": 0},
+                reset=self.ResetProfiler,
             )
 
     def build(self, source, *processors):
