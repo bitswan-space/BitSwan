@@ -3,6 +3,8 @@ from functools import partial
 import bspump
 import os
 from typing import Any, Callable, List
+from bspump.http.web.server import WebRouteSource, JSONWebSink
+import aiohttp
 
 
 class DevPipeline(bspump.Pipeline):
@@ -504,7 +506,6 @@ if default_webserver or deploy_secret:
 
 if deploy_secret:
     import zipfile
-    from bspump.http.web.server import *
 
     new_pipeline("Deploy pipeline")
 
