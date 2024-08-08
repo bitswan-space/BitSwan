@@ -5,7 +5,7 @@ from bspump.jupyter import *
 config = None
 __bitswan_dev = False
 
-notebook_path = os.environ.get("JUPYTER_NOTEBOOK", "pipelines/main.ipynb")
+notebook_path = os.environ.get("JUPYTER_NOTEBOOK", "main.ipynb")
 if os.path.exists(notebook_path):
   with open(notebook_path) as nb:
       notebook = json.load(nb)
