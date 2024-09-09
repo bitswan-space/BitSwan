@@ -34,16 +34,19 @@ class LoggedException:
 class LruQueue(Queue):
     def __init__(self, maxsize=100):
         super().__init__(maxsize=maxsize)
+        self.total = 0
         self.lock = Lock()
 
     def put(self, item):
         with self.lock:
+            self.total += 1
             if self.full():
                 self.get_nowait()
             super().put(item)
 
     def put_nowait(self, item):
         with self.lock:
+            self.total += 1
             if self.full():
                 self.get_nowait()
             super().put_nowait(item)
