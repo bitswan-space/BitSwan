@@ -53,6 +53,16 @@ class DevRuntime:
         self.events = new_eventss
 
 
+def auto_pipeline(source=None, sink=None):
+    if source is None:
+        raise Exception("When calling auto_pipeline must specify a function that returns a source.")
+    if sink is None:
+        raise Exception("When calling auto_pipeline must specify a function that returns a sink.")
+
+    register_source(source)
+    bitswan_auto_pipeline["sink"] = sink
+
+
 async def test_devruntime():
     test_runtime = DevRuntime()
 
@@ -118,6 +128,8 @@ __bitswan_dev_runtime = None
 __bitswan_connections = []
 __bitswan_lookups = []
 _bitswan_app_post_inits = []
+bitswan_auto_pipeline = {}
+__bs_step_locals = {}
 
 
 def ensure_bitswan_runtime(func):
