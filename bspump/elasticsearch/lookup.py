@@ -24,6 +24,10 @@ class ElasticSearchLookup(MappingLookup, AsyncLookupMixin):
 
     *key* - field name to match
 
+    *timefield* - field name to use for sorting
+
+    *sort_order* - order of sorting (default is 'desc')
+
     *scroll_timeout* - Timeout of single scroll request (default is '1m'). Allowed time units:
     https://www.elastic.co/guide/en/elasticsearch/reference/current/common-options.html#time-units
 
@@ -55,6 +59,7 @@ class ElasticSearchLookup(MappingLookup, AsyncLookupMixin):
         "index": "",  # Specify an index
         "key": "",  # Specify field name to match
         "cache_non_existent": False,  # True - if key is not found, it will be cached as None
+        "sort_order": "desc",
         "scroll_timeout": "1m",
     }
 
@@ -90,6 +95,8 @@ class ElasticSearchLookup(MappingLookup, AsyncLookupMixin):
         self.CacheNonExistent = {"True": True, "False": False}.get(
             self.Config["cache_non_existent"], False
         )
+        self.Timefield = self.Config.get("timefield")
+        self.SortOrder = self.Config["sort_order"]
 
         self.Count = -1
         if cache is None:
@@ -108,6 +115,9 @@ class ElasticSearchLookup(MappingLookup, AsyncLookupMixin):
     async def _find_one(self, key):
         prefix = "_search"
         request = {"size": 1, "query": self.build_find_one_query(key)}
+        if self.Timefield:
+            request["sort"] = [{self.Timefield: self.SortOrder}]
+
         url = self.Connection.get_url() + "{}/{}".format(self.Index, prefix)
 
         async with self.Connection.get_session() as session:
