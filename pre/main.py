@@ -9,7 +9,7 @@ __bitswan_dev = False
 
 notebook_path = os.environ.get("JUPYTER_NOTEBOOK", "pipelines/main.ipynb")
 
-def exec_cell(cell, cell_number):
+def exec_cell(cell, cell_number, ctx):
     if cell["cell_type"] == "code":
         source = cell["source"]
         if len(source) > 0 and "#ignore" not in source[0]:
@@ -48,9 +48,9 @@ __bs_step_locals = locals()
                     module = ast.fix_missing_locations(module)
                     compiled_code = compile(module, filename="<ast>", mode="exec")
                     # exec the code
-                    exec(compiled_code)
+                    exec(compiled_code, ctx)
                 else:
-                    exec(clean_code)
+                    exec(clean_code, ctx)
             except Exception as e:
                 print(f"Error in cell: {cell_number}\n{clean_code}")
                 # print traceback
@@ -66,7 +66,7 @@ if os.path.exists(notebook_path):
       cell_number = 0
       for cell in notebook["cells"]:
           cell_number += 1
-          exec_cell(cell, cell_number)
+          exec_cell(cell, cell_number, globals())
 else:
     print(f"Notebook {notebook_path} not found")
                   

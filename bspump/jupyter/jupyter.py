@@ -56,9 +56,13 @@ class DevRuntime:
 
 def auto_pipeline(source=None, sink=None):
     if source is None:
-        raise Exception("When calling auto_pipeline must specify a function that returns a source.")
+        raise Exception(
+            "When calling auto_pipeline must specify a function that returns a source."
+        )
     if sink is None:
-        raise Exception("When calling auto_pipeline must specify a function that returns a sink.")
+        raise Exception(
+            "When calling auto_pipeline must specify a function that returns a sink."
+        )
 
     register_source(source)
     bitswan_auto_pipeline["sink"] = sink
@@ -614,7 +618,9 @@ def deploy():
             details = DeployDetails(
                 json.dumps(notebook_json, sort_keys=True, indent=2),
                 os.environ["BITSWAN_DEPLOY_SECRET"],
-                os.environ["BITSWAN_DEPLOY_URL"], # raises KeyError if not set, to match google colab behavior
+                os.environ[
+                    "BITSWAN_DEPLOY_URL"
+                ],  # raises KeyError if not set, to match google colab behavior
             )
             return details
         else:
