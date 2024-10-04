@@ -85,6 +85,7 @@ setup(
         "numpy>=1.19.0",
         "pika>=1.1.0",
         "pymysql>=0.9.2,<=0.9.2",  # aiomysql 0.0.20 requires PyMySQL<=0.9.2
+        "pytest>=8",
         "aiomysql>=0.0.20",
         "mysql-replication>=0.21",
         "pytz>=2020.1",

@@ -8,6 +8,7 @@ config = None
 __bitswan_dev = False
 
 notebook_path = os.environ.get("JUPYTER_NOTEBOOK", "pipelines/main.ipynb")
+bspump.jupyter.bitswan_test_mode = os.environ.get("BITSWAN_TEST_MODE", "false").lower() in ("true", "t", "1")
 
 def exec_cell(cell, cell_number, ctx):
     if cell["cell_type"] == "code":
@@ -22,11 +23,16 @@ def exec_cell(cell, cell_number, ctx):
             try:
                 if bspump.jupyter.bitswan_auto_pipeline.get("sink") is not None:
                     clean_code = """
+global __bs_step_locals
+# if undefined define __bs_step_locals as empty dict
+if not "__bs_step_locals" in globals():
+    __bs_step_locals = {}
 # load locals from __bs_step_locals
 for key, value in __bs_step_locals.items():
     locals()[key] = value
 """ + clean_code + """
 __bs_step_locals = locals()
+return event
                     """
 
                     parsed_code = ast.parse(clean_code)
@@ -57,8 +63,6 @@ __bs_step_locals = locals()
                 import traceback
                 traceback.print_exc()
 
-if bspump.jupyter.bitswan_auto_pipeline.get("sink") is not None:
-    register_sink(bspump.jupyter.bitswan_auto_pipeline.get("sink"))
 
 if os.path.exists(notebook_path):
   with open(notebook_path) as nb:
@@ -69,5 +73,10 @@ if os.path.exists(notebook_path):
           exec_cell(cell, cell_number, globals())
 else:
     print(f"Notebook {notebook_path} not found")
-                  
-App().run()
+
+if bspump.jupyter.bitswan_auto_pipeline.get("sink") is not None:
+    register_sink(bspump.jupyter.bitswan_auto_pipeline.get("sink"))
+    end_pipeline()
+
+app = App()
+app.run()

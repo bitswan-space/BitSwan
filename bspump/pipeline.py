@@ -474,6 +474,8 @@ class Pipeline(abc.ABC, asab.Configurable):
                         self.PublishingProcessors[processor.Id],
                     )
                     self.PublishingProcessors[processor.Id] -= 1
+            except SystemExit as e:
+                raise e
             except BaseException as e:
                 self.ProcessorsCounter[processor.Id].add("event.drop", 1)
                 if depth > 0:
@@ -500,6 +502,7 @@ class Pipeline(abc.ABC, asab.Configurable):
                         self.MetricsCounter.add("event.drop", 1)
                 return
 
+        import pdb; pdb.set_trace()
         if self.Sinks:
             for c, s in self.Sinks:
                 if c(event):
@@ -542,7 +545,6 @@ class Pipeline(abc.ABC, asab.Configurable):
         :note: For normal operations, it is highly recommended to use process method instead.
 
         """
-
         if context is None:
             context = self._context.copy()
         else:
