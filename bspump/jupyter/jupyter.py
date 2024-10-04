@@ -1,4 +1,5 @@
 import asyncio
+from dataclasses import dataclass
 from functools import partial
 import bspump
 import os
@@ -51,6 +52,20 @@ class DevRuntime:
         [print(event) for event in new_events]
         new_eventss.append((name, new_events))
         self.events = new_eventss
+
+
+def auto_pipeline(source=None, sink=None):
+    if source is None:
+        raise Exception(
+            "When calling auto_pipeline must specify a function that returns a source."
+        )
+    if sink is None:
+        raise Exception(
+            "When calling auto_pipeline must specify a function that returns a sink."
+        )
+
+    register_source(source)
+    bitswan_auto_pipeline["sink"] = sink
 
 
 async def test_devruntime():
@@ -118,6 +133,8 @@ __bitswan_dev_runtime = None
 __bitswan_connections = []
 __bitswan_lookups = []
 _bitswan_app_post_inits = []
+bitswan_auto_pipeline = {}
+__bs_step_locals = {}
 
 
 def ensure_bitswan_runtime(func):
@@ -560,24 +577,87 @@ if deploy_secret:
 
     end_pipeline()
 
-def deploy():
-  # Obtain the notebook JSON as a string
-  from google.colab import _message
-  notebook_json_string = _message.blocking_request('get_ipynb', request='', timeout_sec=None)
 
-  # Pretty print.
-  import json
-  import os.path
-  ipynb_str = json.dumps(notebook_json_string["ipynb"], sort_keys=True, indent=2)
-  from google.colab import userdata
-  deploy_secret = userdata.get('BITSWAN_DEPLOY_SECRET')
-  deploy_url = os.path.join(userdata.get('BITSWAN_DEPLOY_URL'), "__jupyter-deploy-pipeline/", "?secret=" + deploy_secret + "&restart=true")
-  print("Packing for deployment...")
-  import zipfile
-  with zipfile.ZipFile('main.zip', 'w') as myzip:
-    myzip.writestr('main.ipynb', ipynb_str)
-  import requests
-  print("Uploading to server..")
-  with open('main.zip', 'rb') as f:
-    r = requests.post(deploy_url, data=f)
-    print(json.loads(r.text)["status"])
+def deploy():
+    import os
+    import json
+
+    is_vscode = "VSCODE_PID" in os.environ
+
+    @dataclass
+    class DeployDetails:
+        notebook_json: dict[str, Any]
+        deploy_secret: str
+        deploy_url: str
+
+    def get_deploy_details() -> DeployDetails | None:
+        """Get the notebook JSON, deploy secret and deploy URL
+
+        Raises:
+            e: RuntimeError: No VSCode or Colab environment detected. Please run this in a different environment.
+
+        Returns:
+            DeployDetails | None: DeployDetails object containing the notebook JSON, deploy secret and deploy URL
+        """
+
+        if is_vscode:
+            from IPython import get_ipython
+
+            ip = get_ipython()
+            if not ip:
+                return None
+
+            notebook_path = os.path.abspath(ip.user_ns.get("__vsc_ipynb_file__", ""))
+
+            if not notebook_path or not notebook_path.endswith(".ipynb"):
+                return None
+
+            with open(notebook_path, "r", encoding="utf-8") as f:
+                notebook_json = json.load(f)
+
+            details = DeployDetails(
+                json.dumps(notebook_json, sort_keys=True, indent=2),
+                os.environ["BITSWAN_DEPLOY_SECRET"],
+                os.environ[
+                    "BITSWAN_DEPLOY_URL"
+                ],  # raises KeyError if not set, to match google colab behavior
+            )
+            return details
+        else:
+            try:
+                from google.colab import _message, userdata
+            except ImportError:
+                raise RuntimeError(
+                    "No VSCode or Colab environment detected. Please run this in a different environment."
+                )
+
+            notebook_json_string = _message.blocking_request(
+                "get_ipynb", request="", timeout_sec=None
+            )
+            details = DeployDetails(
+                json.dumps(notebook_json_string["ipynb"], sort_keys=True, indent=2),
+                userdata.get("BITSWAN_DEPLOY_SECRET"),
+                userdata.get("BITSWAN_DEPLOY_URL"),
+            )
+            return details
+
+    deploy_details = get_deploy_details()
+    if not deploy_details:
+        print("Error retrieving notebook contents")
+        return
+    deploy_url = os.path.join(
+        deploy_details.deploy_url,
+        "__jupyter-deploy-pipeline/",
+        "?secret=" + deploy_secret + "&restart=true",
+    )
+    print("Packing for deployment...")
+    import zipfile
+
+    with zipfile.ZipFile("main.zip", "w") as myzip:
+        myzip.writestr("main.ipynb", deploy_details.notebook_json)
+    import requests
+
+    print("Uploading to server..")
+    with open("main.zip", "rb") as f:
+        r = requests.post(deploy_url, data=f)
+        print(json.loads(r.text)["status"])

@@ -15,6 +15,8 @@ from .jupyter import (
     step,
     async_step,
     App,
+    bitswan_auto_pipeline,
+    auto_pipeline,
 )
 
 __all__ = [
@@ -34,4 +36,6 @@ __all__ = [
     "step",
     "async_step",
     "App",
+    "auto_pipeline",
+    "bitswan_auto_pipeline",
 ]
