@@ -97,9 +97,14 @@ build: {} [{}]
 """.format(
             __version__, __build__, __build__[:7]
         )
-
         parser = super().create_argument_parser(prog=prog, description=description)
+        parser.add_argument("--test", action="store_true", help="Run pipeline/automation tests")
         return parser
+
+    def parse_arguments(self, args=None):
+        args = super().parse_arguments(args=args)
+        self.Test = args.test
+
 
     async def main(self):
         print("{} pipeline(s) ready.".format(len(self.PumpService.Pipelines)))
