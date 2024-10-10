@@ -13,30 +13,35 @@ class TestSource(Source):
 
     async def main(self):
         import bspump.jupyter
+        print(f"\nRunning tests for pipeline {self.Pipeline.Id}.")
         for event, tests in self.test_events.items():
             await self.Pipeline.ready()
             tests["outputs"] = []
-            print("Input:", event)
+            tests["input"] = str(event)
             bspump.jupyter.bitswan_test_probes.clear()
             bspump.jupyter.bitswan_test_probes.update(tests.get("probes", {}))
+            print(  f"\n    ┌ Testing event:        {event}")
             await self.process(event, context=tests)
+            print(    f"    └ Outputs:              {tests['outputs']}", end="")
             if tests.get("expect") and tests["outputs"] != tests["expect"]:
-                print("Expected:", tests["expect"])
-                print("Got:", tests["outputs"])
-                print("\033[91mTest failed\033[0m")
+                print(" \033[91m✘\033[0m")
+                print(f"    ! \033[91mTest failed\033[0m Expected: {tests['expect']}\n")
                 exit(1)
             if tests.get("inspect"):
                 inspected = tests["inspect"][0](tests["outputs"])
                 expected = tests["inspect"][1]
                 if not inspected == expected:
-                    print(f"\033[91mInspect failed. Got {inspected} expected {expected}\033[0m")
+                    print(" \033[91m✘\033[0m")
+                    print(f"    ! \033[91mInspect failed. Got {inspected} expected {expected}\033[0m")
                     exit(1)
-            print("Test passed!")
-        # terman escape codes for green
-        print("\033[92mAll tests passed\033[0m")
-        exit()
+            print(" \033[92m✔\033[0m")
+        print(f"\n\033[92mAll tests passed for {self.Pipeline.Id}.\033[0m\n")
+        bspump.jupyter.bitswan_tested_pipelines.add(self.Pipeline.Id)
+        if bspump.jupyter.bitswan_tested_pipelines == set(self.Pipeline.App.PumpService.Pipelines):
+            exit()
+
+
 
 class TestSink(Sink):
     def process(self, context, event):
-        print("Ouput:", event)
         context["outputs"].append(copy.deepcopy(event))

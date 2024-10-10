@@ -19,6 +19,7 @@ if "bitswan_auto_pipeline" not in globals():
   bitswan_test_mode = os.environ.get("BITSWAN_TEST_MODE", "false").lower() in ("true", "t", "1")
   __bitswan_autopipeline_count = 1
   bitswan_test_probes = {}
+  bitswan_tested_pipelines = set()
 
 
 
@@ -184,10 +185,10 @@ def add_test_probe(name):
         try:
             probe, expected = bitswan_test_probes.get(name, (None, None))
             if probe is not None:
-                print(f"Probing {name}")
+                print(f"    │ Probing {name}.")
                 probed = probe(frame.f_back.f_locals, frame.f_back.f_globals)
                 if not probed == expected:
-                    print("\033[91m" + f"Probe {name} failed. Got {probed} expected {expected}." + "\033[0m")
+                    print("    └ \033[91m" + f"Probe {name} failed. Got {probed} expected {expected}." + "\033[0m")
                     exit(1)
         finally:
             del frame
@@ -352,7 +353,6 @@ def register_source(func, test_events=None):
     if test_events is None:
         import inspect
         frame = inspect.currentframe()
-        import pdb;pdb.set_trace()
         test_events = frame.f_back.f_locals.get("test_events", {})
     global __bitswan_processors
     global bitswan_test_mode

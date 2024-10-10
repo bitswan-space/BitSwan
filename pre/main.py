@@ -1,14 +1,20 @@
 import json
 import os
-from bspump.jupyter import *
-import bspump.jupyter
 import ast
 
 config = None
 __bitswan_dev = False
 
+app = App()
+# set the BITSWAN_TEST_MODE env var to True if app.Test is true.
+if app.Test:
+    os.environ["BITSWAN_TEST_MODE"] = "True"
+
+from bspump.jupyter import *
+import bspump.jupyter
+
+
 notebook_path = os.environ.get("JUPYTER_NOTEBOOK", "pipelines/main.ipynb")
-bspump.jupyter.bitswan_test_mode = os.environ.get("BITSWAN_TEST_MODE", "false").lower() in ("true", "t", "1")
 
 def exec_cell(cell, cell_number, ctx):
     if cell["cell_type"] == "code":
@@ -78,5 +84,4 @@ if bspump.jupyter.bitswan_auto_pipeline.get("sink") is not None:
     register_sink(bspump.jupyter.bitswan_auto_pipeline.get("sink"))
     end_pipeline()
 
-app = App()
 app.run()

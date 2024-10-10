@@ -19,7 +19,8 @@ from .jupyter import (
     auto_pipeline,
     bitswan_test_mode,
     add_test_probe,
-    bitswan_test_probes
+    bitswan_test_probes,
+    bitswan_tested_pipelines
 )
 
 __all__ = [
@@ -44,4 +45,5 @@ __all__ = [
     "bitswan_test_mode",
     "add_test_probe",
     "bitswan_test_probes",
+    "bitswan_tested_pipelines",
 ]
