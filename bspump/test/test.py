@@ -6,9 +6,6 @@ import copy
 
 class TestSource(Source):
     def __init__(self, *args, **kwargs):
-        import pdb
-
-        pdb.set_trace()
         kwargs["test_events"] = kwargs.get("test_events", {})
         self.test_events = kwargs["test_events"]
         del kwargs["test_events"]
