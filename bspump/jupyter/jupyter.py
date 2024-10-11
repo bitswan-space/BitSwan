@@ -7,20 +7,19 @@ from typing import Any, Callable, List
 
 # Define globals if not define already
 if "bitswan_auto_pipeline" not in globals():
-  __bitswan_processors = []
-  __bitswan_pipelines = {}
-  __bitswan_current_pipeline = None
-  __bitswan_dev_runtime = None
-  __bitswan_connections = []
-  __bitswan_lookups = []
-  _bitswan_app_post_inits = []
-  bitswan_auto_pipeline = {}
-  __bs_step_locals = {}
-  bitswan_test_mode = []
-  __bitswan_autopipeline_count = 1
-  bitswan_test_probes = {}
-  bitswan_tested_pipelines = set()
-
+    __bitswan_processors = []
+    __bitswan_pipelines = {}
+    __bitswan_current_pipeline = None
+    __bitswan_dev_runtime = None
+    __bitswan_connections = []
+    __bitswan_lookups = []
+    _bitswan_app_post_inits = []
+    bitswan_auto_pipeline = {}
+    __bs_step_locals = {}
+    bitswan_test_mode = []
+    __bitswan_autopipeline_count = 1
+    bitswan_test_probes = {}
+    bitswan_tested_pipelines = set()
 
 
 class DevPipeline(bspump.Pipeline):
@@ -86,6 +85,7 @@ def auto_pipeline(source=None, sink=None):
     __bitswan_autopipeline_count += 1
 
     import inspect
+
     frame = inspect.currentframe()
     register_source(source, test_events=frame.f_back.f_locals.get("test_events"))
     bitswan_auto_pipeline["sink"] = sink
@@ -147,6 +147,7 @@ def is_running_in_jupyter():
     except Exception:
         return False
 
+
 __bitswan_dev = is_running_in_jupyter()
 
 
@@ -175,12 +176,12 @@ def init_bitswan_jupyter(config_path: str = None):
     __bitswan_dev_runtime = DevRuntime(args)
 
 
-
 def add_test_probe(name):
     global bitswan_test_mode
     global bitswan_test_probes
     if bitswan_test_mode:
         import inspect
+
         frame = inspect.currentframe()
         try:
             probe, expected = bitswan_test_probes.get(name, (None, None))
@@ -188,11 +189,14 @@ def add_test_probe(name):
                 print(f"    │ Probing {name}.")
                 probed = probe(frame.f_back.f_locals, frame.f_back.f_globals)
                 if not probed == expected:
-                    print("    └ \033[91m" + f"Probe {name} failed. Got {probed} expected {expected}." + "\033[0m")
+                    print(
+                        "    └ \033[91m"
+                        + f"Probe {name} failed. Got {probed} expected {expected}."
+                        + "\033[0m"
+                    )
                     exit(1)
         finally:
             del frame
-
 
 
 @ensure_bitswan_runtime
@@ -352,14 +356,17 @@ def register_source(func, test_events=None):
     """
     if test_events is None:
         import inspect
+
         frame = inspect.currentframe()
         test_events = frame.f_back.f_locals.get("test_events", {})
     global __bitswan_processors
     global bitswan_test_mode
     if bitswan_test_mode:
         import bspump.test
+
         def test_source(app, pipeline):
             return bspump.test.TestSource(app, pipeline, test_events=test_events)
+
         __bitswan_processors.append(test_source)
     else:
         __bitswan_processors.append(func)
@@ -446,8 +453,10 @@ def register_sink(func):
     global bitswan_test_mode
     if bitswan_test_mode:
         import bspump.test
+
         def test_sink(app, pipeline):
             return bspump.test.TestSink(app, pipeline)
+
         __bitswan_processors.append(test_sink)
     else:
         __bitswan_processors.append(func)

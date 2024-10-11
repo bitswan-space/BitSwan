@@ -20,7 +20,7 @@ from .jupyter import (
     bitswan_test_mode,
     add_test_probe,
     bitswan_test_probes,
-    bitswan_tested_pipelines
+    bitswan_tested_pipelines,
 )
 
 __all__ = [
