@@ -88,6 +88,44 @@ class WebRouteSource(Source):
             return aiohttp.web.Response(status=500)
 
 
+class ProtectedWebRouteSource(WebRouteSource):
+    """
+    Web route source that requires a secret in a qparam or in the BearerToken.
+    """
+    async def handle_request(self, request):
+        try:
+            secret = request.query.get("secret")
+            if secret is None:
+                auth = request.headers.get("Authorization")
+                if auth is not None:
+                    if auth.startswith("Bearer "):
+                        secret = auth[7:]
+            if secret is None:
+                return aiohttp.web.Response(
+                    text="Secret is missing. Pass via query parameter 'secret' or in the Authorization as 'Bearer <secret>'",
+                    status=401
+                )
+
+            if not self.Config.get("secret") == secret:
+                return aiohttp.web.Response(
+                    text="Invalid secret",
+                    status=403
+                )
+
+            response_future = asyncio.Future()
+            await self.process(
+                {
+                    "request": request,
+                    "response_future": response_future,
+                    "status": 200,
+                }
+            )
+            return await response_future
+        except Exception as e:
+            L.exception("Exception in WebSource")
+            return aiohttp.web.Response(status=500)
+
+
 class Field:
     def __init__(self, name, **kwargs):
         self.name = name
