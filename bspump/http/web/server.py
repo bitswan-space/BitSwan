@@ -92,6 +92,7 @@ class ProtectedWebRouteSource(WebRouteSource):
     """
     Web route source that requires a secret in a qparam or in the BearerToken.
     """
+
     async def handle_request(self, request):
         try:
             secret = request.query.get("secret")
@@ -103,14 +104,11 @@ class ProtectedWebRouteSource(WebRouteSource):
             if secret is None:
                 return aiohttp.web.Response(
                     text="Secret is missing. Pass via query parameter 'secret' or in the Authorization as 'Bearer <secret>'",
-                    status=401
+                    status=401,
                 )
 
             if not self.Config.get("secret") == secret:
-                return aiohttp.web.Response(
-                    text="Invalid secret",
-                    status=403
-                )
+                return aiohttp.web.Response(text="Invalid secret", status=403)
 
             response_future = asyncio.Future()
             await self.process(
@@ -147,7 +145,7 @@ class Field:
         </div>
         </div>
         """
-        
+
 
 class TextField(Field):
     def inner_html(self, default="", readonly=False):
@@ -161,6 +159,7 @@ class TextField(Field):
             <input type="text" name="{self.name}" id="{self.name}" value="{default}" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 w-full sm:text-sm border-gray-300 rounded-md" {readonly}>
         </div>
         """
+
 
 class ChoiceField(Field):
     def __init__(self, name, choices, **kwargs):
@@ -249,7 +248,15 @@ class WebFormSource(WebRouteSource):
         id=None,
         config=None,
     ):
-        super().__init__(app, pipeline, connection=connection, route=route, method="GET", id=id, config=config)
+        super().__init__(
+            app,
+            pipeline,
+            connection=connection,
+            route=route,
+            method="GET",
+            id=id,
+            config=config,
+        )
         self.fields = fields
         self.aiohttp_app.router.add_route("POST", route, self.handle_post)
 
@@ -283,7 +290,9 @@ class WebFormSource(WebRouteSource):
 
     def render_form(self, request, errors={}):
         # read defaults from query params. If not present, use empty string.
-        defaults = {field.name: request.query.get(field.name, "") for field in self.fields}
+        defaults = {
+            field.name: request.query.get(field.name, "") for field in self.fields
+        }
         top = f"""
         <html>
         <head>
