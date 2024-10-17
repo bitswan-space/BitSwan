@@ -88,6 +88,208 @@ class WebRouteSource(Source):
             return aiohttp.web.Response(status=500)
 
 
+class Field:
+    def __init__(self, name, **kwargs):
+        self.name = name
+        self.hidden = kwargs.get("hidden", False)
+        self.readonly = kwargs.get("readonly", False)
+        self.default = kwargs.get("default", "")
+
+    def clean(self, data):
+        pass
+
+    def html(self, default=""):
+        if not default:
+            default = self.default
+        return f"""
+
+      <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6" style='{'display: none' if self.hidden else ''}'>
+        <div class="sm:col-span-4">
+                {self.inner_html(default, self.readonly)}
+        </div>
+        </div>
+        """
+        
+
+class TextField(Field):
+    def inner_html(self, default="", readonly=False):
+        if readonly:
+            readonly = "readonly"
+        else:
+            readonly = ""
+        return f"""
+        <label for="{self.name}" class="block text-sm font-bold text-gray-700">{self.name}</label>
+        <div class="mt-1">
+            <input type="text" name="{self.name}" id="{self.name}" value="{default}" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 w-full sm:text-sm border-gray-300 rounded-md" {readonly}>
+        </div>
+        """
+
+class ChoiceField(Field):
+    def __init__(self, name, choices, **kwargs):
+        super().__init__(name, **kwargs)
+        self.choices = choices
+
+    def inner_html(self, default="", readonly=False):
+        if readonly:
+            readonly = "readonly"
+        else:
+            readonly = ""
+        return f"""
+        <label for="{self.name}" class="block text-sm font-bold text-gray-700">{self.name}</label>
+        <div class="mt-1">
+            <select id="{self.name}" name="{self.name}" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 w-full sm:text-sm border-gray-300 rounded-md" {readonly}>
+                {"".join(
+                    f'<option value="{choice}" {"selected" if choice == default else ""}>{choice}</option>'
+                    for choice in self.choices
+                )}
+            </select>
+        </div>
+        """
+
+
+class CheckboxField(Field):
+    def inner_html(self, default="", readonly=False):
+        if readonly:
+            readonly = "readonly"
+        else:
+            readonly = ""
+        return f"""
+            <label for="{self.name}" class="block text-sm font-bold text-gray-700">{self.name}</label>
+            <input type="checkbox" name="{self.name}" id="{self.name}" {"checked" if default else ""} class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 sm:text-sm border-gray-300 rounded-md" {readonly}>
+        """
+
+    def clean(self, data):
+        data[self.name] = data.get(self.name, False) == "on"
+
+
+class IntField(Field):
+    def inner_html(self, default=0, readonly=False):
+        if not default:
+            default = 0
+        if readonly:
+            readonly = "readonly"
+        else:
+            readonly = ""
+        return f"""
+        <label for="{self.name}" class="block text-sm font-bold text-gray-700">{self.name}</label>
+        <div class="mt-1">
+            <input type="number" name="{self.name}" id="{self.name}" value="{default}" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 w-full sm:text-sm border-gray-300 rounded-md" {readonly}>
+        </div>
+        """
+
+    def clean(self, data):
+        data[self.name] = int(data.get(self.name, 0))
+
+
+class FloatField(Field):
+    def inner_html(self, default=0, readonly=False):
+        if not default:
+            default = 0.0
+        if readonly:
+            readonly = "readonly"
+        else:
+            readonly = ""
+        return f"""
+        <label for="{self.name}" class="block text-sm font-bold text-gray-700">{self.name}</label>
+        <div class="mt-1">
+            <input type="number" name="{self.name}" id="{self.name}" value="{default}" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 w-full sm:text-sm border-gray-300 rounded-md" {readonly}>
+        </div>
+        """
+
+    def clean(self, data):
+        data[self.name] = float(data.get(self.name, 0))
+
+
+class WebFormSource(WebRouteSource):
+    def __init__(
+        self,
+        app,
+        pipeline,
+        connection="DefaultWebServerConnection",
+        route="/",
+        fields=None,
+        id=None,
+        config=None,
+    ):
+        super().__init__(app, pipeline, connection=connection, route=route, method="GET", id=id, config=config)
+        self.fields = fields
+        self.aiohttp_app.router.add_route("POST", route, self.handle_post)
+
+    async def handle_request(self, request):
+        return aiohttp.web.Response(
+            text=self.render_form(request),
+            content_type="text/html",
+        )
+
+    async def handle_post(self, request):
+        data = dict(await request.post())
+        for field in self.fields:
+            try:
+                field.clean(data)
+            except ValueError as e:
+                return aiohttp.web.Response(
+                    text=self.render_form(request, errors={field.name: e}),
+                    content_type="text/html",
+                    status=400,
+                )
+        response_future = asyncio.Future()
+        await self.process(
+            {
+                "request": request,
+                "response_future": response_future,
+                "status": 200,
+                "form": data,
+            }
+        )
+        return await response_future
+
+    def render_form(self, request, errors={}):
+        # read defaults from query params. If not present, use empty string.
+        defaults = {field.name: request.query.get(field.name, "") for field in self.fields}
+        top = f"""
+        <html>
+        <head>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+
+            function submitForm() {{
+                document.getElementById("loading").style.display = "block";
+                document.getElementById("main-form").submit();
+            }}
+        </script>
+        </head>
+        <BODY>
+        <form id="main-form" method="post">
+        <div id="loading" style="display:none">
+            <div class="fixed top-0 left-0 h-screen w-screen bg-black bg-opacity-50 z-50 flex justify-center items-center">
+                <div class="bg-white p-4 rounded-lg">
+                    <div class="text-center">Processing...</div>
+                </div>
+            </div>
+        </div>
+        <div class="space-y-12">
+        <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 bg-gray shadow sm:rounded-lg">
+        """
+        fields = ""
+        for field in self.fields:
+            fields += field.html(defaults[field.name])
+            if field.name in errors:
+                fields += f'<div class="text-red-500">{errors[field.name]}</div>'
+        bottom = """
+        <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+        <div class="sm:col-span-4">
+        <button type="button" onclick=submitForm() class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Submit</button>
+        </div>
+        </div>
+        </div>
+        </div>
+        </form>
+        </body>
+        </html>
+        """
+        return top + fields + bottom
+
+
 class WebSink(Sink):
     """
     WebSink is a sink that sends HTTP requests.
