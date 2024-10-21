@@ -570,10 +570,11 @@ default_webserver = os.environ.get("BITSWAN_DEFAULT_WEBSERVER", "f") in [
 deploy_secret = os.environ.get("BITSWAN_DEPLOY_SECRET", None)
 
 if default_webserver or deploy_secret:
+    from bspump.http.web.server import WebServerConnection
 
     @register_connection
     def webserver(app):
-        return bspump.http.web.server.WebServerConnection(
+        return WebServerConnection(
             app, "DefaultWebServerConnection"
         )
 
