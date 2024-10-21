@@ -127,13 +127,22 @@ class ProtectedWebRouteSource(WebRouteSource):
 class Field:
     def __init__(self, name, **kwargs):
         self.name = name
+        if "___" in name:
+            raise ValueError("Field name cannot contain '___'")
         self.hidden = kwargs.get("hidden", False)
         self.readonly = kwargs.get("readonly", False)
         self.display = kwargs.get("display", self.name)
         self.default = kwargs.get("default", "")
+        self.field_name = f"f___{self.name}"
+        self.default_classes = kwargs.get("default_css_classes", "shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 w-full sm:text-sm border-gray-300 rounded-md")
+        if self.readonly:
+            readonly = "readonly"
+        else:
+            readonly = ""
+        self.default_input_props = f'name="{self.field_name}" id="{self.field_name}" {readonly}'
 
     def clean(self, data):
-        pass
+        data[self.name] = data.get(self.field_name)
 
     def html(self, default=""):
         if not default:
@@ -142,7 +151,7 @@ class Field:
 
       <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6" style='{'display: none' if self.hidden else ''}'>
         <div class="sm:col-span-4">
-                <label for="{self.name}" class="block text-sm font-bold text-gray-700">{self.display}</label>
+                <label for="{self.field_name}" class="block text-sm font-bold text-gray-700">{self.display}</label>
                 {self.inner_html(default, self.readonly)}
         </div>
         </div>
@@ -151,13 +160,9 @@ class Field:
 
 class TextField(Field):
     def inner_html(self, default="", readonly=False):
-        if readonly:
-            readonly = "readonly"
-        else:
-            readonly = ""
         return f"""
         <div class="mt-1">
-            <input type="text" name="{self.name}" id="{self.name}" value="{default}" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 w-full sm:text-sm border-gray-300 rounded-md" {readonly}>
+            <input type="text" class="{self.default_classes}" value="{default}" {self.default_input_props}>
         </div>
         """
 
@@ -168,13 +173,9 @@ class ChoiceField(Field):
         self.choices = choices
 
     def inner_html(self, default="", readonly=False):
-        if readonly:
-            readonly = "readonly"
-        else:
-            readonly = ""
         return f"""
         <div class="mt-1">
-            <select id="{self.name}" name="{self.name}" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 w-full sm:text-sm border-gray-300 rounded-md" {readonly}>
+            <select class="{self.default_classes}" value="{default}" {self.default_input_props}>
                 {"".join(
                     f'<option value="{choice}" {"selected" if choice == default else ""}>{choice}</option>'
                     for choice in self.choices
@@ -186,52 +187,40 @@ class ChoiceField(Field):
 
 class CheckboxField(Field):
     def inner_html(self, default="", readonly=False):
-        if readonly:
-            readonly = "readonly"
-        else:
-            readonly = ""
         return f"""
-            <input type="checkbox" name="{self.name}" id="{self.name}" {"checked" if default else ""} class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 sm:text-sm border-gray-300 rounded-md" {readonly}>
+            <input type="checkbox" {"checked" if default else ""} class="{self.default_classes}" {self.default_input_props}>
         """
 
     def clean(self, data):
-        data[self.name] = data.get(self.name, False) == "on"
+        data[self.name] = data.get(self.field_name, False) == "on"
 
 
 class IntField(Field):
     def inner_html(self, default=0, readonly=False):
         if not default:
             default = 0
-        if readonly:
-            readonly = "readonly"
-        else:
-            readonly = ""
         return f"""
         <div class="mt-1">
-            <input type="number" name="{self.name}" id="{self.name}" value="{default}" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 w-full sm:text-sm border-gray-300 rounded-md" {readonly}>
+            <input type="number" value="{default}" class="{self.default_classes}" {self.default_input_props}>
         </div>
         """
 
     def clean(self, data):
-        data[self.name] = int(data.get(self.name, 0))
+        data[self.name] = int(data.get(self.field_name, 0))
 
 
 class FloatField(Field):
     def inner_html(self, default=0, readonly=False):
         if not default:
             default = 0.0
-        if readonly:
-            readonly = "readonly"
-        else:
-            readonly = ""
         return f"""
         <div class="mt-1">
-            <input type="number" name="{self.name}" id="{self.name}" value="{default}" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 w-full sm:text-sm border-gray-300 rounded-md" {readonly}>
+            <input type="number" value="{default}" class="{self.default_classes}" {self.default_input_props}>
         </div>
         """
 
     def clean(self, data):
-        data[self.name] = float(data.get(self.name, 0))
+        data[self.name] = float(data.get(self.field_name, 0))
 
 
 class WebFormSource(WebRouteSource):
