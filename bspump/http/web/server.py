@@ -129,6 +129,7 @@ class Field:
         self.name = name
         self.hidden = kwargs.get("hidden", False)
         self.readonly = kwargs.get("readonly", False)
+        self.display = kwargs.get("display", self.name)
         self.default = kwargs.get("default", "")
 
     def clean(self, data):
@@ -141,6 +142,7 @@ class Field:
 
       <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6" style='{'display: none' if self.hidden else ''}'>
         <div class="sm:col-span-4">
+                <label for="{self.name}" class="block text-sm font-bold text-gray-700">{self.display}</label>
                 {self.inner_html(default, self.readonly)}
         </div>
         </div>
@@ -154,7 +156,6 @@ class TextField(Field):
         else:
             readonly = ""
         return f"""
-        <label for="{self.name}" class="block text-sm font-bold text-gray-700">{self.name}</label>
         <div class="mt-1">
             <input type="text" name="{self.name}" id="{self.name}" value="{default}" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 w-full sm:text-sm border-gray-300 rounded-md" {readonly}>
         </div>
@@ -172,7 +173,6 @@ class ChoiceField(Field):
         else:
             readonly = ""
         return f"""
-        <label for="{self.name}" class="block text-sm font-bold text-gray-700">{self.name}</label>
         <div class="mt-1">
             <select id="{self.name}" name="{self.name}" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 w-full sm:text-sm border-gray-300 rounded-md" {readonly}>
                 {"".join(
@@ -191,7 +191,6 @@ class CheckboxField(Field):
         else:
             readonly = ""
         return f"""
-            <label for="{self.name}" class="block text-sm font-bold text-gray-700">{self.name}</label>
             <input type="checkbox" name="{self.name}" id="{self.name}" {"checked" if default else ""} class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 sm:text-sm border-gray-300 rounded-md" {readonly}>
         """
 
@@ -208,7 +207,6 @@ class IntField(Field):
         else:
             readonly = ""
         return f"""
-        <label for="{self.name}" class="block text-sm font-bold text-gray-700">{self.name}</label>
         <div class="mt-1">
             <input type="number" name="{self.name}" id="{self.name}" value="{default}" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 w-full sm:text-sm border-gray-300 rounded-md" {readonly}>
         </div>
@@ -227,7 +225,6 @@ class FloatField(Field):
         else:
             readonly = ""
         return f"""
-        <label for="{self.name}" class="block text-sm font-bold text-gray-700">{self.name}</label>
         <div class="mt-1">
             <input type="number" name="{self.name}" id="{self.name}" value="{default}" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 w-full sm:text-sm border-gray-300 rounded-md" {readonly}>
         </div>
