@@ -88,6 +88,26 @@ class WebRouteSource(Source):
             return aiohttp.web.Response(status=500)
 
 
+async def gate_response(request, expected_secret, response_fn):
+    secret = request.query.get("secret")
+    if secret is None:
+        auth = request.headers.get("Authorization")
+        if auth is not None:
+            if auth.startswith("Bearer "):
+                secret = auth[7:]
+        if secret is None:
+            return aiohttp.web.Response(
+                text="Secret is missing. Pass via query parameter 'secret' or in the Authorization as 'Bearer <secret>'",
+                status=401,
+            )
+
+    if not expected_secret == secret:
+        return aiohttp.web.Response(text="Invalid secret", status=403)
+
+    return await response_fn()
+
+
+
 class ProtectedWebRouteSource(WebRouteSource):
     """
     Web route source that requires a secret in a qparam or in the BearerToken.
@@ -95,30 +115,17 @@ class ProtectedWebRouteSource(WebRouteSource):
 
     async def handle_request(self, request):
         try:
-            secret = request.query.get("secret")
-            if secret is None:
-                auth = request.headers.get("Authorization")
-                if auth is not None:
-                    if auth.startswith("Bearer "):
-                        secret = auth[7:]
-            if secret is None:
-                return aiohttp.web.Response(
-                    text="Secret is missing. Pass via query parameter 'secret' or in the Authorization as 'Bearer <secret>'",
-                    status=401,
+            async def response_fn():
+                response_future = asyncio.Future()
+                await self.process(
+                    {
+                        "request": request,
+                        "response_future": response_future,
+                        "status": 200,
+                    }
                 )
-
-            if not self.Config.get("secret") == secret:
-                return aiohttp.web.Response(text="Invalid secret", status=403)
-
-            response_future = asyncio.Future()
-            await self.process(
-                {
-                    "request": request,
-                    "response_future": response_future,
-                    "status": 200,
-                }
-            )
-            return await response_future
+                return await response_future
+            await gate_response(request, self.Config["secret"], response_fn)
         except Exception as e:
             L.exception("Exception in WebSource")
             return aiohttp.web.Response(status=500)
@@ -321,6 +328,20 @@ class WebFormSource(WebRouteSource):
         </html>
         """
         return top + fields + bottom
+
+
+class ProtectedWebFormSource(WebFormSource):
+    async def handle_request(self, request):
+        su = super()
+        async def response_fn():
+            return await su.handle_request(request)
+        return await gate_response(request, self.Config["secret"], response_fn)
+
+    async def handle_post(self, request):
+        su = super()
+        async def response_fn():
+            return await su.handle_post(request)
+        return await gate_response(request, self.Config["secret"], response_fn)
 
 
 class WebSink(Sink):
