@@ -107,7 +107,6 @@ async def gate_response(request, expected_secret, response_fn):
     return await response_fn()
 
 
-
 class ProtectedWebRouteSource(WebRouteSource):
     """
     Web route source that requires a secret in a qparam or in the BearerToken.
@@ -115,6 +114,7 @@ class ProtectedWebRouteSource(WebRouteSource):
 
     async def handle_request(self, request):
         try:
+
             async def response_fn():
                 response_future = asyncio.Future()
                 await self.process(
@@ -125,6 +125,7 @@ class ProtectedWebRouteSource(WebRouteSource):
                     }
                 )
                 return await response_future
+
             await gate_response(request, self.Config["secret"], response_fn)
         except Exception as e:
             L.exception("Exception in WebSource")
@@ -168,7 +169,6 @@ class FieldSet:
             field.clean(data[self.name])
 
 
-
 class Field:
     def __init__(self, name, **kwargs):
         self.name = name
@@ -179,7 +179,10 @@ class Field:
         self.display = kwargs.get("display", self.name)
         self.default = kwargs.get("default", "")
         self.field_name = f"f___{self.name}"
-        self.default_classes = kwargs.get("default_css_classes", "shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 w-full sm:text-sm border-gray-300 rounded-md")
+        self.default_classes = kwargs.get(
+            "default_css_classes",
+            "shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 w-full sm:text-sm border-gray-300 rounded-md",
+        )
 
     @property
     def default_input_props(self):
@@ -389,14 +392,18 @@ class WebFormSource(WebRouteSource):
 class ProtectedWebFormSource(WebFormSource):
     async def handle_request(self, request):
         su = super()
+
         async def response_fn():
             return await su.handle_request(request)
+
         return await gate_response(request, self.Config["secret"], response_fn)
 
     async def handle_post(self, request):
         su = super()
+
         async def response_fn():
             return await su.handle_post(request)
+
         return await gate_response(request, self.Config["secret"], response_fn)
 
 
