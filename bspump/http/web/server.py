@@ -138,6 +138,7 @@ class FieldSet:
         if fields is None:
             self.fields = []
         self.name = name
+        self.default = {}
         self.fieldset_intro = fieldset_intro
         self.prefix = f"fieldset___{self.name}___"
 
@@ -145,11 +146,11 @@ class FieldSet:
         for field in self.fields:
             field.field_name = f"{self.prefix}{field.name}"
 
-    def html(self, *args, **kwargs):
+    def html(self, defaults, *args, **kwargs):
         fields = ""
         self.set_subfield_names()
         for field in self.fields:
-            fields += field.html()
+            fields += field.html(defaults.get(field.name, field.default))
         return f"""
         <div style="margin-left: 20px; border-left: 1px solid black; padding-left: 10px;margin-top: 30px;">
             <legend><b>{self.name}</b></legend>
@@ -242,7 +243,7 @@ class ChoiceField(Field):
 class CheckboxField(Field):
     def inner_html(self, default="", readonly=False):
         return f"""
-            <input type="checkbox" {"checked" if default else ""} class="{self.default_classes}" {self.default_input_props}>
+            <input type="checkbox" {"checked" if default=="true" else ""} class="{self.default_classes}" {self.default_input_props}>
         """
 
     def clean(self, data):
@@ -340,10 +341,23 @@ class WebFormSource(WebRouteSource):
         return await response_future
 
     def render_form(self, request, errors={}):
-        # read defaults from query params. If not present, use empty string.
-        defaults = {
-            field.name: request.query.get(field.name, "") for field in self.fields
-        }
+        # load defaults from request. Normal fields are listed by name. Subfields of fieldsets are listed as fieldset___subfield. We need to recursively go through this to support nested fieldsets. We should end up with a ntested dict of defaults
+        defaults = {}
+        for query_param, value in request.query.items():
+            if "___" in query_param:
+                parts = query_param.split("___")
+                current_dict = defaults
+                for fieldset in parts[:1]:
+                    if not current_dict.get(fieldset):
+                        current_dict[fieldset] = {}
+                    current_dict = current_dict[fieldset]
+                current_dict[parts[-1]] = value
+        for field in self.fields:
+            if field.name in request.query:
+                defaults[field.name] = request.query[field.name]
+            elif field.name not in defaults:
+                defaults[field.name] = field.default
+
         top = f"""
         <html>
         <head>
