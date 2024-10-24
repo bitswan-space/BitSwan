@@ -131,6 +131,44 @@ class ProtectedWebRouteSource(WebRouteSource):
             return aiohttp.web.Response(status=500)
 
 
+class FieldSet:
+    def __init__(self, name, fields=None, fieldset_intro=""):
+        self.fields = fields
+        if fields is None:
+            self.fields = []
+        self.name = name
+        self.fieldset_intro = fieldset_intro
+        self.prefix = f"fieldset___{self.name}___"
+
+    def set_subfield_names(self):
+        for field in self.fields:
+            field.field_name = f"{self.prefix}{field.name}"
+
+    def html(self, *args, **kwargs):
+        fields = ""
+        self.set_subfield_names()
+        for field in self.fields:
+            fields += field.html()
+        return f"""
+        <div style="margin-left: 20px; border-left: 1px solid black; padding-left: 10px;margin-top: 30px;">
+            <legend><b>{self.name}</b></legend>
+            {self.fieldset_intro}
+            {fields}
+        </div>
+        """
+
+    def restructure_data(self, dfrom, dto):
+        self.set_subfield_names()
+        dto[self.name] = {}
+        for field in self.fields:
+            field.restructure_data(dfrom, dto[self.name])
+
+    def clean(self, data):
+        for field in self.fields:
+            field.clean(data[self.name])
+
+
+
 class Field:
     def __init__(self, name, **kwargs):
         self.name = name
@@ -142,14 +180,17 @@ class Field:
         self.default = kwargs.get("default", "")
         self.field_name = f"f___{self.name}"
         self.default_classes = kwargs.get("default_css_classes", "shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 w-full sm:text-sm border-gray-300 rounded-md")
+
+    @property
+    def default_input_props(self):
         if self.readonly:
             readonly = "readonly"
         else:
             readonly = ""
-        self.default_input_props = f'name="{self.field_name}" id="{self.field_name}" {readonly}'
+        return f'name="{self.field_name}" id="{self.field_name}" {readonly}'
 
-    def restructure_data(self, data):
-        data[self.name] = data.get(self.field_name)
+    def restructure_data(self, dfrom, dto):
+        dto[self.name] = dfrom.get(self.field_name)
 
     def clean(self, data):
         pass
@@ -202,7 +243,7 @@ class CheckboxField(Field):
         """
 
     def clean(self, data):
-        if type(data.get(self.field_name)) == str:
+        if type(data.get(self.name)) == str:
             data[self.name] = data.get(self.name, False) == "on"
 
 
@@ -271,9 +312,10 @@ class WebFormSource(WebRouteSource):
         if request.content_type == "application/json":
             data = await request.json()
         else:
-            data = dict(await request.post())
+            dfrom = dict(await request.post())
+            data = {}
             for field in self.fields:
-                field.restructure_data(data)
+                field.restructure_data(dfrom, data)
         for field in self.fields:
             try:
                 field.clean(data)
