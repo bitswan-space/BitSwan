@@ -1,5 +1,5 @@
-BSPump: A real-time stream processor for Python 3.5+
-====================================================
+BSPump: A real-time stream processor for Python
+===============================================
 
 Licence
 -------
