@@ -148,8 +148,11 @@ class Field:
             readonly = ""
         self.default_input_props = f'name="{self.field_name}" id="{self.field_name}" {readonly}'
 
-    def clean(self, data):
+    def restructure_data(self, data):
         data[self.name] = data.get(self.field_name)
+
+    def clean(self, data):
+        pass
 
     def html(self, default=""):
         if not default:
@@ -199,7 +202,8 @@ class CheckboxField(Field):
         """
 
     def clean(self, data):
-        data[self.name] = data.get(self.field_name, False) == "on"
+        if type(data.get(self.field_name)) == str:
+            data[self.name] = data.get(self.name, False) == "on"
 
 
 class IntField(Field):
@@ -213,7 +217,8 @@ class IntField(Field):
         """
 
     def clean(self, data):
-        data[self.name] = int(data.get(self.field_name, 0))
+        if type(data.get(self.name)) == str:
+            data[self.name] = int(data.get(self.name, 0))
 
 
 class FloatField(Field):
@@ -227,7 +232,8 @@ class FloatField(Field):
         """
 
     def clean(self, data):
-        data[self.name] = float(data.get(self.field_name, 0))
+        if type(data.get(self.name)) == str:
+            data[self.name] = float(data.get(self.name, 0))
 
 
 class WebFormSource(WebRouteSource):
@@ -260,7 +266,12 @@ class WebFormSource(WebRouteSource):
         )
 
     async def handle_post(self, request):
-        data = dict(await request.post())
+        if request.content_type == "application/json":
+            data = await request.json()
+        else:
+            data = dict(await request.post())
+            for field in self.fields:
+                field.restructure_data(data)
         for field in self.fields:
             try:
                 field.clean(data)
