@@ -246,6 +246,7 @@ class WebFormSource(WebRouteSource):
         fields=None,
         id=None,
         config=None,
+        form_intro="",
     ):
         super().__init__(
             app,
@@ -257,6 +258,7 @@ class WebFormSource(WebRouteSource):
             config=config,
         )
         self.fields = fields
+        self.form_intro = form_intro
         self.aiohttp_app.router.add_route("POST", route, self.handle_post)
 
     async def handle_request(self, request):
@@ -320,6 +322,7 @@ class WebFormSource(WebRouteSource):
         </div>
         <div class="space-y-12">
         <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 bg-gray shadow sm:rounded-lg">
+        {self.form_intro}
         """
         fields = ""
         for field in self.fields:
