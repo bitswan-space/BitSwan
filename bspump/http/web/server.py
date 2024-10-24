@@ -88,6 +88,25 @@ class WebRouteSource(Source):
             return aiohttp.web.Response(status=500)
 
 
+async def gate_response(request, expected_secret, response_fn):
+    secret = request.query.get("secret")
+    if secret is None:
+        auth = request.headers.get("Authorization")
+        if auth is not None:
+            if auth.startswith("Bearer "):
+                secret = auth[7:]
+        if secret is None:
+            return aiohttp.web.Response(
+                text="Secret is missing. Pass via query parameter 'secret' or in the Authorization as 'Bearer <secret>'",
+                status=401,
+            )
+
+    if not expected_secret == secret:
+        return aiohttp.web.Response(text="Invalid secret", status=403)
+
+    return await response_fn()
+
+
 class ProtectedWebRouteSource(WebRouteSource):
     """
     Web route source that requires a secret in a qparam or in the BearerToken.
@@ -95,41 +114,86 @@ class ProtectedWebRouteSource(WebRouteSource):
 
     async def handle_request(self, request):
         try:
-            secret = request.query.get("secret")
-            if secret is None:
-                auth = request.headers.get("Authorization")
-                if auth is not None:
-                    if auth.startswith("Bearer "):
-                        secret = auth[7:]
-            if secret is None:
-                return aiohttp.web.Response(
-                    text="Secret is missing. Pass via query parameter 'secret' or in the Authorization as 'Bearer <secret>'",
-                    status=401,
+
+            async def response_fn():
+                response_future = asyncio.Future()
+                await self.process(
+                    {
+                        "request": request,
+                        "response_future": response_future,
+                        "status": 200,
+                    }
                 )
+                return await response_future
 
-            if not self.Config.get("secret") == secret:
-                return aiohttp.web.Response(text="Invalid secret", status=403)
-
-            response_future = asyncio.Future()
-            await self.process(
-                {
-                    "request": request,
-                    "response_future": response_future,
-                    "status": 200,
-                }
-            )
-            return await response_future
+            await gate_response(request, self.Config["secret"], response_fn)
         except Exception as e:
             L.exception("Exception in WebSource")
             return aiohttp.web.Response(status=500)
 
 
+class FieldSet:
+    def __init__(self, name, fields=None, fieldset_intro=""):
+        self.fields = fields
+        if fields is None:
+            self.fields = []
+        self.name = name
+        self.fieldset_intro = fieldset_intro
+        self.prefix = f"fieldset___{self.name}___"
+
+    def set_subfield_names(self):
+        for field in self.fields:
+            field.field_name = f"{self.prefix}{field.name}"
+
+    def html(self, *args, **kwargs):
+        fields = ""
+        self.set_subfield_names()
+        for field in self.fields:
+            fields += field.html()
+        return f"""
+        <div style="margin-left: 20px; border-left: 1px solid black; padding-left: 10px;margin-top: 30px;">
+            <legend><b>{self.name}</b></legend>
+            {self.fieldset_intro}
+            {fields}
+        </div>
+        """
+
+    def restructure_data(self, dfrom, dto):
+        self.set_subfield_names()
+        dto[self.name] = {}
+        for field in self.fields:
+            field.restructure_data(dfrom, dto[self.name])
+
+    def clean(self, data):
+        for field in self.fields:
+            field.clean(data[self.name])
+
+
 class Field:
     def __init__(self, name, **kwargs):
         self.name = name
+        if "___" in name:
+            raise ValueError("Field name cannot contain '___'")
         self.hidden = kwargs.get("hidden", False)
         self.readonly = kwargs.get("readonly", False)
+        self.display = kwargs.get("display", self.name)
         self.default = kwargs.get("default", "")
+        self.field_name = f"f___{self.name}"
+        self.default_classes = kwargs.get(
+            "default_css_classes",
+            "shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 w-full sm:text-sm border-gray-300 rounded-md",
+        )
+
+    @property
+    def default_input_props(self):
+        if self.readonly:
+            readonly = "readonly"
+        else:
+            readonly = ""
+        return f'name="{self.field_name}" id="{self.field_name}" {readonly}'
+
+    def restructure_data(self, dfrom, dto):
+        dto[self.name] = dfrom.get(self.field_name)
 
     def clean(self, data):
         pass
@@ -141,6 +205,7 @@ class Field:
 
       <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6" style='{'display: none' if self.hidden else ''}'>
         <div class="sm:col-span-4">
+                <label for="{self.field_name}" class="block text-sm font-bold text-gray-700">{self.display}</label>
                 {self.inner_html(default, self.readonly)}
         </div>
         </div>
@@ -149,14 +214,9 @@ class Field:
 
 class TextField(Field):
     def inner_html(self, default="", readonly=False):
-        if readonly:
-            readonly = "readonly"
-        else:
-            readonly = ""
         return f"""
-        <label for="{self.name}" class="block text-sm font-bold text-gray-700">{self.name}</label>
         <div class="mt-1">
-            <input type="text" name="{self.name}" id="{self.name}" value="{default}" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 w-full sm:text-sm border-gray-300 rounded-md" {readonly}>
+            <input type="text" class="{self.default_classes}" value="{default}" {self.default_input_props}>
         </div>
         """
 
@@ -167,14 +227,9 @@ class ChoiceField(Field):
         self.choices = choices
 
     def inner_html(self, default="", readonly=False):
-        if readonly:
-            readonly = "readonly"
-        else:
-            readonly = ""
         return f"""
-        <label for="{self.name}" class="block text-sm font-bold text-gray-700">{self.name}</label>
         <div class="mt-1">
-            <select id="{self.name}" name="{self.name}" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 w-full sm:text-sm border-gray-300 rounded-md" {readonly}>
+            <select class="{self.default_classes}" value="{default}" {self.default_input_props}>
                 {"".join(
                     f'<option value="{choice}" {"selected" if choice == default else ""}>{choice}</option>'
                     for choice in self.choices
@@ -186,55 +241,43 @@ class ChoiceField(Field):
 
 class CheckboxField(Field):
     def inner_html(self, default="", readonly=False):
-        if readonly:
-            readonly = "readonly"
-        else:
-            readonly = ""
         return f"""
-            <label for="{self.name}" class="block text-sm font-bold text-gray-700">{self.name}</label>
-            <input type="checkbox" name="{self.name}" id="{self.name}" {"checked" if default else ""} class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 sm:text-sm border-gray-300 rounded-md" {readonly}>
+            <input type="checkbox" {"checked" if default else ""} class="{self.default_classes}" {self.default_input_props}>
         """
 
     def clean(self, data):
-        data[self.name] = data.get(self.name, False) == "on"
+        if type(data.get(self.name)) == str:
+            data[self.name] = data.get(self.name, False) == "on"
 
 
 class IntField(Field):
     def inner_html(self, default=0, readonly=False):
         if not default:
             default = 0
-        if readonly:
-            readonly = "readonly"
-        else:
-            readonly = ""
         return f"""
-        <label for="{self.name}" class="block text-sm font-bold text-gray-700">{self.name}</label>
         <div class="mt-1">
-            <input type="number" name="{self.name}" id="{self.name}" value="{default}" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 w-full sm:text-sm border-gray-300 rounded-md" {readonly}>
+            <input type="number" value="{default}" class="{self.default_classes}" {self.default_input_props}>
         </div>
         """
 
     def clean(self, data):
-        data[self.name] = int(data.get(self.name, 0))
+        if type(data.get(self.name)) == str:
+            data[self.name] = int(data.get(self.name, 0))
 
 
 class FloatField(Field):
     def inner_html(self, default=0, readonly=False):
         if not default:
             default = 0.0
-        if readonly:
-            readonly = "readonly"
-        else:
-            readonly = ""
         return f"""
-        <label for="{self.name}" class="block text-sm font-bold text-gray-700">{self.name}</label>
         <div class="mt-1">
-            <input type="number" name="{self.name}" id="{self.name}" value="{default}" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 w-full sm:text-sm border-gray-300 rounded-md" {readonly}>
+            <input type="number" value="{default}" class="{self.default_classes}" {self.default_input_props}>
         </div>
         """
 
     def clean(self, data):
-        data[self.name] = float(data.get(self.name, 0))
+        if type(data.get(self.name)) == str:
+            data[self.name] = float(data.get(self.name, 0))
 
 
 class WebFormSource(WebRouteSource):
@@ -247,6 +290,7 @@ class WebFormSource(WebRouteSource):
         fields=None,
         id=None,
         config=None,
+        form_intro="",
     ):
         super().__init__(
             app,
@@ -258,6 +302,7 @@ class WebFormSource(WebRouteSource):
             config=config,
         )
         self.fields = fields
+        self.form_intro = form_intro
         self.aiohttp_app.router.add_route("POST", route, self.handle_post)
 
     async def handle_request(self, request):
@@ -267,7 +312,13 @@ class WebFormSource(WebRouteSource):
         )
 
     async def handle_post(self, request):
-        data = dict(await request.post())
+        if request.content_type == "application/json":
+            data = await request.json()
+        else:
+            dfrom = dict(await request.post())
+            data = {}
+            for field in self.fields:
+                field.restructure_data(dfrom, data)
         for field in self.fields:
             try:
                 field.clean(data)
@@ -316,6 +367,7 @@ class WebFormSource(WebRouteSource):
         </div>
         <div class="space-y-12">
         <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 bg-gray shadow sm:rounded-lg">
+        {self.form_intro}
         """
         fields = ""
         for field in self.fields:
@@ -335,6 +387,24 @@ class WebFormSource(WebRouteSource):
         </html>
         """
         return top + fields + bottom
+
+
+class ProtectedWebFormSource(WebFormSource):
+    async def handle_request(self, request):
+        su = super()
+
+        async def response_fn():
+            return await su.handle_request(request)
+
+        return await gate_response(request, self.Config["secret"], response_fn)
+
+    async def handle_post(self, request):
+        su = super()
+
+        async def response_fn():
+            return await su.handle_post(request)
+
+        return await gate_response(request, self.Config["secret"], response_fn)
 
 
 class WebSink(Sink):
