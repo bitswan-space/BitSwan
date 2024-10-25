@@ -351,7 +351,7 @@ class WebFormSource(WebRouteSource):
             if "___" in query_param:
                 parts = query_param.split("___")
                 current_dict = defaults
-                for fieldset in parts[:1]:
+                for fieldset in parts[:-1]:
                     if not current_dict.get(fieldset):
                         current_dict[fieldset] = {}
                     current_dict = current_dict[fieldset]
