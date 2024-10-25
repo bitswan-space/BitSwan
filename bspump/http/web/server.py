@@ -182,8 +182,13 @@ class Field:
         self.field_name = f"f___{self.name}"
         self.default_classes = kwargs.get(
             "default_css_classes",
-            "shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-2 w-full sm:text-sm border-gray-300 rounded-md",
+            "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
         )
+        if self.readonly:
+            self.default_classes = kwargs.get(
+                "default_css_classes",
+                "bg-gray-500 border border-gray-300 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
+            )
 
     @property
     def default_input_props(self):
