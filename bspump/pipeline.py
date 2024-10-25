@@ -262,17 +262,21 @@ class Pipeline(abc.ABC, asab.Configurable):
         else:
             tb_text = "".join(traceback.format_exception(None, exc, exc.__traceback__))
 
+            alert_data = {
+                    "exception": "{}: {}".format(exc.__class__.__name__, exc),
+                    "event": str(event),
+                    "traceback": tb_text,
+            }
+            print(f"""
+            Event: {alert_data['event']}
+            Traceback: {alert_data['traceback']}""")
             # send alert
             self.App.AlertService.trigger(
                 source=self.App.__class__.__name__,
                 alert_cls=self.Id,
                 alert_id=self.Alert_id,
                 title="{}:{} ERROR".format(self.Id, self.Alert_id),
-                data={
-                    "exception": "{}: {}".format(exc.__class__.__name__, exc),
-                    "event": str(event),
-                    "traceback": tb_text,
-                },
+                data=alert_data,
             )
 
             if self.handle_error(exc, context, event):
