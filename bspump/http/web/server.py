@@ -194,7 +194,7 @@ class Field:
         return f'name="{self.field_name}" id="{self.field_name}" {readonly}'
 
     def restructure_data(self, dfrom, dto):
-        dto[self.name] = dfrom.get(self.field_name)
+        dto[self.name] = dfrom.get(self.field_name, self.default)
 
     def clean(self, data):
         pass
@@ -241,9 +241,13 @@ class ChoiceField(Field):
 
 
 class CheckboxField(Field):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.default = self.default or False
+
     def inner_html(self, default="", readonly=False):
         return f"""
-            <input type="checkbox" {"checked" if default=="true" else ""} class="{self.default_classes}" {self.default_input_props}>
+            <input type="checkbox" {"checked" if default == True or (default and default.lower() in ("true", "t")) else ""} class="{self.default_classes}" {self.default_input_props}>
         """
 
     def clean(self, data):
