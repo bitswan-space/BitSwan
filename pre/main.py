@@ -8,13 +8,6 @@ __bitswan_dev = False
 from bspump.jupyter import *
 import bspump.jupyter
 
-
-app = App()
-# set the BITSWAN_TEST_MODE env var to True if app.Test is true.
-if app.Test:
-    bspump.jupyter.bitswan_test_mode.append(True)
-
-
 def exec_cell(cell, cell_number, ctx):
     if cell["cell_type"] == "code":
         source = cell["source"]
@@ -69,19 +62,28 @@ return event
                 traceback.print_exc()
 
 
-if os.path.exists(app.Notebook):
-  with open(app.Notebook) as nb:
-      notebook = json.load(nb)
-      cell_number = 0
-      for cell in notebook["cells"]:
-          cell_number += 1
-          exec_cell(cell, cell_number, globals())
-else:
-    print(f"Notebook {app.Notebook} not found")
+def main():
+    app = App()
+    if app.Test:
+        bspump.jupyter.bitswan_test_mode.append(True)
 
-if bspump.jupyter.bitswan_auto_pipeline.get("sink") is not None:
-    register_sink(bspump.jupyter.bitswan_auto_pipeline.get("sink"))
-    end_pipeline()
 
-app.init_componets()
-app.run()
+    if os.path.exists(app.Notebook):
+      with open(app.Notebook) as nb:
+          notebook = json.load(nb)
+          cell_number = 0
+          for cell in notebook["cells"]:
+              cell_number += 1
+              exec_cell(cell, cell_number, globals())
+    else:
+        print(f"Notebook {app.Notebook} not found")
+
+    if bspump.jupyter.bitswan_auto_pipeline.get("sink") is not None:
+        register_sink(bspump.jupyter.bitswan_auto_pipeline.get("sink"))
+        end_pipeline()
+
+    app.init_componets()
+    app.run()
+
+if __name__ == "__main__":
+    main()

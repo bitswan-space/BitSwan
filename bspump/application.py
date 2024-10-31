@@ -112,7 +112,7 @@ build: {} [{}]
         self.Test = args.test
         self.Notebook = args.notebook
         if self.Notebook is None:
-            os.environ.get("JUPYTER_NOTEBOOK", "pipelines/main.ipynb")
+            self.Notebook = os.environ.get("JUPYTER_NOTEBOOK", "pipelines/main.ipynb")
 
     async def main(self):
         print("{} pipeline(s) ready.".format(len(self.PumpService.Pipelines)))

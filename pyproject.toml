@@ -54,6 +54,11 @@ dependencies = [
         "kazoo>=2.9.0,<3",
 ]
 
+[project.scripts]
+bitswan-cli = "pre.main:main"
+
+
+
 [tool.hatch.version]
 path = "pkg/__about__.py"
 
