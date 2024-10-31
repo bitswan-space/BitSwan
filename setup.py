@@ -74,11 +74,12 @@ setup(
     project_urls={"Source": "https://github.com/LibertyAces/BitSwanPump"},
     install_requires=[
         "pyasn1==0.4.8",  # version 0.5.0 is not compatible with pysnmp
-        "asab @ git+https://github.com/bitswan-space/asab.git#egg=asab",
         "aiohttp>=3.8.3",
         "requests>=2.24.0",
         "confluent-kafka>=1.8.2",
         "aiozk>=0.25.0",
+        "fastjsonschema>=2.16.2,<3",
+        "kazoo>=2.9.0,<3",
         "aiosmtplib>=1.1.3",
         "fastavro>=0.23.5",
         "google-api-python-client>=1.7.10",
