@@ -8,20 +8,15 @@ lint.ignore = ["E501", "E402", "E721"]
 [project]
 dynamic = ["version"]
 name = "bspump"
-description = "BSPump is a real-time stream processor for Python 3.6+"
+description = "Bitswan is a framework for building automations and pipelines in Jupyter"
 readme = {file = "README.rst", content-type = "text/x-rst"}
 license = {file = "LICENSE"}
-# keywords = ["egg", "bacon", "sausage", "tomatoes", "Lobster Thermidor"]
 authors = [
-  {name = "TeskaLabs Ltd", email = "info@teskalabs.com"}
+  {name = "LibertyAces Ltd", email = "timothy.hobbs@libertyaces.com"}
 ]
-# maintainers = [
-#   {name = "Brett Cannon", email = "brett@example.com"}
-# ]
 
 dependencies = [
         "pyasn1==0.4.8",  # version 0.5.0 is not compatible with pysnmp
-        "asab @ git+https://github.com/bitswan-space/asab.git#egg=asab",
         "aiohttp>=3.8.3",
         "requests>=2.24.0",
         "confluent-kafka>=1.8.2",
@@ -55,6 +50,8 @@ dependencies = [
         "jupyter_app_launcher",
         "dockerfile-parse",
         "docker",
+        "fastjsonschema>=2.16.2,<3",
+        "kazoo>=2.9.0,<3",
 ]
 
 [tool.hatch.version]
