@@ -60,8 +60,8 @@ setup(
     description="BSPump is a real-time stream processor for Python 3.6+",
     long_description=open("README.rst").read(),
     url="https://github.com/LibertyAces/BitSwanPump",
-    author="TeskaLabs Ltd",
-    author_email="info@teskalabs.com",
+    author="LibertyAces Ltd",
+    author_email="timothy.hobbs@libertyaces.com",
     license="BSD License",
     platforms="any",
     classifiers=[
