@@ -6,12 +6,24 @@ import asyncio
 
 import aiohttp
 import asab
+import dataclasses
 
 #
 
 L = logging.getLogger(__name__)
 
 #
+
+
+@dataclasses.dataclass
+class Alert:
+        source: str
+        alert_cls: str
+        alert_id: str
+        title: str
+        data: dict
+        detail: str = ""
+        exception: Exception = None
 
 
 class AlertProviderABC(asab.Configurable, abc.ABC):
@@ -27,21 +39,17 @@ class AlertProviderABC(asab.Configurable, abc.ABC):
         pass
 
     @abc.abstractmethod
-    def trigger(self, tenant_id, alert_cls, alert_id, title, detail):
+    def trigger(self, alert: Alert):
         pass
 
 
-class AlertHTTPProviderABC(AlertProviderABC):
-    ConfigDefaults = {
-        "url": "",
-    }
+class AlertAsyncProviderABC(AlertProviderABC):
 
     def __init__(self, config_section_name):
         super().__init__(config_section_name=config_section_name)
         self.Queue = asyncio.Queue()
         self.MainTask = None
 
-        self.URL = self.Config["url"]
 
     async def initialize(self, app):
         self._start_main_task()
@@ -52,8 +60,8 @@ class AlertHTTPProviderABC(AlertProviderABC):
             self.MainTask = None
             mt.cancel()
 
-    def trigger(self, tenant_id, alert_cls, alert_id, title, detail, data):
-        self.Queue.put_nowait((tenant_id, alert_cls, alert_id, title, detail, data))
+    def trigger(self, alert: Alert):
+        self.Queue.put_nowait(alert)
 
     def _start_main_task(self):
         assert self.MainTask is None
@@ -74,6 +82,16 @@ class AlertHTTPProviderABC(AlertProviderABC):
         pass
 
 
+class AlertHTTPProviderABC(AlertAsyncProviderABC):
+    ConfigDefaults = {
+        "url": "",
+    }
+
+    def __init__(self, config_section_name):
+        super().__init__(config_section_name=config_section_name)
+        self.URL = self.Config["url"]
+
+
 class OpsGenieAlertProvider(AlertHTTPProviderABC):
     ConfigDefaults = {
         # US: https://api.opsgenie.com
@@ -86,7 +104,7 @@ class OpsGenieAlertProvider(AlertHTTPProviderABC):
         "tags": "",
     }
 
-    def __init__(self, config_section_name):
+    def __init__(self, config_section_name, *args):
         super().__init__(config_section_name=config_section_name)
         self.APIKey = self.Config["api_key"]
         self.Tags = re.split(r"[,\s]+", self.Config["tags"], re.MULTILINE)
@@ -94,26 +112,26 @@ class OpsGenieAlertProvider(AlertHTTPProviderABC):
 
     async def _main(self):
         while True:
-            source, alert_cls, alert_id, title, detail, data = await self.Queue.get()
+            a = await self.Queue.get()
 
             headers = {"Authorization": "GenieKey {}".format(self.APIKey)}
 
             create_alert = {
-                "message": title,
-                "note": detail,
-                "alias": "{}:{}:{}".format(source, alert_cls, alert_id),
+                "message": a.title,
+                "note": a.detail,
+                "alias": "{}:{}:{}".format(a.source, a.alert_cls, a.alert_id),
                 "tags": self.Tags,
                 "details": {
-                    "source": source,
-                    "class": alert_cls,
-                    "id": alert_id,
+                    "source": a.source,
+                    "class": a.alert_cls,
+                    "id": a.alert_id,
                 },
-                "entity": source,
+                "entity": a.source,
                 "source": self.Hostname,
             }
 
-            if data:
-                create_alert["details"].update(data)
+            if a.data:
+                create_alert["details"].update(a.data)
 
             async with aiohttp.ClientSession(headers=headers) as session:
                 async with session.post(
@@ -140,37 +158,37 @@ class PagerDutyAlertProvider(AlertHTTPProviderABC):
         "integration_key": "",
     }
 
-    def __init__(self, config_section_name):
+    def __init__(self, config_section_name, *args, **kwargs):
         super().__init__(config_section_name=config_section_name)
         self.APIKey = self.Config["api_key"]
         self.IntegrationKey = self.Config["integration_key"]
 
     async def _main(self):
         while True:
-            source, alert_cls, alert_id, title, detail, data = await self.Queue.get()
+            a = await self.Queue.get()
 
             headers = {"Authorization": "Token token={}".format(self.APIKey)}
 
             create_alert = {
                 "event_action": "trigger",
                 "routing_key": self.IntegrationKey,
-                "dedup_key": "{}:{}:{}".format(source, alert_cls, alert_id),
+                "dedup_key": "{}:{}:{}".format(a.source, a.alert_cls, a.alert_id),
                 "client": "Asab Alert Service",
                 "payload": {
-                    "summary": title,
+                    "summary": a.title,
                     "severity": "warning",
-                    "source": source,
-                    "group": alert_cls,
+                    "source": a.source,
+                    "group": a.alert_cls,
                     "custom_details": {
-                        "source": source,
-                        "class": alert_cls,
-                        "id": alert_id,
+                        "source": a.source,
+                        "class": a.alert_cls,
+                        "id": a.alert_id,
                     },
                 },
             }
 
-            if data:
-                create_alert["payload"]["custom_details"].update(data)
+            if a.data:
+                create_alert["payload"]["custom_details"].update(a.data)
 
             async with aiohttp.ClientSession(headers=headers) as session:
                 async with session.post(
@@ -187,6 +205,22 @@ class PagerDutyAlertProvider(AlertHTTPProviderABC):
                         await resp.text()
 
 
+class SentryAlertProvider(AlertAsyncProviderABC):
+    def __init__(self, config_section_name="", application=None):
+        super().__init__(config_section_name=config_section_name)
+        import asab.sentry
+        self.SentryService = asab.sentry.SentryService(application)
+
+    async def _main(self):
+        while True:
+            a = await self.Queue.get()
+            self.SentryService.set_tags({"source": a.source, "class": a.alert_cls, "id": a.alert_id})
+            self.SentryService.capture_exception(a.exception)
+
+    async def finalize(self, app):
+        await super().finalize(app)
+
+
 class AlertService(asab.Service):
     def __init__(self, app, service_name="asab.AlertService"):
         super().__init__(app, service_name)
@@ -199,12 +233,13 @@ class AlertService(asab.Service):
             provider_cls = {
                 "asab:alert:opsgenie": OpsGenieAlertProvider,
                 "asab:alert:pagerduty": PagerDutyAlertProvider,
+                "asab:alert:sentry": SentryAlertProvider,
             }.get(section)
             if provider_cls is None:
                 L.warning("Unknwn alert provider: {}".format(section))
                 continue
 
-            self.Providers.append(provider_cls(config_section_name=section))
+            self.Providers.append(provider_cls(config_section_name=section,application=app))
 
     async def initialize(self, app):
         await asyncio.gather(*[p.initialize(app) for p in self.Providers])
@@ -214,13 +249,7 @@ class AlertService(asab.Service):
 
     def trigger(
         self,
-        source,
-        alert_cls,
-        alert_id,
-        title,
-        *,
-        detail: str = None,
-        data: dict = None
+        alert: Alert,
     ):
         for p in self.Providers:
-            p.trigger(source, alert_cls, alert_id, title, detail, data)
+            p.trigger(alert)

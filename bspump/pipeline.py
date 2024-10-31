@@ -10,6 +10,7 @@ import traceback
 import time
 
 import asab
+from asab.alert import Alert
 import asab.api
 from .abc.connection import Connection
 from .abc.generator import Generator
@@ -272,11 +273,14 @@ class Pipeline(abc.ABC, asab.Configurable):
             Traceback: {alert_data['traceback']}""")
             # send alert
             self.App.AlertService.trigger(
-                source=self.App.__class__.__name__,
-                alert_cls=self.Id,
-                alert_id=self.Alert_id,
-                title="{}:{} ERROR".format(self.Id, self.Alert_id),
-                data=alert_data,
+               Alert( 
+                      source=self.App.__class__.__name__,
+                      alert_cls=self.Id,
+                      alert_id=self.Alert_id,
+                      title="{}:{} ERROR".format(self.Id, self.Alert_id),
+                      data=alert_data,
+                      exception=exc,
+                   )
             )
 
             if self.handle_error(exc, context, event):

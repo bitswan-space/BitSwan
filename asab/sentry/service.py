@@ -38,7 +38,7 @@ class SentryService(asab.Service):
 
     Configuration:
     ```ini
-    [sentry]
+    [asab:alert:sentry]
     data_source_name=... ; DSN of the project
     environment=... ; default: 'not specified'
     ```
@@ -48,7 +48,7 @@ class SentryService(asab.Service):
     ```python
     class MyApp(asab.Application):
             async def initialize(self):
-                    if "sentry" in asab.Config.sections():
+                    if "asab:alert:sentry" in asab.Config.sections():
                             import asab.sentry
                             self.SentryService = asab.sentry.SentryService(self)
     ```
@@ -62,7 +62,7 @@ class SentryService(asab.Service):
         # DSN is automatically generated when new project is created
         # and can be modified: Settings > Client Keys (DSN) > Key Details
         # Specification: either in configuration '[sentry] data_source_name', $SENTRY_DSN environment variable as a fallback
-        self.DataSourceName = asab.Config.get("sentry", "data_source_name", fallback="")
+        self.DataSourceName = asab.Config.get("asab:alert:sentry", "data_source_name", fallback="")
         if len(self.DataSourceName) == 0:
             self.DataSourceName = os.getenv("SENTRY_DSN", "")
         if len(self.DataSourceName) == 0:
@@ -72,28 +72,10 @@ class SentryService(asab.Service):
             )
             raise SystemExit("Exit due to a critical configuration error.")
 
-        # LOGGING LEVELS
-        # by default, LOG_NOTICE+ are sent to breadcrumbs, ERROR+ to events
-        levels = {
-            "debug": logging.DEBUG,
-            "info": logging.INFO,
-            "notice": asab.LOG_NOTICE,
-            "warning": logging.WARNING,
-            "error": logging.ERROR,
-            "critical": logging.CRITICAL,
-        }
-
-        self.LoggingBreadCrumbsLevel = levels.get(
-            asab.Config.get("sentry:logging", "breadcrumbs").lower()
-        )
-        self.LoggingEventsLevel = levels.get(
-            asab.Config.get("sentry:logging", "events").lower()
-        )
-
         # ENVIRONMENT (e.g. "production", "testing", ...)
         self.Environment = asab.Config.get(
-            "sentry", "environment"
-        )  # default: "development"
+            "asab:alert:sentry", "environment", fallback="development",
+        )
 
         # RELEASE
         # Release can be obtained from MANIFEST.json if exists
@@ -122,7 +104,7 @@ class SentryService(asab.Service):
         # traces sample rate: percentage of captured events
         # prevents overcrowding when deployed to production
         # default: 100%
-        self.TracesSampleRate = asab.Config.getfloat("sentry", "traces_sample_rate")
+        self.TracesSampleRate = asab.Config.getfloat("asab:alert:sentry", "traces_sample_rate", fallback=1.0)
         assert (
             0 <= self.TracesSampleRate <= 1.0
         ), "Traces sample rate must be between 0 and 1."
@@ -133,10 +115,6 @@ class SentryService(asab.Service):
             integrations=[
                 sentry_sdk.integrations.aiohttp.AioHttpIntegration(),
                 sentry_sdk.integrations.asyncio.AsyncioIntegration(),
-                sentry_sdk.integrations.logging.LoggingIntegration(
-                    level=self.LoggingBreadCrumbsLevel,  # logging level sent to breadcrumbs
-                    event_level=self.LoggingEventsLevel,  # logging level sent to events
-                ),
             ],
             traces_sample_rate=self.TracesSampleRate,  # percentage of captured events
             environment=self.Environment,  # e.g. "production", "develop"
