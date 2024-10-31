@@ -65,7 +65,11 @@ class WebRouteSource(Source):
         super().__init__(app, pipeline, id=id, config=config)
         pipeline.StopOnErrors = False
 
-        self.Connection = pipeline.locate_connection(app, connection)
+        try:
+            self.Connection = pipeline.locate_connection(app, connection)
+        except KeyError:
+            if connection == "DefaultWebServerConnection":
+                self.Connection = WebServerConnection(app, "DefaultWebServerConnection")
         self.aiohttp_app = self.Connection.aiohttp_app
         self.aiohttp_app.router.add_route(method, route, self.handle_request)
 

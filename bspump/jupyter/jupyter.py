@@ -561,86 +561,11 @@ class App(bspump.BSPumpApplication):
             func(self)
 
 
-default_webserver = os.environ.get("BITSWAN_DEFAULT_WEBSERVER", "f") in [
-    "t",
-    "true",
-    "True",
-    "1",
-]
-deploy_secret = os.environ.get("BITSWAN_DEPLOY_SECRET", None)
-
-if default_webserver or deploy_secret:
-    from bspump.http.web.server import WebServerConnection
-
-    @register_connection
-    def webserver(app):
-        return WebServerConnection(
-            app, "DefaultWebServerConnection"
-        )
-
-
-if deploy_secret:
-    import zipfile
-    from bspump.http.web.server import *
-
-    new_pipeline("Deploy pipeline")
-
-    @register_source
-    def deploy_source(app, pipeline):
-        return WebRouteSource(
-            app, pipeline, method="POST", route="/__jupyter-deploy-pipeline/"
-        )
-
-    @async_step
-    async def deploy_processor(inject, ctx):
-        if not ctx["request"].query.get("secret") == deploy_secret:
-            ctx["status"] = 403
-            ctx["response"] = {"error": "Wrong secret"}
-            await inject(ctx)
-            return
-        else:
-            ctx["status"] = 200
-            ctx["response"] = {"status": "Uploaded new assets"}
-            # first store the content to /tmp/pipeline.zip
-            print("Deploying pipeline")
-            with open("/tmp/pipeline.zip", "wb") as f:
-                print("Writing to /tmp/pipeline.zip")
-                content = ctx["request"].content
-                while True:
-                    chunk = await content.read()
-                    if not chunk:
-                        break
-                    f.write(chunk)
-
-            # then extract the content to /opt/piplines
-            try:
-                with zipfile.ZipFile("/tmp/pipeline.zip", "r") as zip_ref:
-                    zip_ref.extractall("/opt/pipelines")
-            except Exception as e:
-                ctx["status"] = 500
-                ctx["response"] = {"error": str(e)}
-                await inject(ctx)
-                return
-            if ctx["request"].query.get("restart") == "true":
-                ctx["response"] = {"status": "Restarting"}
-                ctx["response_future"].set_result(
-                    aiohttp.web.json_response(ctx["response"], status=ctx["status"])
-                )
-                await asyncio.sleep(0.5)
-                os.execv("/bin/sh", ["/bin/sh", "/opt/entrypoint.sh"])
-            await inject(ctx)
-            return
-
-    @register_sink
-    def deploy_sink(app, pipeline):
-        return JSONWebSink(app, pipeline)
-
-    end_pipeline()
-
-
 def deploy():
     import os
     import json
+
+    deploy_secret = os.environ.get("BITSWAN_DEPLOY_SECRET", None)
 
     is_vscode = "VSCODE_PID" in os.environ
 
