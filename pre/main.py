@@ -15,8 +15,6 @@ if app.Test:
     bspump.jupyter.bitswan_test_mode.append(True)
 
 
-notebook_path = os.environ.get("JUPYTER_NOTEBOOK", "pipelines/main.ipynb")
-
 def exec_cell(cell, cell_number, ctx):
     if cell["cell_type"] == "code":
         source = cell["source"]
@@ -71,15 +69,15 @@ return event
                 traceback.print_exc()
 
 
-if os.path.exists(notebook_path):
-  with open(notebook_path) as nb:
+if os.path.exists(app.Notebook):
+  with open(app.Notebook) as nb:
       notebook = json.load(nb)
       cell_number = 0
       for cell in notebook["cells"]:
           cell_number += 1
           exec_cell(cell, cell_number, globals())
 else:
-    print(f"Notebook {notebook_path} not found")
+    print(f"Notebook {app.Notebook} not found")
 
 if bspump.jupyter.bitswan_auto_pipeline.get("sink") is not None:
     register_sink(bspump.jupyter.bitswan_auto_pipeline.get("sink"))

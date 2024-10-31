@@ -1,6 +1,7 @@
 import logging
 import signal
 import sys
+import os
 
 import asab
 import asab.web
@@ -101,11 +102,17 @@ build: {} [{}]
         parser.add_argument(
             "--test", action="store_true", help="Run pipeline/automation tests"
         )
+        parser.add_argument(
+            "notebook", nargs="?", default=None, help="Jupyter notebook"
+        )
         return parser
 
     def parse_arguments(self, args=None):
         args = super().parse_arguments(args=args)
         self.Test = args.test
+        self.Notebook = args.notebook
+        if self.Notebook is None:
+            os.environ.get("JUPYTER_NOTEBOOK", "pipelines/main.ipynb")
 
     async def main(self):
         print("{} pipeline(s) ready.".format(len(self.PumpService.Pipelines)))
