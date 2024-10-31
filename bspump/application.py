@@ -79,6 +79,11 @@ class BSPumpApplication(asab.Application):
 
             self.ASABApiService.initialize_zookeeper()
 
+        if self.Watch:
+            from .watch import Watcher
+
+            Watcher([self.Notebook])
+
     def create_argument_parser(self):
         """
         Description:
@@ -105,6 +110,12 @@ build: {} [{}]
         parser.add_argument(
             "notebook", nargs="?", default=None, help="Jupyter notebook"
         )
+        # add watch argument that watches the notebooks for changes and restarts if needed
+        parser.add_argument(
+                "--watch",
+                action="store_true",
+                help="Watch the notebook for changes and restarts if needed",
+        )
         return parser
 
     def parse_arguments(self, args=None):
@@ -113,6 +124,8 @@ build: {} [{}]
         self.Notebook = args.notebook
         if self.Notebook is None:
             self.Notebook = os.environ.get("JUPYTER_NOTEBOOK", "pipelines/main.ipynb")
+        self.Watch = args.watch
+        
 
     async def main(self):
         print("{} pipeline(s) ready.".format(len(self.PumpService.Pipelines)))
