@@ -1,7 +1,0 @@
-env-dir: /etc/bitswan-secrets/
-default-networks:
-  - docker-compose_default
-data-machines:
-    whatsapp-maps:
-        source: whatsapp-maps
-        container_name: whatsapp-maps
