@@ -30,7 +30,7 @@ CMD ["sh", "/opt/entrypoint.sh"]
 
 # Setup jupyterlab
 
-COPY examples/Jupyter/ /etc/notebooks/
+COPY examples/ /etc/notebooks/
 COPY icons/*.svg /etc/icons/
 
 ENV JUPYTER_APP_LAUNCHER_PATH /etc/jupyter_config/
