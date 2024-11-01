@@ -27,7 +27,8 @@ class TestSource(Source):
             if tests.get("expect") and tests["outputs"] != tests["expect"]:
                 print(" \033[91m✘\033[0m")
                 print(f"    ! \033[91mTest failed\033[0m Expected: {tests['expect']}\n")
-                exit(1)
+                if not self.Pipeline.App.Watch:
+                    exit(1)
             if tests.get("inspect"):
                 inspected = tests["inspect"][0](tests["outputs"])
                 expected = tests["inspect"][1]
@@ -36,14 +37,16 @@ class TestSource(Source):
                     print(
                         f"    ! \033[91mInspect failed. Got {inspected} expected {expected}\033[0m"
                     )
-                    exit(1)
+                    if not self.Pipeline.App.Watch:
+                        exit(1)
             print(" \033[92m✔\033[0m")
         print(f"\n\033[92mAll tests passed for {self.Pipeline.Id}.\033[0m\n")
         bspump.jupyter.bitswan_tested_pipelines.add(self.Pipeline.Id)
         if bspump.jupyter.bitswan_tested_pipelines == set(
             self.Pipeline.App.PumpService.Pipelines
         ):
-            exit()
+            if not self.Pipeline.App.Watch:
+                exit()
 
 
 class TestSink(Sink):
