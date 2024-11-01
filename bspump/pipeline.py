@@ -264,23 +264,25 @@ class Pipeline(abc.ABC, asab.Configurable):
             tb_text = "".join(traceback.format_exception(None, exc, exc.__traceback__))
 
             alert_data = {
-                    "exception": "{}: {}".format(exc.__class__.__name__, exc),
-                    "event": str(event),
-                    "traceback": tb_text,
+                "exception": "{}: {}".format(exc.__class__.__name__, exc),
+                "event": str(event),
+                "traceback": tb_text,
             }
-            print(f"""
+            print(
+                f"""
             Event: {alert_data['event']}
-            Traceback: {alert_data['traceback']}""")
+            Traceback: {alert_data['traceback']}"""
+            )
             # send alert
             self.App.AlertService.trigger(
-               Alert( 
-                      source=self.App.__class__.__name__,
-                      alert_cls=self.Id,
-                      alert_id=self.Alert_id,
-                      title="{}:{} ERROR".format(self.Id, self.Alert_id),
-                      data=alert_data,
-                      exception=exc,
-                   )
+                Alert(
+                    source=self.App.__class__.__name__,
+                    alert_cls=self.Id,
+                    alert_id=self.Alert_id,
+                    title="{}:{} ERROR".format(self.Id, self.Alert_id),
+                    data=alert_data,
+                    exception=exc,
+                )
             )
 
             if self.handle_error(exc, context, event):
@@ -800,16 +802,16 @@ class Pipeline(abc.ABC, asab.Configurable):
         )
 
         if isinstance(processor, Analyzer):
-            self.ProfilerCounter["analyzer_" + processor.Id] = (
-                self.MetricsService.create_counter(
-                    "bspump.pipeline.profiler",
-                    tags={
-                        "analyzer": processor.Id,
-                        "pipeline": self.Id,
-                    },
-                    init_values={"duration": 0.0, "run": 0},
-                    reset=self.ResetProfiler,
-                )
+            self.ProfilerCounter[
+                "analyzer_" + processor.Id
+            ] = self.MetricsService.create_counter(
+                "bspump.pipeline.profiler",
+                tags={
+                    "analyzer": processor.Id,
+                    "pipeline": self.Id,
+                },
+                init_values={"duration": 0.0, "run": 0},
+                reset=self.ResetProfiler,
             )
 
     def build(self, source, *processors):
