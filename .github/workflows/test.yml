@@ -27,3 +27,4 @@ jobs:
       run: |
         black --check bspump
         ruff check bspump
+        ruff check asab

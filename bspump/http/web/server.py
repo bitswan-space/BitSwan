@@ -1,5 +1,4 @@
 import logging
-import traceback
 import asyncio
 
 from ...abc.source import Source
@@ -87,7 +86,7 @@ class WebRouteSource(Source):
                 }
             )
             return await response_future
-        except Exception as e:
+        except Exception:
             L.exception("Exception in WebSource")
             return aiohttp.web.Response(status=500)
 
@@ -131,7 +130,7 @@ class ProtectedWebRouteSource(WebRouteSource):
                 return await response_future
 
             await gate_response(request, self.Config["secret"], response_fn)
-        except Exception as e:
+        except Exception:
             L.exception("Exception in WebSource")
             return aiohttp.web.Response(status=500)
 
