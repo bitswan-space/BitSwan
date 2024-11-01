@@ -79,10 +79,6 @@ class BSPumpApplication(asab.Application):
 
             self.ASABApiService.initialize_zookeeper()
 
-        if self.Watch:
-            from .watch import Watcher
-
-            Watcher([self.Notebook])
 
     def create_argument_parser(self):
         """
@@ -129,6 +125,11 @@ build: {} [{}]
 
     async def main(self):
         print("{} pipeline(s) ready.".format(len(self.PumpService.Pipelines)))
+
+        if self.Watch:
+            from .watch import Watcher
+
+            Watcher([self.Notebook])
 
     def _on_signal_usr1(self):
         """
