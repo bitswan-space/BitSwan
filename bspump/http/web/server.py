@@ -69,6 +69,7 @@ class WebRouteSource(Source):
         except KeyError:
             if connection == "DefaultWebServerConnection":
                 self.Connection = WebServerConnection(app, "DefaultWebServerConnection")
+                app.PumpService.add_connection(self.Connection)
         self.aiohttp_app = self.Connection.aiohttp_app
         self.aiohttp_app.router.add_route(method, route, self.handle_request)
 
