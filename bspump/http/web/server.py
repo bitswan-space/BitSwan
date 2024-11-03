@@ -294,6 +294,18 @@ class FloatField(Field):
         if type(data.get(self.name)) == str:
             data[self.name] = float(data.get(self.name, 0))
 
+class RawJSONField(Field):
+  def inner_html(self, default="", readonly=False):
+      return f"""
+      <div class="mt-1">
+      <textarea class="{self.default_classes}" {self.default_input_props}>{default}</textarea>
+      </div>
+      """
+
+  def clean(self, data):
+      if type(data.get(self.name)) == str:
+          data[self.name] = json.loads(data.get(self.name, "{}"))
+
 
 class WebFormSource(WebRouteSource):
     def __init__(
