@@ -137,12 +137,13 @@ class ProtectedWebRouteSource(WebRouteSource):
 
 
 class FieldSet:
-    def __init__(self, name, fields=None, fieldset_intro=""):
+    def __init__(self, name, fields=None, fieldset_intro="", display=""):
         self.fields = fields
         if fields is None:
             self.fields = []
         self.name = name
         self.default = {}
+        self.display = display if display else name
         self.fieldset_intro = fieldset_intro
         self.prefix = f"fieldset___{self.name}___"
 
@@ -157,7 +158,7 @@ class FieldSet:
             fields += field.html(defaults.get(field.name, field.default))
         return f"""
         <div style="margin-left: 20px; border-left: 1px solid black; padding-left: 10px;margin-top: 30px;">
-            <legend><b>{self.name}</b></legend>
+            <legend><b>{self.display}</b></legend>
             {self.fieldset_intro}
             {fields}
         </div>
