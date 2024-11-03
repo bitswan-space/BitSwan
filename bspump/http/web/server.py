@@ -454,13 +454,23 @@ class WebSink(Sink):
 
     def process(self, context, event):
         content_type = event.get("content_type", "text/html")
-        event["response_future"].set_result(
-            aiohttp.web.Response(
-                status=event["status"],
-                text=event["response"],
-                content_type=content_type,
+        # if bytes we use a binary response otherwise we use text
+        if isinstance(event["response"], bytes):
+            event["response_future"].set_result(
+                aiohttp.web.Response(
+                    status=event["status"],
+                    body=event["response"],
+                    content_type=content_type,
+                )
             )
-        )
+        else:
+            event["response_future"].set_result(
+                aiohttp.web.Response(
+                    status=event["status"],
+                    text=event["response"],
+                    content_type=content_type,
+                )
+            )
 
 
 class JSONWebSink(Sink):
