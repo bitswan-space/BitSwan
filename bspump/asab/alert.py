@@ -17,13 +17,13 @@ L = logging.getLogger(__name__)
 
 @dataclasses.dataclass
 class Alert:
-        source: str
-        alert_cls: str
-        alert_id: str
-        title: str
-        data: dict
-        detail: str = ""
-        exception: Exception = None
+    source: str
+    alert_cls: str
+    alert_id: str
+    title: str
+    data: dict
+    detail: str = ""
+    exception: Exception = None
 
 
 class AlertProviderABC(Configurable, abc.ABC):
@@ -44,12 +44,10 @@ class AlertProviderABC(Configurable, abc.ABC):
 
 
 class AlertAsyncProviderABC(AlertProviderABC):
-
     def __init__(self, config_section_name):
         super().__init__(config_section_name=config_section_name)
         self.Queue = asyncio.Queue()
         self.MainTask = None
-
 
     async def initialize(self, app):
         self._start_main_task()
@@ -209,12 +207,15 @@ class SentryAlertProvider(AlertAsyncProviderABC):
     def __init__(self, config_section_name="", application=None):
         super().__init__(config_section_name=config_section_name)
         import bspump.asab.sentry
+
         self.SentryService = bspump.asab.sentry.SentryService(application)
 
     async def _main(self):
         while True:
             a = await self.Queue.get()
-            self.SentryService.set_tags({"source": a.source, "class": a.alert_cls, "id": a.alert_id})
+            self.SentryService.set_tags(
+                {"source": a.source, "class": a.alert_cls, "id": a.alert_id}
+            )
             self.SentryService.capture_exception(a.exception)
 
     async def finalize(self, app):
@@ -239,7 +240,9 @@ class AlertService(Service):
                 L.warning("Unknwn alert provider: {}".format(section))
                 continue
 
-            self.Providers.append(provider_cls(config_section_name=section,application=app))
+            self.Providers.append(
+                provider_cls(config_section_name=section, application=app)
+            )
 
     async def initialize(self, app):
         await asyncio.gather(*[p.initialize(app) for p in self.Providers])

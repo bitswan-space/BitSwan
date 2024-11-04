@@ -30,15 +30,15 @@ class DocWebHandler(object):
         )
         self.WebContainer.WebApp.router.add_get("/asab/v1/openapi", self.openapi)
 
-        self.AuthorizationUrl = asab.Config.get(
+        self.AuthorizationUrl = Config.get(
             config_section_name, "authorization_url", fallback=None
         )
-        self.TokenUrl = asab.Config.get(config_section_name, "token_url", fallback=None)
-        self.Scopes = asab.Config.get(config_section_name, "scopes", fallback=None)
+        self.TokenUrl = Config.get(config_section_name, "token_url", fallback=None)
+        self.Scopes = Config.get(config_section_name, "scopes", fallback=None)
 
         self.Manifest = api_service.Manifest
 
-        self.DefaultRouteTag: str = asab.Config["asab:doc"].get(
+        self.DefaultRouteTag: str = Config["asab:doc"].get(
             "default_route_tag"
         )  # default: 'module_name'
         if self.DefaultRouteTag not in ["module_name", "class_name"]:

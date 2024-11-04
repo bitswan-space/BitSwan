@@ -1,7 +1,7 @@
 import logging
 import aiohttp.web
 
-frmo bspump.asab import Service
+from bspump.asab import Service
 
 from .session import Session
 

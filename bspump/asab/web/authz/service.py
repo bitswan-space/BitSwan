@@ -7,7 +7,7 @@ import aiohttp.client_exceptions
 
 import bspump.asab as asab
 from bspump.asab import Service, Config
-import bspump.asab.exceptions as asab.exceptions
+import bspump.asab.exceptions as exceptions
 
 try:
     import jwcrypto.jwk
@@ -192,18 +192,16 @@ def _get_id_token_claims(bearer_token: str, auth_server_public_key):
     try:
         token = jwcrypto.jwt.JWT(jwt=bearer_token, key=auth_server_public_key)
     except jwcrypto.jwt.JWTExpired:
-        raise asab.exceptions.NotAuthenticatedError("ID token expired.")
+        raise exceptions.NotAuthenticatedError("ID token expired.")
     except jwcrypto.jws.InvalidJWSSignature:
-        raise asab.exceptions.NotAuthenticatedError("Invalid ID token signature.")
+        raise exceptions.NotAuthenticatedError("Invalid ID token signature.")
     except ValueError as e:
-        raise asab.exceptions.NotAuthenticatedError(
-            "Authentication failed: {}".format(e)
-        )
+        raise exceptions.NotAuthenticatedError("Authentication failed: {}".format(e))
 
     try:
         token_claims = json.loads(token.claims)
     except ValueError:
-        raise asab.exceptions.NotAuthenticatedError("Cannot parse ID token claims.")
+        raise exceptions.NotAuthenticatedError("Cannot parse ID token claims.")
 
     return token_claims
 
@@ -212,18 +210,18 @@ def _get_id_token_claims_without_verification(bearer_token: str):
     try:
         header, payload, signature = bearer_token.split(".")
     except IndexError:
-        raise asab.exceptions.NotAuthenticatedError(
+        raise exceptions.NotAuthenticatedError(
             "Cannot parse ID token: Wrong number of '.'."
         )
 
     try:
         claims = json.loads(base64.b64decode(payload.encode("utf-8")))
     except binascii.Error:
-        raise asab.exceptions.NotAuthenticatedError(
+        raise exceptions.NotAuthenticatedError(
             "Cannot parse ID token: Payload is not base 64."
         )
     except json.JSONDecodeError:
-        raise asab.exceptions.NotAuthenticatedError(
+        raise exceptions.NotAuthenticatedError(
             "Cannot parse ID token: Payload cannot be parsed as JSON."
         )
 

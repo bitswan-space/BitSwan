@@ -62,7 +62,9 @@ class SentryService(Service):
         # DSN is automatically generated when new project is created
         # and can be modified: Settings > Client Keys (DSN) > Key Details
         # Specification: either in configuration '[sentry] data_source_name', $SENTRY_DSN environment variable as a fallback
-        self.DataSourceName = Config.get("asab:alert:sentry", "data_source_name", fallback="")
+        self.DataSourceName = Config.get(
+            "asab:alert:sentry", "data_source_name", fallback=""
+        )
         if len(self.DataSourceName) == 0:
             self.DataSourceName = os.getenv("SENTRY_DSN", "")
         if len(self.DataSourceName) == 0:
@@ -74,7 +76,9 @@ class SentryService(Service):
 
         # ENVIRONMENT (e.g. "production", "testing", ...)
         self.Environment = Config.get(
-            "asab:alert:sentry", "environment", fallback="development",
+            "asab:alert:sentry",
+            "environment",
+            fallback="development",
         )
 
         # RELEASE
@@ -104,7 +108,9 @@ class SentryService(Service):
         # traces sample rate: percentage of captured events
         # prevents overcrowding when deployed to production
         # default: 100%
-        self.TracesSampleRate = Config.getfloat("asab:alert:sentry", "traces_sample_rate", fallback=1.0)
+        self.TracesSampleRate = Config.getfloat(
+            "asab:alert:sentry", "traces_sample_rate", fallback=1.0
+        )
         assert (
             0 <= self.TracesSampleRate <= 1.0
         ), "Traces sample rate must be between 0 and 1."

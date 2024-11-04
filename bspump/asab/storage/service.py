@@ -31,8 +31,7 @@ class StorageServiceABC(Service):
     def __init__(self, app, service_name):
         super().__init__(app, service_name)
         self.WebhookURIs = (
-            Config.get("asab:storage:changestream", "webhook_uri", fallback="")
-            or None
+            Config.get("asab:storage:changestream", "webhook_uri", fallback="") or None
         )
         if self.WebhookURIs is not None:
             self.WebhookURIs = [
@@ -43,8 +42,7 @@ class StorageServiceABC(Service):
             except KeyError as e:
                 raise Exception("Storage webhooks require ProactorService") from e
         self.WebhookAuth = (
-            Config.get("asab:storage:changestream", "webhook_auth", fallback="")
-            or None
+            Config.get("asab:storage:changestream", "webhook_auth", fallback="") or None
         )
 
         # Specify a non-empty AES key to enable AES encryption of selected fields
