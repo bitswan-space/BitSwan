@@ -27,9 +27,7 @@ class GeneralAnomaly(Anomaly):
         super().__init__()
 
         self.CloseRules = {}
-        for key_value_str in str(Config["GeneralAnomaly"]["close_rules"]).split(
-            ";"
-        ):
+        for key_value_str in str(Config["GeneralAnomaly"]["close_rules"]).split(";"):
             key_value = key_value_str.split(":")
             self.CloseRules[key_value[0]] = key_value[1]
 
