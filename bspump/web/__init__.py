@@ -6,9 +6,8 @@ import logging
 
 import aiohttp.web
 
-import asab
-import asab.web.rest
-from asab.web.auth import noauth
+from bspump.asab.web.rest import json_response
+from bspump.asab.web.auth import noauth
 
 from ..__version__ import __build__ as bspump_build
 from ..__version__ import __version__ as bspump_version
@@ -24,14 +23,14 @@ L = logging.getLogger(__name__)
 async def pipelines(request):
     app = request.app["app"]
     svc = app.get_service("bspump.PumpService")
-    return asab.web.rest.json_response(request, svc.Pipelines)
+    return json_response(request, svc.Pipelines)
 
 
 @noauth
 async def example_trigger(request):
     app = request.app["app"]
     app.PubSub.publish("mymessage!")
-    return asab.web.rest.json_response(request, {"ok": 1})
+    return json_response(request, {"ok": 1})
 
 
 @noauth
@@ -40,14 +39,14 @@ async def example_internal(request):
     svc = app.get_service("bspump.PumpService")
     source = svc.locate("SampleInternalPipeline.*InternalSource")
     source.put({"event": "example"})
-    return asab.web.rest.json_response(request, {"ok": 1})
+    return json_response(request, {"ok": 1})
 
 
 @noauth
 async def lookup_list(request):
     app = request.app["app"]
     svc = app.get_service("bspump.PumpService")
-    return asab.web.rest.json_response(
+    return json_response(
         request, [lookup.rest_get() for lookup in svc.Lookups.values()]
     )
 
@@ -61,7 +60,7 @@ async def lookup_meta(request):
         lookup = svc.locate_lookup(lookup_id)
     except KeyError:
         raise aiohttp.web.HTTPNotFound()
-    return asab.web.rest.json_response(request, lookup.rest_get())
+    return json_response(request, lookup.rest_get())
 
 
 @noauth
@@ -116,7 +115,6 @@ async def manifest(request):
     app = request.app["app"]
 
     d = {
-        "ASAB_VERSION": asab.__version__,
         "BSPUMP_VERSION": bspump_version,
         "BSPUMP_BUILD": bspump_build,
         "LAUNCHED_AT": datetime.datetime.utcfromtimestamp(app.LaunchTime).isoformat(),
@@ -137,7 +135,7 @@ async def manifest(request):
         d["MANIFEST_MTIME"] = datetime.datetime.utcfromtimestamp(mtime).isoformat()
     except FileNotFoundError:
         pass
-    return asab.web.rest.json_response(request, d)
+    return json_response(request, d)
 
 
 def initialize_web(container):

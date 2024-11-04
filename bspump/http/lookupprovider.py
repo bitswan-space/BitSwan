@@ -5,7 +5,7 @@ import struct
 import aiohttp
 import asyncio
 
-import asab
+from bspump.asab import Config
 
 from bspump.abc.lookupprovider import LookupBatchProviderABC
 
@@ -35,10 +35,10 @@ class HTTPBatchLookupProvider(LookupBatchProviderABC):
             cache_path = self.Config.get("cache_dir", "").strip()
             if (
                 len(cache_path) == 0
-                and "general" in asab.Config
-                and "var_dir" in asab.Config["general"]
+                and "general" in Config
+                and "var_dir" in Config["general"]
             ):
-                cache_path = os.path.abspath(asab.Config["general"]["var_dir"])
+                cache_path = os.path.abspath(Config["general"]["var_dir"])
                 self.CachePath = os.path.join(
                     cache_path, "lookup_{}.cache".format(self.Id)
                 )

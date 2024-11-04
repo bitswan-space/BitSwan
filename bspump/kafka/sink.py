@@ -2,7 +2,7 @@ import logging
 
 import confluent_kafka
 
-import asab
+import bspump.asab as asab
 
 from ..abc.sink import Sink
 

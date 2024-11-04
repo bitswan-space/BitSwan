@@ -3,7 +3,7 @@ import logging
 
 import numpy as np
 
-import asab
+import bspump.asab as asab
 from ..abc.lookup import Lookup
 from ..matrix.sessionmatrix import SessionMatrix
 

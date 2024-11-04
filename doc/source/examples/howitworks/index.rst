@@ -35,7 +35,7 @@ Installing BSPump module
 
 To install BSPump module:
 ::
-    pip install asab bspump
+    pip install bspump
 
 or alternatively using
 ::
@@ -82,7 +82,7 @@ Service is part where pipelines and connections are registered.
 
 We will go through the following code and explain each part
 ::
-    import asab
+    import bspump.asab as asab
 
     from .pipeline import TCPPipeline
 

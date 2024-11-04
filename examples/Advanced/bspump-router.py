@@ -4,8 +4,8 @@ import logging
 import random
 import string
 
-import asab
-import asab.web.rest
+import bspump.asab as asab
+from bspump.asab.web.rest import json_response
 import bspump
 import bspump.common
 
@@ -140,7 +140,7 @@ async def simulate_fail(request):
     cb = svc.locate("TargetPipelineC.CircuitBreaker")
     cb.set(value=fail)
 
-    return asab.web.rest.json_response(request, data={"OK": True}, pretty=True)
+    return json_response(request, data={"OK": True}, pretty=True)
 
 
 if __name__ == "__main__":

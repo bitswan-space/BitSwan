@@ -1,4 +1,4 @@
-import asab
+import bspump.asab
 import asyncio
 from .trigger import Trigger
 
@@ -10,7 +10,7 @@ class PeriodicTrigger(Trigger):
         """
 
         super().__init__(app, id)
-        self.Timer = asab.Timer(app, self.on_timer, autorestart=True)
+        self.Timer = bspump.asab.Timer(app, self.on_timer, autorestart=True)
         self.Timer.start(interval)
 
         async def run_on_ready():

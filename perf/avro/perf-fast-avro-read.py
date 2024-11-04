@@ -6,7 +6,7 @@ import bspump.avro
 import bspump.common
 import bspump.file
 import bspump.trigger
-import asab
+import bspump.asab as asab
 
 ###
 

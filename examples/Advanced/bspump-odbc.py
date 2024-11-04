@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import logging
 import asyncio
-import asab
+import bspump.asab as asab
 import bspump
 import bspump.odbc
 import bspump.trigger

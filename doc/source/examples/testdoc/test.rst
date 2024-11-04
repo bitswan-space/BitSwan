@@ -11,7 +11,7 @@ This is generic pump template you can use for your app.
     import bspump.common
     import bspump.trigger
     import bspump.http
-    import asab
+    import bspump.asab as asab
 
     # There is place for your processors
 
@@ -77,7 +77,7 @@ Import Elastic Search module from BSPump
     import bspump.common
     import bspump.http
     import bspump.elasticsearch
-    import asab
+    import bspump.asab as asab
 
 Add Elastic Search connection to main function:
 ::
@@ -189,7 +189,7 @@ Import Kafka module from BSPump
     import bspump.common
     import bspump.http
     import bspump.kafka
-    import asab
+    import bspump.asab as asab
 
 Add Kafka connection to main function:
 ::
@@ -337,7 +337,7 @@ If you want to insert data to your InfluxDB with your pump you have to add impor
     import bspump.common
     import bspump.http
     import bspump.influxdb
-    import asab
+    import bspump.asab as asab
 
 Add InfluxDB Connection to main function of your pump
 ::

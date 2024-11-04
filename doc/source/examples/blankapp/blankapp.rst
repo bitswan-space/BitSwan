@@ -110,7 +110,7 @@ In service you have to register your pipeline. You can also register more pipeli
 
 ::
 
-    import asab
+    import bspump.asab as asab
 
     from .pipeline import SamplePipeline
 
@@ -151,7 +151,7 @@ In module you create a module of your service. You can create more modules from 
 
 ::
 
-    import asab
+    import bspump.asab as asab
 
     from .service import BlankService
 

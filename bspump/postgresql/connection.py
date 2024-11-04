@@ -8,7 +8,7 @@ import psycopg2
 import psycopg2.errorcodes
 import psycopg2.extras
 
-import asab
+from bspump.asab import PubSub
 from ..abc.connection import Connection
 
 
@@ -51,7 +51,7 @@ class PostgreSQLConnection(Connection):
         self.ConnectionEvent = asyncio.Event()
         self.ConnectionEvent.clear()
 
-        self.PubSub = asab.PubSub(app)
+        self.PubSub = PubSub(app)
         self.Loop = app.Loop
 
         self._host = self.Config["host"]

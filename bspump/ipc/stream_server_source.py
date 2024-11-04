@@ -42,9 +42,9 @@ class StreamServerSource(Source):
         self.Address = self.Config["address"]
 
         if "cert" in self.Config or "key" in self.Config:
-            import asab.net
+            import bspump.asab.net
 
-            sslbuilder = asab.net.SSLContextBuilder("[none]", config=self.Config)
+            sslbuilder = bspump.asab.net.SSLContextBuilder("[none]", config=self.Config)
             self.SSL = sslbuilder.build(protocol=ssl.PROTOCOL_SSLv23)
         else:
             self.SSL = None

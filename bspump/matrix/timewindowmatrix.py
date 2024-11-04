@@ -3,7 +3,7 @@ import logging
 
 import numpy as np
 
-import asab
+from bspump.asab import Timer
 
 import os
 
@@ -69,7 +69,7 @@ class TimeWindowMatrix(NamedMatrix):
 
         if clock_driven:
             advance_period = resolution / 4
-            self.Timer = asab.Timer(app, self.on_clock_tick, autorestart=True)
+            self.Timer = Timer(app, self.on_clock_tick, autorestart=True)
             self.Timer.start(advance_period)
         else:
             self.Timer = None
@@ -280,7 +280,7 @@ class PersistentTimeWindowMatrix(PersistentNamedMatrix):
 
         if clock_driven:
             advance_period = resolution / 4
-            self.Timer = asab.Timer(app, self.on_clock_tick, autorestart=True)
+            self.Timer = Timer(app, self.on_clock_tick, autorestart=True)
             self.Timer.start(advance_period)
             if self.TimeConfig.get_start() != start:
                 self.advance(start)

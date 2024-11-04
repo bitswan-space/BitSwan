@@ -1,6 +1,6 @@
 import pika
 
-import asab
+from bspump.asab import subscribe
 
 from ..abc.sink import Sink
 import logging
@@ -37,7 +37,7 @@ class AMQPSink(Sink):
         if self._connection.ConnectionEvent.is_set():
             self._on_connection_open("simulated")
 
-    @asab.subscribe("Application.tick/10!")
+    @subscribe("Application.tick/10!")
     def _on_tick(self, event_name):
         # Heal the connection
         if self._channel is None and self._connection.ConnectionEvent.is_set():

@@ -3,7 +3,7 @@ import logging
 import os
 import numpy as np
 
-import asab
+from bspump.asab import Configurable
 from .utils.closedrows import ClosedRows, PersistentClosedRows
 
 ###
@@ -13,7 +13,7 @@ L = logging.getLogger(__name__)
 ###
 
 
-class Matrix(abc.ABC, asab.Configurable):
+class Matrix(abc.ABC, Configurable):
     """
     Generic `Matrix` object.
 

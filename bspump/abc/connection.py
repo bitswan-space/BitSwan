@@ -1,5 +1,5 @@
 import abc
-from asab import Configurable
+from bspump.asab import Configurable
 
 
 class Connection(abc.ABC, Configurable):

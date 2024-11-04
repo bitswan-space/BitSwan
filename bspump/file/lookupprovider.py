@@ -1,7 +1,7 @@
 import logging
 import os
 
-import asab.proactor
+import bspump.asab.proactor as proactor
 
 from bspump.abc.lookupprovider import LookupBatchProviderABC
 
@@ -22,7 +22,7 @@ class FileBatchLookupProvider(LookupBatchProviderABC):
 
     def __init__(self, lookup, url, id=None, config=None):
         super().__init__(lookup, url, id, config)
-        self.App.add_module(asab.proactor.Module)
+        self.App.add_module(proactor.Module)
         self.ProactorService = self.App.get_service("asab.ProactorService")
 
     async def load(self):

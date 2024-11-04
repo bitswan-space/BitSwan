@@ -1,7 +1,7 @@
 import datetime
 import pytz
 
-import asab
+from bspump.asab import Config
 
 from ...abc import Expression, evaluate
 
@@ -41,7 +41,7 @@ class DATETIME_GET(Expression):
             raise ValueError("Invalid 'what' provided: '{}'".format(arg_what))
 
         if arg_timezone is None:
-            timezone_from_config = asab.Config["declarations"]["timezone"]
+            timezone_from_config = Config["declarations"]["timezone"]
 
             if len(timezone_from_config) == 0:
                 self.Timezone = None

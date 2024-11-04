@@ -1,12 +1,12 @@
 import logging
 import asyncio
-import asab
+from bspump.asab import Service
 
 
 L = logging.getLogger(__file__)
 
 
-class BSPumpService(asab.Service):
+class BSPumpService(Service):
     """
     Service registry based on Service object. Read more in ASAB documentation `Service <https://asab.readthedocs.io/en/latest/asab/service.html`_.
 

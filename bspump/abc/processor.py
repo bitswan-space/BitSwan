@@ -1,4 +1,4 @@
-import asab
+import bspump.asab as asab
 
 
 class ProcessorBase(asab.Configurable):

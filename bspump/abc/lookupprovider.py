@@ -1,6 +1,6 @@
 import abc
 
-import asab
+import bspump.asab as asab
 
 
 class LookupProviderABC(abc.ABC, asab.Configurable):

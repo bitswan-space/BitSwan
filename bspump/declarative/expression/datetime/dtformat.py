@@ -1,7 +1,7 @@
 import datetime
 import pytz
 
-import asab
+from bspump.asab import Config
 
 from ...abc import Expression
 from ..value.valueexpr import VALUE
@@ -34,7 +34,7 @@ class DATETIME_FORMAT(Expression):
             self.Format = arg_format
 
         if arg_timezone is None:
-            timezone_from_config = asab.Config["declarations"]["timezone"]
+            timezone_from_config = Config["declarations"]["timezone"]
 
             if len(timezone_from_config) == 0:
                 self.Timezone = None

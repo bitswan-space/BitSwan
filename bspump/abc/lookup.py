@@ -4,7 +4,7 @@ import json
 import logging
 from typing import Optional
 
-import asab
+import bspump.asab as asab
 
 from .lookupprovider import LookupProviderABC
 

@@ -1,4 +1,4 @@
-import asab
+import bspump.asab as asab
 
 from .processor import DeclarativeProcessor
 from .generator import DeclarativeGenerator

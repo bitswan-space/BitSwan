@@ -4,8 +4,8 @@ import logging
 import requests
 import time
 
-import asab
-import asab.proactor
+import bspump.asab as asab
+import bspump.asab.proactor as proactor
 import bspump
 import bspump.common
 import bspump.http
@@ -35,7 +35,7 @@ class SampleOOBGenerator(bspump.Generator):
     def __init__(self, app, pipeline, id=None, config=None):
         super().__init__(app, pipeline, id=id, config=config)
 
-        app.add_module(asab.proactor.Module)
+        app.add_module(proactor.Module)
         self.ProactorService = app.get_service("asab.ProactorService")
 
     async def generate(self, context, event, depth):

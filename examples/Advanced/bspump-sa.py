@@ -8,7 +8,7 @@ import bspump.random
 import logging
 import time
 
-import asab
+import bspump.asab as asab
 
 
 ##

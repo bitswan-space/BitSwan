@@ -1,4 +1,4 @@
-import asab
+from bspump.asab import Config
 
 from ..abc.anomaly import Anomaly
 
@@ -15,7 +15,7 @@ class GeneralAnomaly(Anomaly):
 
     TYPE = "default"  # N/A
 
-    asab.Config.add_defaults(
+    Config.add_defaults(
         {
             "GeneralAnomaly": {
                 "close_rules": "default:status",  # Structure: type1:rule;type2:rule ...
@@ -27,7 +27,7 @@ class GeneralAnomaly(Anomaly):
         super().__init__()
 
         self.CloseRules = {}
-        for key_value_str in str(asab.Config["GeneralAnomaly"]["close_rules"]).split(
+        for key_value_str in str(Config["GeneralAnomaly"]["close_rules"]).split(
             ";"
         ):
             key_value = key_value_str.split(":")

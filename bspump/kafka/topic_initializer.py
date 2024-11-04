@@ -5,7 +5,7 @@ import typing
 
 import confluent_kafka.admin
 
-import asab
+import bspump.asab as asab
 import bspump
 import bspump.abc.sink
 import bspump.abc.source

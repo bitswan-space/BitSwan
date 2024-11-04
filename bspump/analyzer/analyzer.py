@@ -2,7 +2,7 @@ import logging
 
 import time
 
-import asab
+import bspump.asab as asab
 from ..abc.processor import Processor
 
 ###

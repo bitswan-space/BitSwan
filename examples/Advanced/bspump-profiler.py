@@ -1,7 +1,7 @@
 import json
 import logging
 import time
-import asab
+import bspump.asab as asab
 
 import bspump
 import bspump.common

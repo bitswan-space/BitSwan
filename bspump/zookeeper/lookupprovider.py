@@ -1,7 +1,7 @@
 import logging
-import asab
+from bspump.asab import Config
 
-from asab.zookeeper import build_client
+from bspump.asab.zookeeper import build_client
 from bspump.abc.lookupprovider import LookupBatchProviderABC
 
 ###
@@ -18,7 +18,7 @@ class ZooKeeperBatchLookupProvider(LookupBatchProviderABC):
 
     def __init__(self, lookup, url, id=None, config=None):
         super().__init__(lookup, url, id, config)
-        self.ZKClient, self.Path = build_client(asab.Config, self.URL)
+        self.ZKClient, self.Path = build_client(Config, self.URL)
 
     async def load(self):
         try:

@@ -3,9 +3,9 @@ import signal
 import sys
 import os
 
-import asab
-import asab.web
-import asab.api
+from bspump.asab import Application, Config
+import bspump.asab.web
+import bspump.asab.api
 
 from .service import BSPumpService
 from .__version__ import __version__, __build__
@@ -13,7 +13,7 @@ from .__version__ import __version__, __build__
 L = logging.getLogger(__name__)
 
 
-class BSPumpApplication(asab.Application):
+class BSPumpApplication(Application):
     """
     Description: BSPumpApplication is **class** used for .....
 
@@ -26,20 +26,20 @@ class BSPumpApplication(asab.Application):
         # Banner
         print("BitSwan BSPump version {}".format(__version__))
 
-        from asab.proactor import Module
+        from bspump.asab.proactor import Module
 
         self.add_module(Module)
 
-        from asab.metrics import Module
+        from bspump.asab.metrics import Module
 
         self.add_module(Module)
 
-        self.ASABApiService = asab.api.ApiService(self)
+        self.ASABApiService = bspump.asab.api.ApiService(self)
 
         self.PumpService = BSPumpService(self)
         self.WebContainer = None
 
-        from asab.alert import AlertService
+        from bspump.asab.alert import AlertService
 
         self.AlertService = AlertService(self)
 
@@ -52,9 +52,9 @@ class BSPumpApplication(asab.Application):
             pass
 
         # Register bspump API endpoints, if requested (the web service is present)
-        if "web" in asab.Config and asab.Config["web"].get("listen"):
+        if "web" in Config and Config["web"].get("listen"):
             # Initialize API service
-            self.add_module(asab.web.Module)
+            self.add_module(bspump.asab.web.Module)
 
             self.WebService = self.get_service("asab.WebService")
 
@@ -63,7 +63,7 @@ class BSPumpApplication(asab.Application):
             self.WebContainer = initialize_web(self.WebService.WebContainer)
             self.ASABApiService.initialize_web()
 
-        if "mqtt" in asab.Config and self.DeploymentId:
+        if "mqtt" in Config and self.DeploymentId:
             from .mqtt import MQTTService, MQTTConnection
 
             self.PumpService.add_connection(
@@ -72,8 +72,8 @@ class BSPumpApplication(asab.Application):
             self.MQTTService = MQTTService(self, connection="MQTTServiceConnection")
 
         # Initialize zookeeper container
-        if "zookeeper" in asab.Config.sections():
-            from asab.zookeeper import Module
+        if "zookeeper" in Config.sections():
+            from bspump.asab.zookeeper import Module
 
             self.add_module(Module)
 

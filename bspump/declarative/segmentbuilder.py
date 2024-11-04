@@ -5,7 +5,7 @@ import glob
 import os
 import logging
 
-import asab
+import bspump.asab as asab
 
 import bspump.analyzer
 

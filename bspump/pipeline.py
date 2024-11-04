@@ -9,9 +9,8 @@ import traceback
 
 import time
 
-import asab
-from asab.alert import Alert
-import asab.api
+import bspump.asab
+from bspump.asab.alert import Alert
 from .abc.connection import Connection
 from .abc.generator import Generator
 from .abc.sink import Sink
@@ -26,7 +25,7 @@ L = logging.getLogger(__name__)
 #
 
 
-class Pipeline(abc.ABC, asab.Configurable):
+class Pipeline(abc.ABC, bspump.asab.Configurable):
     """
     Description: Pipeline is ...
 
@@ -102,7 +101,7 @@ class Pipeline(abc.ABC, asab.Configurable):
         self.Sinks = []
 
         # Publish-Subscribe for this pipeline
-        self.PubSub = asab.PubSub(app)
+        self.PubSub = bspump.asab.PubSub(app)
         self.MetricsService = app.get_service("asab.MetricsService")
         self.MetricsCounter = self.MetricsService.create_counter(
             "bspump.pipeline",

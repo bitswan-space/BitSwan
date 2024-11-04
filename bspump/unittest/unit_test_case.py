@@ -1,7 +1,7 @@
 import logging
 import unittest
 
-import asab.abc.singleton
+from bspump.asab.abc.singleton import Singleton
 from .pipeline import UnitTestPipeline
 from ..application import BSPumpApplication
 from ..abc.processor import Processor
@@ -12,7 +12,7 @@ class TestCase(unittest.TestCase):
         self.App = BSPumpApplication(args=[])
 
     def tearDown(self):
-        asab.abc.singleton.Singleton.delete(self.App.__class__)
+        Singleton.delete(self.App.__class__)
         self.App = None
         root_logger = logging.getLogger()
         root_logger.handlers = []

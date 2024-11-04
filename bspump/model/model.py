@@ -1,7 +1,7 @@
 import logging
 import json
 
-import asab
+from bspump.asab import Configurable
 
 ###
 
@@ -10,7 +10,7 @@ L = logging.getLogger(__name__)
 ###
 
 
-class Model(asab.Configurable):
+class Model(Configurable):
     """
     Generic `Model` object. Loads trained model and parameters.
 

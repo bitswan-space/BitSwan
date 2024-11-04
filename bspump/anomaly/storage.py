@@ -4,7 +4,7 @@ import collections
 
 import asyncio
 
-import asab
+from bspump.asab import Configurable
 
 from .generalanomaly import GeneralAnomaly
 
@@ -15,7 +15,7 @@ L = logging.getLogger(__name__)
 ###
 
 
-class AnomalyStorage(asab.Configurable, collections.OrderedDict):
+class AnomalyStorage(Configurable, collections.OrderedDict):
     """
     AnomalyStorage serves to store anomaly objects (see AnomalyManager for details),
     separated to "open" (anomalies that are not closed by status attribute in a symptom) and "closed".

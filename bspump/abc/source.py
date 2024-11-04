@@ -1,7 +1,7 @@
 import logging
 import asyncio
 
-import asab
+import bspump.asab as asab
 
 
 L = logging.getLogger(__name__)

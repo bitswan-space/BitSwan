@@ -2,7 +2,7 @@ import logging
 import os
 import numpy as np
 
-import asab
+from bspump.asab import PubSub
 from .utils.index import Index, PersistentIndex
 from .matrix import Matrix, PersistentMatrix
 
@@ -16,7 +16,7 @@ L = logging.getLogger(__name__)
 class NamedMatrix(Matrix):
     def __init__(self, app, dtype="float_", id=None, config=None):
         super().__init__(app, dtype=dtype, id=id, config=config)
-        self.PubSub = asab.PubSub(app)
+        self.PubSub = PubSub(app)
 
     def zeros(self):
         super().zeros()
@@ -104,7 +104,7 @@ class NamedMatrix(Matrix):
 class PersistentNamedMatrix(PersistentMatrix):
     def __init__(self, app, dtype="float_", id=None, config=None):
         super().__init__(app, dtype=dtype, id=id, config=config)
-        self.PubSub = asab.PubSub(app)
+        self.PubSub = PubSub(app)
 
     def zeros(self):
         super().zeros()

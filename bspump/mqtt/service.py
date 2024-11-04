@@ -2,8 +2,8 @@ import re
 import json
 import logging
 import time
-import asab
-from asab.web.rest.json import JSONDumper
+from bspump.asab import Service, Config
+from bspump.asab.web.rest.json import JSONDumper
 
 L = logging.getLogger(__name__)
 
@@ -106,7 +106,7 @@ def get_message_structure():
     }
 
 
-class MQTTService(asab.Service):
+class MQTTService(Service):
     def __init__(self, app, service_name="bspump.MQTTService", connection=None):
         super().__init__(app, service_name)
         self.App = app
@@ -114,7 +114,7 @@ class MQTTService(asab.Service):
         self.Connection = None
         self.ConnectionId = connection
         try:
-            self.max_count = int(asab.Config["mqtt"].get("max_count"))
+            self.max_count = int(Config["mqtt"].get("max_count"))
         except Exception:
             L.warning(
                 "MQTTService: The max_count parameter is not set in the configuration file or is not an integer. Default value is 100."
