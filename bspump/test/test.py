@@ -5,6 +5,9 @@ import copy
 import asyncio
 import bspump.jupyter
 
+import nest_asyncio
+nest_asyncio.apply()
+
 class TestSource(Source):
     def __init__(self, *args, **kwargs):
         kwargs["test_events"] = kwargs.get("test_events", {})
