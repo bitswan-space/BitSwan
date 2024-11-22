@@ -6,7 +6,9 @@ import asyncio
 import bspump.jupyter
 
 import nest_asyncio
+
 nest_asyncio.apply()
+
 
 class TestSource(Source):
     def __init__(self, *args, **kwargs):
@@ -52,15 +54,19 @@ class TestSource(Source):
                 all_tasks_before = asyncio.all_tasks()
                 await self.process(event, context=tests)
                 all_tasks_after = asyncio.all_tasks()
-                other_tasks = [task for task in all_tasks_after if task not in all_tasks_before]
+                other_tasks = [
+                    task for task in all_tasks_after if task not in all_tasks_before
+                ]
 
-                  # Wait for all other tasks to complete
+                # Wait for all other tasks to complete
                 if other_tasks:
                     await asyncio.wait(other_tasks)
                 print(f"    └ Outputs:              {tests['outputs']}", end="")
                 if tests.get("expect") and tests["outputs"] != tests["expect"]:
                     print(" \033[91m✘\033[0m")
-                    print(f"    ! \033[91mTest failed\033[0m Expected: {tests['expect']}\n")
+                    print(
+                        f"    ! \033[91mTest failed\033[0m Expected: {tests['expect']}\n"
+                    )
                     if not self.Pipeline.App.Watch:
                         exit(1)
                 if tests.get("inspect"):
@@ -84,6 +90,7 @@ class TestSource(Source):
 
         self.Pipeline._evaluate_ready()
         asyncio.get_event_loop().run_until_complete(_main())
+
 
 class TestSink(Sink):
     def process(self, context, event):
