@@ -1,4 +1,5 @@
 import os
+import os.path
 import sys
 import re
 import glob
@@ -9,6 +10,7 @@ import configparser
 import urllib.parse
 import collections.abc
 import typing
+from dotenv import load_dotenv
 
 from . import utils
 
@@ -103,6 +105,22 @@ class ConfigParser(configparser.ConfigParser):
         Args:
                 dictionary: Arguments to be added to the default configuration.
         """
+        # sniff file for secrets groups so we can read the env vars
+        config_file = self._default_values.get("general", {}).get("config_file", "")
+        if config_file and os.path.exists(config_file):
+            temp_config = ConfigParser()
+            temp_config.read(config_file)
+            if groups := temp_config.get("secrets", "groups", fallback="."):
+                gitops_dir = os.environ.get(
+                    "BITSWAN_GITOPS_DIR",
+                    os.path.join(
+                        os.environ.get("HOME"), ".config/bitswan/local-gitops/"
+                    ),
+                )
+                if type(groups) is not list:
+                    groups = groups.split(" ")
+                for group in groups:
+                    load_dotenv(os.path.join(gitops_dir, "secrets", group))
 
         for section, keys in dictionary.items():
             section = str(section)
@@ -179,6 +197,7 @@ class ConfigParser(configparser.ConfigParser):
         self.config_name_list = []
 
         config_fname = ConfigParser._default_values["general"]["config_file"]
+
         if config_fname != "":
             if not os.path.isfile(config_fname):
                 print(
@@ -322,7 +341,7 @@ class ConfigParser(configparser.ConfigParser):
             raw=raw,
             vars=vars,
             fallback=fallback,
-            **kwargs
+            **kwargs,
         )
 
     def geturl(
@@ -334,7 +353,7 @@ class ConfigParser(configparser.ConfigParser):
         vars=None,
         fallback=None,
         scheme=None,
-        **kwargs
+        **kwargs,
     ):
         """
         Get URL from config and remove all leading and trailing whitespaces and trailing slashes.
