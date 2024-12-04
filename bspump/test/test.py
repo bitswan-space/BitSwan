@@ -82,7 +82,7 @@ class TestSource(Source):
                 if tests.get("inspect_in"):
                     inspected = tests["inspect_in"][0](tests["outputs"])
                     expected = tests["inspect_in"][1]
-                    if not expected in inspected:
+                    if expected not in inspected:
                         print(" \033[91m✘\033[0m")
                         print(
                             f"    ! \033[91mInspect failed. Got \"{inspected}\" expected that to contain \"{expected}\"\033[0m"

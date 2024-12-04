@@ -5,7 +5,7 @@ import ast
 config = None
 __bitswan_dev = False
 
-from bspump.jupyter import *
+from bspump.jupyter import * # noqa: F403
 import bspump.jupyter
 
 def exec_cell(cell, cell_number, ctx):
@@ -55,7 +55,7 @@ return event
                     exec(compiled_code, ctx)
                 else:
                     exec(clean_code, ctx)
-            except Exception as e:
+            except Exception:
                 print(f"Error in cell: {cell_number}\n{clean_code}")
                 # print traceback
                 import traceback
@@ -63,7 +63,7 @@ return event
 
 
 def main():
-    app = App()
+    app = App()  # noqa: F405
     if app.Test:
         bspump.jupyter.bitswan_test_mode.append(True)
 
@@ -79,8 +79,8 @@ def main():
         print(f"Notebook {app.Notebook} not found")
 
     if bspump.jupyter.bitswan_auto_pipeline.get("sink") is not None:
-        register_sink(bspump.jupyter.bitswan_auto_pipeline.get("sink"))
-        end_pipeline()
+        register_sink(bspump.jupyter.bitswan_auto_pipeline.get("sink"))  # noqa: F405
+        end_pipeline() # noqa: F405
 
     app.init_componets()
     app.run()
