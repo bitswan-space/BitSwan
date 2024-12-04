@@ -23,6 +23,12 @@ jobs:
       run: |
         pytest bspump/file
 
+    - name: Run bitswan tests
+      run: |
+        bitswan-cli --test examples/Testing/main.ipynb
+        bitswan-cli --test examples/Testing/MultiplePipelines/main.ipynb
+
+
     - name: Run linter
       run: |
         black --check bspump
