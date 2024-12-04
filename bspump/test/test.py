@@ -85,7 +85,7 @@ class TestSource(Source):
                     if expected not in inspected:
                         print(" \033[91m✘\033[0m")
                         print(
-                            f"    ! \033[91mInspect failed. Got \"{inspected}\" expected that to contain \"{expected}\"\033[0m"
+                            f'    ! \033[91mInspect failed. Got "{inspected}" expected that to contain "{expected}"\033[0m'
                         )
                         if not self.Pipeline.App.Watch:
                             exit(1)
