@@ -79,6 +79,17 @@ class TestSource(Source):
                         )
                         if not self.Pipeline.App.Watch:
                             exit(1)
+                if tests.get("inspect_in"):
+                    inspected = tests["inspect_in"][0](tests["outputs"])
+                    expected = tests["inspect_in"][1]
+                    if not expected in inspected:
+                        print(" \033[91m✘\033[0m")
+                        print(
+                            f"    ! \033[91mInspect failed. Got \"{inspected}\" expected that to contain \"{expected}\"\033[0m"
+                        )
+                        if not self.Pipeline.App.Watch:
+                            exit(1)
+
                 print(" \033[92m✔\033[0m")
             print(f"\n\033[92mAll tests passed for {self.Pipeline.Id}.\033[0m\n")
             bspump.jupyter.bitswan_tested_pipelines.add(self.Pipeline.Id)
