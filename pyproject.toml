@@ -58,7 +58,7 @@ dev = [
 ]
 
 [project.scripts]
-bitswan-cli = "pre.main:main"
+bitswan-cli = "bspump.main:main"
 
 
 [tool.ruff]
