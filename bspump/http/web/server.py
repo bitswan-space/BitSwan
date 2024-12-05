@@ -325,7 +325,7 @@ class WebFormSource(WebRouteSource):
         pipeline,
         connection="DefaultWebServerConnection",
         route="/",
-        fields: Field=None,
+        fields: Field = None,
         id=None,
         config=None,
         form_intro="",
@@ -458,7 +458,9 @@ class ProtectedWebFormSource(WebFormSource):
         async def response_fn():
             return await su.handle_request(request)
 
-        return await gate_response(request, lambda secret: self.test_secret(secret), response_fn)
+        return await gate_response(
+            request, lambda secret: self.test_secret(secret), response_fn
+        )
 
     def test_secret(self, secret):
         return secret == self.Config["secret"]
@@ -469,7 +471,9 @@ class ProtectedWebFormSource(WebFormSource):
         async def response_fn():
             return await su.handle_post(request)
 
-        return await gate_response(request, lambda secret: self.test_secret(secret), response_fn)
+        return await gate_response(
+            request, lambda secret: self.test_secret(secret), response_fn
+        )
 
 
 class JWTWebFormSource(ProtectedWebFormSource):
@@ -486,23 +490,24 @@ class JWTWebFormSource(ProtectedWebFormSource):
         pipeline,
         connection="DefaultWebServerConnection",
         route="/",
-        fields: Field=None,
+        fields: Field = None,
         id=None,
         config=None,
         form_intro="",
     ):
-        self.fields = fields+[IntField("exp", hidden=True, display="Expires at: ")]
+        self.fields = fields + [IntField("exp", hidden=True, display="Expires at: ")]
         super().__init__(
             app,
             pipeline,
             connection,
             route,
-            self.fields+[
+            self.fields
+            + [
                 TextField("secret", hidden=False, readonly=True, display="DEBUG secret")
             ],
             id=id,
             config=config,
-            form_intro=""
+            form_intro="",
         )
 
     def test_secret(self, secret):
@@ -520,13 +525,25 @@ class JWTWebFormSource(ProtectedWebFormSource):
     def extract_defaults(self, request):
         su = super()
         defaults = su.extract_defaults(request)
-        defaults = recursive_merge(defaults, jwt.decode(request.query["secret"], self.Config["jwt-secret"], algorithms=["HS256"]))
+        defaults = recursive_merge(
+            defaults,
+            jwt.decode(
+                request.query["secret"], self.Config["jwt-secret"], algorithms=["HS256"]
+            ),
+        )
         return defaults
 
     async def handle_post(self, request):
         data = await self.extract_data(request)
         try:
-            data = recursive_merge(data, jwt.decode(request.query["secret"], self.Config["jwt-secret"], algorithms=["HS256"]))
+            data = recursive_merge(
+                data,
+                jwt.decode(
+                    request.query["secret"],
+                    self.Config["jwt-secret"],
+                    algorithms=["HS256"],
+                ),
+            )
         except DecodeError as e:
             return aiohttp.web.Response(text=f"Invalid secret: {e}", status=400)
         except ExpiredSignatureError as e:
