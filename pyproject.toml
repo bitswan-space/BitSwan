@@ -46,6 +46,7 @@ dependencies = [
         "fastjsonschema>=2.16.2,<3",
         "kazoo>=2.9.0,<3",
         "nest-asyncio==1.6.0",
+        "python-dotenv==1.0.1",
 ]
 
 [project.optional-dependencies]
