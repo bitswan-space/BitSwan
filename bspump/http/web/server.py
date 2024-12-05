@@ -501,10 +501,7 @@ class JWTWebFormSource(ProtectedWebFormSource):
             pipeline,
             connection,
             route,
-            self.fields
-            + [
-                TextField("secret", hidden=False, readonly=True, display="DEBUG secret")
-            ],
+            self.fields,
             id=id,
             config=config,
             form_intro="",
