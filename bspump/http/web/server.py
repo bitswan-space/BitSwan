@@ -1,16 +1,27 @@
 import logging
 import asyncio
 import json
+import jwt
+from jwt.exceptions import ExpiredSignatureError, DecodeError
 
 from ...abc.source import Source
 from ...abc.sink import Sink
 from ...abc.connection import Connection
 
 import aiohttp.web
+from aiohttp.web import Request
 
-#
 
 L = logging.getLogger(__name__)
+
+
+def recursive_merge(dict1, dict2):
+    for key, value in dict2.items():
+        if key in dict1 and isinstance(dict1[key], dict) and isinstance(value, dict):
+            dict1[key] = recursive_merge(dict1[key], value)
+        else:
+            dict1[key] = value
+    return dict1
 
 
 class WebServerConnection(Connection):
@@ -93,7 +104,7 @@ class WebRouteSource(Source):
             return aiohttp.web.Response(status=500)
 
 
-async def gate_response(request, expected_secret, response_fn):
+async def gate_response(request, test_secret, response_fn):
     secret = request.query.get("secret")
     if secret is None:
         auth = request.headers.get("Authorization")
@@ -105,10 +116,8 @@ async def gate_response(request, expected_secret, response_fn):
                 text="Secret is missing. Pass via query parameter 'secret' or in the Authorization as 'Bearer <secret>'",
                 status=401,
             )
-
-    if not expected_secret == secret:
+    if not test_secret(secret):
         return aiohttp.web.Response(text="Invalid secret", status=403)
-
     return await response_fn()
 
 
@@ -181,11 +190,11 @@ class Field:
         self.name = name
         if "___" in name:
             raise ValueError("Field name cannot contain '___'")
-        self.hidden = kwargs.get("hidden", False)
-        self.readonly = kwargs.get("readonly", False)
-        self.display = kwargs.get("display", self.name)
+        self.hidden: bool = kwargs.get("hidden", False)
+        self.readonly: bool = kwargs.get("readonly", False)
+        self.display: str = kwargs.get("display", self.name)
         self.default = kwargs.get("default", "")
-        self.field_name = f"f___{self.name}"
+        self.field_name: str = f"f___{self.name}"
         self.default_classes = kwargs.get(
             "default_css_classes",
             "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
@@ -316,7 +325,7 @@ class WebFormSource(WebRouteSource):
         pipeline,
         connection="DefaultWebServerConnection",
         route="/",
-        fields=None,
+        fields: Field=None,
         id=None,
         config=None,
         form_intro="",
@@ -340,7 +349,7 @@ class WebFormSource(WebRouteSource):
             content_type="text/html",
         )
 
-    async def handle_post(self, request):
+    async def extract_data(self, request):
         if request.content_type == "application/json":
             data = await request.json()
         else:
@@ -348,6 +357,9 @@ class WebFormSource(WebRouteSource):
             data = {}
             for field in self.fields:
                 field.restructure_data(dfrom, data)
+        return data
+
+    async def clean_and_process(self, request, data):
         for field in self.fields:
             try:
                 field.clean(data)
@@ -368,8 +380,11 @@ class WebFormSource(WebRouteSource):
         )
         return await response_future
 
-    def render_form(self, request, errors={}):
-        # load defaults from request. Normal fields are listed by name. Subfields of fieldsets are listed as fieldset___subfield. We need to recursively go through this to support nested fieldsets. We should end up with a ntested dict of defaults
+    async def handle_post(self, request: Request):
+        data = await self.extract_data(request)
+        return await self.clean_and_process(request, data)
+
+    def extract_defaults(self, request):
         defaults = {}
         for query_param, value in request.query.items():
             if "___" in query_param:
@@ -380,6 +395,11 @@ class WebFormSource(WebRouteSource):
                         current_dict[fieldset] = {}
                     current_dict = current_dict[fieldset]
                 current_dict[parts[-1]] = value
+        return defaults
+
+    def render_form(self, request, errors={}):
+        defaults = self.extract_defaults(request)
+
         for field in self.fields:
             if field.name in request.query:
                 defaults[field.name] = request.query[field.name]
@@ -438,7 +458,10 @@ class ProtectedWebFormSource(WebFormSource):
         async def response_fn():
             return await su.handle_request(request)
 
-        return await gate_response(request, self.Config["secret"], response_fn)
+        return await gate_response(request, lambda secret: self.test_secret(secret), response_fn)
+
+    def test_secret(self, secret):
+        return secret == self.Config["secret"]
 
     async def handle_post(self, request):
         su = super()
@@ -446,7 +469,70 @@ class ProtectedWebFormSource(WebFormSource):
         async def response_fn():
             return await su.handle_post(request)
 
-        return await gate_response(request, self.Config["secret"], response_fn)
+        return await gate_response(request, lambda secret: self.test_secret(secret), response_fn)
+
+
+class JWTWebFormSource(ProtectedWebFormSource):
+    """
+    ProtectedWebFormSource that is gated by a JWT token issued at some time and
+    due to expire. All hidden fields are encoded in the JWT token and values
+    for any other fields encoded in the JWT token take precedence over user
+    input
+    """
+
+    def __init__(
+        self,
+        app,
+        pipeline,
+        connection="DefaultWebServerConnection",
+        route="/",
+        fields: Field=None,
+        id=None,
+        config=None,
+        form_intro="",
+    ):
+        self.fields = fields+[IntField("exp", hidden=True, display="Expires at: ")]
+        super().__init__(
+            app,
+            pipeline,
+            connection,
+            route,
+            self.fields+[
+                TextField("secret", hidden=False, readonly=True, display="DEBUG secret")
+            ],
+            id=id,
+            config=config,
+            form_intro=""
+        )
+
+    def test_secret(self, secret):
+        print(self.Config["jwt-secret"])
+        try:
+            jwt.decode(secret, self.Config["jwt-secret"], algorithms=["HS256"])
+        except DecodeError as e:
+            print(e)
+            return False
+        except ExpiredSignatureError as e:
+            print(e)
+            return False
+        return True
+
+    def extract_defaults(self, request):
+        su = super()
+        defaults = su.extract_defaults(request)
+        defaults = recursive_merge(defaults, jwt.decode(request.query["secret"], self.Config["jwt-secret"], algorithms=["HS256"]))
+        return defaults
+
+    async def handle_post(self, request):
+        data = await self.extract_data(request)
+        try:
+            data = recursive_merge(data, jwt.decode(request.query["secret"], self.Config["jwt-secret"], algorithms=["HS256"]))
+        except DecodeError as e:
+            return aiohttp.web.Response(text=f"Invalid secret: {e}", status=400)
+        except ExpiredSignatureError as e:
+            return aiohttp.web.Response(text=f"JWT Token expired: {e}", status=403)
+
+        return await self.clean_and_process(request, data)
 
 
 class WebSink(Sink):
