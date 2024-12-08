@@ -34,7 +34,6 @@ dependencies = [
         "pandas>=0.24.2",
         "xxhash>=1.4.4",
         "orjson",
-        "pyjq>=2.6.0",
         "croniter>=1.4.1",
         "paho-mqtt",
         "jupyter",
@@ -57,6 +56,9 @@ dev = [
     "pytest-asyncio",
     "ruff",
     "black==23.1.0",
+]
+pyjq-support = [
+    "pyjq>=2.6.0",
 ]
 
 [project.scripts]
