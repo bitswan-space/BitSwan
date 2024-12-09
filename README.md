@@ -8,9 +8,10 @@ Installation
 
 ```
 $ git clone git@github.com:bitswan-space/BitSwan.git
+$ cd BitSwan
 $ python3 -m venv venv
 $ source venv/bin/activate
-$ pip3 install -e .[dev]
+$ pip3 install -e ".[dev]"
 ```
 
 Running pipelines
