@@ -106,11 +106,13 @@ class ConfigParser(configparser.ConfigParser):
                 dictionary: Arguments to be added to the default configuration.
         """
         # sniff file for secrets groups so we can read the env vars
-        config_file = self._default_values.get("general", {}).get("config_file", "")
+        config_file = self._default_values.get("general", {}).get(
+            "config_file", "pipelines.conf"
+        )
         if config_file and os.path.exists(config_file):
             temp_config = ConfigParser()
             temp_config.read(config_file)
-            if groups := temp_config.get("secrets", "groups", fallback="."):
+            if groups := temp_config.get("secrets", "groups", fallback=""):
                 gitops_dir = os.environ.get(
                     "BITSWAN_GITOPS_DIR",
                     os.path.join(
@@ -120,7 +122,8 @@ class ConfigParser(configparser.ConfigParser):
                 if type(groups) is not list:
                     groups = groups.split(" ")
                 for group in groups:
-                    load_dotenv(os.path.join(gitops_dir, "secrets", group))
+                    if group:
+                        load_dotenv(os.path.join(gitops_dir, "secrets", group))
 
         for section, keys in dictionary.items():
             section = str(section)
@@ -198,13 +201,18 @@ class ConfigParser(configparser.ConfigParser):
 
         config_fname = ConfigParser._default_values["general"]["config_file"]
 
-        if config_fname != "":
+        if config_fname == "":
+            config_fname = "pipelines.conf"
+            if not os.path.isfile(config_fname):
+                config_fname = ""
+        else:
             if not os.path.isfile(config_fname):
                 print(
                     "Config file '{}' not found".format(config_fname), file=sys.stderr
                 )
                 sys.exit(1)
 
+        if config_fname:
             self._load_dir_stack.append(os.path.dirname(config_fname))
             try:
                 self.read(config_fname)
