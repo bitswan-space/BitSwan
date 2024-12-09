@@ -4,6 +4,7 @@ import ast
 
 config = None
 __bitswan_dev = False
+__bs_cell_code_contents: dict[int, str] = {}
 
 from bspump.jupyter import *  # noqa: F403
 import bspump.jupyter
@@ -23,30 +24,25 @@ def exec_cell(cell, cell_number, ctx):
                 if line.startswith("!"):
                     continue
                 clean_code += line + "\n"
+            __bs_cell_code_contents[cell_number] = clean_code
             try:
                 if bspump.jupyter.bitswan_auto_pipeline.get("sink") is not None:
-                    clean_code = (
-                        """
+                    clean_code = f"""
 global __bs_step_locals
 # if undefined define __bs_step_locals as empty dict
 if not "__bs_step_locals" in globals():
-    __bs_step_locals = {}
+    __bs_step_locals = {{}}
 # load locals from __bs_step_locals
-for key, value in __bs_step_locals.items():
-    locals()[key] = value
+__bs_step_locals['event'] = event
+exec(__bs_cell_code_contents[{cell_number}] + "__bs_step_locals = locals()\\ndel __bs_step_locals['__bs_step_locals']",globals(), __bs_step_locals)
+return __bs_step_locals['event']
 """
-                        + clean_code
-                        + """
-__bs_step_locals = locals()
-return event
-                    """
-                    )
 
                     parsed_code = ast.parse(clean_code)
 
                     # Step 3: Create a new function definition
                     new_function = ast.FunctionDef(
-                        name=f"step_{cell_number}",
+                        name=f"step_{cell_number}_internal",
                         args=ast.arguments(
                             posonlyargs=[],
                             args=[ast.arg(arg="event", annotation=None)],
