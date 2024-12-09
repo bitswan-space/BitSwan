@@ -1,6 +1,0 @@
-###### Requirements without Version Specifiers ######`
-
-bspump
-asab
-orjson
-cysimdjson

@@ -11,7 +11,6 @@ from .flatten import FlattenDictProcessor
 from .hexlify import HexlifyProcessor
 from .iterator import IteratorGenerator
 from .iterator import IteratorSource
-from .json import CySimdJsonParser
 from .json import StdDictToJsonParser
 from .json import StdJsonToDictParser
 from .mapping import MappingKeysGenerator, MappingValuesGenerator, MappingItemsGenerator
@@ -44,7 +43,6 @@ __all__ = (
     "IteratorGenerator",
     "IteratorSource",
     "JsonToDictParser",
-    "CySimdJsonParser",
     "StdDictToJsonParser",
     "StdJsonToDictParser",
     "MappingKeysGenerator",

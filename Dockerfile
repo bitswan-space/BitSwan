@@ -28,26 +28,6 @@ COPY pre/ /opt/
 
 CMD ["sh", "/opt/entrypoint.sh"]
 
-# Setup jupyterlab
-
-COPY examples/ /etc/notebooks/
-COPY icons/*.svg /etc/icons/
-
-ENV JUPYTER_APP_LAUNCHER_PATH /etc/jupyter_config/
-COPY ./jupyter/config.yaml /etc/jupyter_config/config.yaml
-
-USER root
-RUN chmod -R 777 /etc/notebooks/ /etc/icons/ /etc/jupyter_config/
-
-RUN echo '#!/bin/sh\n\
-chown -R bitswan /mnt\n\
-cp -R /ssh /home/bitswan/.ssh\n\
-chown -R bitswan /home/bitswan\n\
-cd /mnt\n\
-su bitswan -c "jupyter notebook --port=8888 --no-browser --ip=*"' > /start-ide.sh
-
-RUN chmod +x /start-ide.sh
-
 # Setup bitswan user
 
 RUN useradd --uid 1000 --create-home bitswan
