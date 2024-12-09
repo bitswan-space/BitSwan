@@ -140,7 +140,7 @@ class ProtectedWebRouteSource(WebRouteSource):
                 )
                 return await response_future
 
-            await gate_response(request, self.Config["secret"], response_fn)
+            return await gate_response(request, self.Config["secret"], response_fn)
         except Exception:
             L.exception("Exception in WebSource")
             return aiohttp.web.Response(status=500)
