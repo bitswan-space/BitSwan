@@ -5,4 +5,4 @@ if [ -f /opt/pipelines/extra-dependencies.txt ]; then
 fi
 cd /opt/
 
-python3 -u main.py -c /opt/pipelines/pipelines.conf
+bitswan-cli /opt/pipelines/main.ipynb -c /opt/pipelines/pipelines.conf

@@ -41,6 +41,7 @@ dependencies = [
         "kazoo>=2.9.0,<3",
         "nest-asyncio==1.6.0",
         "python-dotenv==1.0.1",
+        "pyjwt==v2.10.0"
 ]
 
 [project.optional-dependencies]
