@@ -106,9 +106,9 @@ class ConfigParser(configparser.ConfigParser):
                 dictionary: Arguments to be added to the default configuration.
         """
         # sniff file for secrets groups so we can read the env vars
-        config_file = self._default_values.get("general", {}).get(
-            "config_file", "pipelines.conf"
-        )
+        config_file = self._default_values.get("general", {}).get("config_file", "")
+        if not config_file:
+            config_file = "pipelines.conf"
         if config_file and os.path.exists(config_file):
             temp_config = ConfigParser()
             temp_config.read(config_file)
