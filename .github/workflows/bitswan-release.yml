@@ -34,8 +34,13 @@ jobs:
   create-github-release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
       - name: Create GitHub Release
         uses: actions/create-release@v1
         with:
