@@ -38,7 +38,7 @@ class WebServerConnection(Connection):
         super().__init__(app, id=id, config=config)
 
         self.aiohttp_app = aiohttp.web.Application(
-            client_max_size=self.Config["max_body_size_bytes"]
+            client_max_size=int(self.Config["max_body_size_bytes"])
         )
         self.start_server()
 
@@ -48,7 +48,7 @@ class WebServerConnection(Connection):
             self.App.Loop.create_task(
                 aiohttp.web._run_app(
                     self.aiohttp_app,
-                    port=self.Config["port"],
+                    port=int(self.Config["port"]),
                 )
             )
         except Exception as e:
