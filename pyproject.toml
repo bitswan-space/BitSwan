@@ -51,6 +51,7 @@ dev = [
     "pytest-asyncio",
     "ruff",
     "black==23.1.0",
+    "watchdog==6.0.0"
 ]
 pyjq-support = [
     "pyjq>=2.6.0",
