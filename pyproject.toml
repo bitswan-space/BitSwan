@@ -1,5 +1,4 @@
 [project]
-version = "2024.4"
 name = "bitswan"
 description = "Bitswan is a framework for building automations and pipelines in Jupyter"
 readme = {file = "README.md", content-type = "text/markdown"}
@@ -7,6 +6,8 @@ license = {file = "LICENSE"}
 authors = [
   {name = "LibertyAces Ltd", email = "timothy.hobbs@libertyaces.com"}
 ]
+dynamic = ["version"]
+
 
 
 
@@ -67,7 +68,7 @@ bitswan-cli = "bspump.main:main"
 lint.ignore = ["E501", "E402", "E721", "E712"]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling","versioningit"]
 build-backend = "hatchling.build"
 
 [tool.hatch.metadata]
@@ -75,6 +76,10 @@ allow-direct-references=true
 
 [tool.hatch.build.targets.wheel]
 packages = ["bspump"]
+
+[tool.hatch.version]
+source = "versioningit"
+default-version = "0.0.0"
 
 [project.urls]
 homepage = "https://github.com/bitswan-space/BitSwan"
