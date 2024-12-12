@@ -3,7 +3,7 @@ name: Release Workflow (PyPI, Docker, GitHub Release)
 on:
   push:
     tags:
-      - "stable*"
+      - "*"
 
 jobs:
   build-and-upload-pypi:
