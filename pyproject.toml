@@ -79,6 +79,7 @@ packages = ["bspump"]
 
 [tool.hatch.version]
 source = "versioningit"
+default-version = "0.0.0"
 
 [project.urls]
 homepage = "https://github.com/bitswan-space/BitSwan"
