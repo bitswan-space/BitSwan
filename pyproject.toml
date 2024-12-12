@@ -8,6 +8,8 @@ authors = [
   {name = "LibertyAces Ltd", email = "timothy.hobbs@libertyaces.com"}
 ]
 
+
+
 dependencies = [
         "pyasn1==0.4.8",  # version 0.5.0 is not compatible with pysnmp
         "aiohttp>=3.8.3",
@@ -69,6 +71,9 @@ build-backend = "hatchling.build"
 
 [tool.hatch.metadata]
 allow-direct-references=true
+
+[tool.hatch.build.targets.wheel]
+packages = ["bspump"]
 
 [project.urls]
 homepage = "https://github.com/bitswan-space/BitSwan"
