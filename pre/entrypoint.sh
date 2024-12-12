@@ -3,6 +3,6 @@
 if [ -f /opt/pipelines/extra-dependencies.txt ]; then
     pip install -r /opt/pipelines/extra-dependencies.txt
 fi
-cd /opt/
+cd /opt/pipelines/
 
 bitswan-cli /opt/pipelines/main.ipynb -c /opt/pipelines/pipelines.conf
