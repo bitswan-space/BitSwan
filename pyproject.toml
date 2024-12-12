@@ -1,6 +1,6 @@
 [project]
 version = "2024.4"
-name = "bspump"
+name = "bitswan"
 description = "Bitswan is a framework for building automations and pipelines in Jupyter"
 readme = {file = "README.md", content-type = "text/markdown"}
 license = {file = "LICENSE"}
@@ -69,3 +69,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.metadata]
 allow-direct-references=true
+
+[project.urls]
+homepage = "https://github.com/bitswan-space/BitSwan"
