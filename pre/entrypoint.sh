@@ -5,4 +5,6 @@ if [ -f /opt/pipelines/extra-dependencies.txt ]; then
 fi
 cd /opt/pipelines/
 
+export PYTHONPATH="/opt/pipelines:${PYTHONPATH}"
+
 bitswan-cli /opt/pipelines/main.ipynb -c /opt/pipelines/pipelines.conf
