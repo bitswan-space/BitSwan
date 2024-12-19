@@ -147,7 +147,7 @@ class ProtectedWebRouteSource(WebRouteSource):
 
 
 class FieldSet:
-    def __init__(self, name, fields=None, fieldset_intro="", display=""):
+    def __init__(self, name, fields=None, fieldset_intro="", display="", required=True):
         self.fields = fields
         if fields is None:
             self.fields = []
@@ -155,6 +155,7 @@ class FieldSet:
         self.default = {}
         self.display = display if display else name
         self.fieldset_intro = fieldset_intro
+        self.required: bool = required
         self.prefix = f"fieldset___{self.name}___"
 
     def set_subfield_names(self):
@@ -192,6 +193,7 @@ class Field:
             raise ValueError("Field name cannot contain '___'")
         self.hidden: bool = kwargs.get("hidden", False)
         self.readonly: bool = kwargs.get("readonly", False)
+        self.required: bool = kwargs.get("required", True)
         self.display: str = kwargs.get("display", self.name)
         self.default = kwargs.get("default", "")
         self.field_name: str = f"f___{self.name}"
@@ -349,6 +351,15 @@ class WebFormSource(WebRouteSource):
             content_type="text/html",
         )
 
+    def validate_field_presence(self, data, fields=None):
+        if not fields:
+            fields = self.fields
+        for field in fields:
+            if field.required and field.name not in data:
+                raise ValueError(f"Field {field.name} is required")
+            if field.required and hasattr(field, "fields"):
+                self.validate_field_presence(data[field.name], field.fields)
+
     async def extract_data(self, request):
         if request.content_type == "application/json":
             data = await request.json()
@@ -381,7 +392,18 @@ class WebFormSource(WebRouteSource):
         return await response_future
 
     async def handle_post(self, request: Request):
-        data = await self.extract_data(request)
+        try:
+            data = await self.extract_data(request)
+        except json.decoder.JSONDecodeError:
+            return aiohttp.web.Response(status=400, text="Invalid JSON")
+        try:
+            self.validate_field_presence(data)
+        except ValueError as e:
+            return aiohttp.web.Response(
+                status=400,
+                text=f"Schema validation error: {e}",
+                content_type="text/plain",
+            )
         return await self.clean_and_process(request, data)
 
     def extract_defaults(self, request):
@@ -531,7 +553,11 @@ class JWTWebFormSource(ProtectedWebFormSource):
         return defaults
 
     async def handle_post(self, request):
-        data = await self.extract_data(request)
+        try:
+            data = await self.extract_data(request)
+        except json.decoder.JSONDecodeError:
+            return aiohttp.web.Response(status=400, text="Invalid JSON")
+
         try:
             data = recursive_merge(
                 data,
@@ -545,6 +571,15 @@ class JWTWebFormSource(ProtectedWebFormSource):
             return aiohttp.web.Response(text=f"Invalid secret: {e}", status=400)
         except ExpiredSignatureError as e:
             return aiohttp.web.Response(text=f"JWT Token expired: {e}", status=403)
+
+        try:
+            self.validate_field_presence(data)
+        except ValueError as e:
+            return aiohttp.web.Response(
+                status=400,
+                text=f"Schema validation error: {e}",
+                content_type="text/plain",
+            )
 
         return await self.clean_and_process(request, data)
 
