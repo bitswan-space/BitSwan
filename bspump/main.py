@@ -34,18 +34,22 @@ if not "__bs_step_locals" in globals():
     __bs_step_locals = {{}}
 # load locals from __bs_step_locals
 __bs_step_locals['event'] = event
+__bs_step_locals['inject'] = inject
 exec(__bs_cell_code_contents[{cell_number}] + "__bs_step_locals = locals()\\ndel __bs_step_locals['__bs_step_locals']",globals(), __bs_step_locals)
-return __bs_step_locals['event']
+await __bs_step_locals['inject'](__bs_step_locals['event'])
 """
 
                     parsed_code = ast.parse(clean_code)
 
                     # Step 3: Create a new function definition
-                    new_function = ast.FunctionDef(
+                    new_function = ast.AsyncFunctionDef(
                         name=f"step_{cell_number}_internal",
                         args=ast.arguments(
                             posonlyargs=[],
-                            args=[ast.arg(arg="event", annotation=None)],
+                            args=[
+                                ast.arg(arg="inject", annotation=None),
+                                ast.arg(arg="event", annotation=None),
+                            ],
                             kwonlyargs=[],
                             kw_defaults=[],
                             defaults=[],
