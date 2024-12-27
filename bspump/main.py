@@ -51,7 +51,7 @@ return __bs_step_locals['event']
                             defaults=[],
                         ),
                         body=parsed_code.body,
-                        decorator_list=[ast.Name(id="step", ctx=ast.Load())],
+                        decorator_list=[ast.Name(id="async_step", ctx=ast.Load())],
                     )
 
                     # Step 4: Wrap the function definition in a module
