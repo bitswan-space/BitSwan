@@ -3,6 +3,7 @@ import asyncio
 import json
 import jwt
 from jwt.exceptions import ExpiredSignatureError, DecodeError
+from html import escape
 
 from ...abc.source import Source
 from ...abc.sink import Sink
@@ -268,9 +269,10 @@ class CheckboxField(Field):
         self.default = self.default or False
 
     def inner_html(self, default="", readonly=False):
+        readonly_attr = "disabled" if readonly else ""
         return f"""
-            <input type="checkbox" {"checked" if default == True or (default and default.lower() in ("true", "t")) else ""} class="{self.default_classes}" {self.default_input_props}>
-        """
+                    <input type="checkbox" {"checked" if default == True or (default and default.lower() in ("true", "t")) else ""} class="{self.default_classes}" {self.default_input_props} {readonly_attr}>
+                """
 
     def clean(self, data):
         if type(data.get(self.name)) == str:
@@ -609,13 +611,79 @@ class WebSink(Sink):
                 )
             )
 
-
 class JSONWebSink(Sink):
     """
     JSONWebSink is a sink that sends HTTP requests with JSON content.
     """
 
     def process(self, context, event):
-        event["response_future"].set_result(
-            aiohttp.web.json_response(event["response"], status=event["status"])
-        )
+        """
+        Process the incoming event and respond with either JSON or HTML.
+        """
+        if event["request"].content_type == "application/json":
+            event["response_future"].set_result(
+                aiohttp.web.json_response(event["response"], status=event["status"])
+            )
+        else:
+            html_content = self.format_as_html(event["response"])
+            event["response_future"].set_result(
+                aiohttp.web.Response(
+                    text=html_content,
+                    content_type="text/html",
+                    status=200,
+                )
+            )
+
+    def format_as_html(self, json_data):
+        top = f"""
+        <html>
+        <head>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+
+            function submitForm() {{
+                document.getElementById("loading").style.display = "block";
+                document.getElementById("main-form").submit();
+            }}
+        </script>
+        </head>
+        <BODY>
+        <form id="main-form" method="post">
+        <div id="loading" style="display:none">
+            <div class="fixed top-0 left-0 h-screen w-screen bg-black bg-opacity-50 z-50 flex justify-center items-center">
+                <div class="bg-white p-4 rounded-lg">
+                    <div class="text-center">Processing...</div>
+                </div>
+            </div>
+        </div>
+        <div class="space-y-12">
+        <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 bg-gray shadow sm:rounded-lg">
+        Results
+        """
+
+        # separate the text fields and checkbox fields so the checkbox fields are displayed as last
+        checkbox_fields = []
+        other_fields = []
+
+        for (key, value) in json_data.items():
+            if isinstance(value, bool):
+                fd = CheckboxField(key, readonly=True, default=value)
+                checkbox_fields.append(fd.html())
+            elif isinstance(value, int):
+                fd = IntField(key, readonly=True, default=value)
+                other_fields.append(fd.html())
+            else:
+                fd = TextField(key, readonly=True, default=value)
+                other_fields.append(fd.html())
+
+        bottom = """
+        </div>
+        </div>
+        </form>
+        </body>
+        </html>
+        """
+        return "".join([top] + other_fields + checkbox_fields + [bottom])
+
+
+
