@@ -1,10 +1,12 @@
 import json
 import os
 import ast
+import asyncio
 
 config = None
 __bitswan_dev = False
 __bs_cell_code_contents: dict[int, str] = {}
+__bs_step_locals = {}
 
 from bspump.jupyter import *  # noqa: F403
 import bspump.jupyter
@@ -26,18 +28,28 @@ def exec_cell(cell, cell_number, ctx):
                 clean_code += line + "\n"
             __bs_cell_code_contents[cell_number] = clean_code
             try:
+                # print("ASYNC")
                 if bspump.jupyter.bitswan_auto_pipeline.get("sink") is not None:
+                    # print(f"DEBUG {__bs_cell_code_contents[cell_number]}")
                     clean_code = f"""
 global __bs_step_locals
 # if undefined define __bs_step_locals as empty dict
 if not "__bs_step_locals" in globals():
-    __bs_step_locals = {{}}
-# load locals from __bs_step_locals
-__bs_step_locals['event'] = event
-__bs_step_locals['inject'] = inject
-exec(__bs_cell_code_contents[{cell_number}] + "__bs_step_locals = locals()\\ndel __bs_step_locals['__bs_step_locals']",globals(), __bs_step_locals)
+    __bs_step_locals = locals().copy()
+elif not __bs_step_locals:
+    __bs_step_locals = locals().copy()
+for k, v in __bs_step_locals.items():
+    globals()[k] = v
+print("Before: ", __bs_step_locals)
+{__bs_cell_code_contents[cell_number]}
+print("After: ", __bs_step_locals)
+for k, v in locals().items():
+    __bs_step_locals[k] = v
 await __bs_step_locals['inject'](__bs_step_locals['event'])
 """
+                    # print("--------")
+                    # print(clean_code)
+                    # print("--------")
 
                     parsed_code = ast.parse(clean_code)
 
@@ -65,9 +77,12 @@ await __bs_step_locals['inject'](__bs_step_locals['event'])
                     module = ast.fix_missing_locations(module)
                     compiled_code = compile(module, filename="<ast>", mode="exec")
                     # exec the code
-                    exec(compiled_code, ctx)
+                    exec(compiled_code, globals(), __bs_step_locals)
                 else:
-                    exec(clean_code, ctx)
+                    glob = globals()
+                    exec(clean_code, glob)
+                    for k,v in glob.items():
+                        globals()[k] = v
             except Exception:
                 print(f"Error in cell: {cell_number}\n{clean_code}")
                 # print traceback
