@@ -3,6 +3,9 @@ import asyncio
 import json
 import jwt
 from jwt.exceptions import ExpiredSignatureError, DecodeError
+import base64
+from io import BytesIO
+
 
 from ...abc.source import Source
 from ...abc.sink import Sink
@@ -181,7 +184,7 @@ class FieldSet:
         for field in self.fields:
             field.restructure_data(dfrom, dto[self.name])
 
-    def clean(self, data):
+    def clean(self, data, request=None):
         for field in self.fields:
             field.clean(data[self.name])
 
@@ -218,7 +221,7 @@ class Field:
     def restructure_data(self, dfrom, dto):
         dto[self.name] = dfrom.get(self.field_name, self.default)
 
-    def clean(self, data):
+    def clean(self, data, request=None):
         pass
 
     def html(self, default=""):
@@ -273,7 +276,7 @@ class CheckboxField(Field):
                     <input type="checkbox" {"checked" if default == True or (default and default.lower() in ("true", "t")) else ""} class="{self.default_classes}" {self.default_input_props} {readonly_attr}>
                 """
 
-    def clean(self, data):
+    def clean(self, data, request=None):
         if type(data.get(self.name)) == str:
             data[self.name] = data.get(self.name, False) == "on"
 
@@ -288,7 +291,7 @@ class IntField(Field):
         </div>
         """
 
-    def clean(self, data):
+    def clean(self, data, request=None):
         if type(data.get(self.name)) == str:
             data[self.name] = int(data.get(self.name, 0))
 
@@ -303,9 +306,29 @@ class FloatField(Field):
         </div>
         """
 
-    def clean(self, data):
+    def clean(self, data, request=None):
         if type(data.get(self.name)) == str:
             data[self.name] = float(data.get(self.name, 0))
+
+
+class FileField(Field):
+    """
+    The value ends up being the bytes of the uploaded file.
+    """
+
+    def inner_html(self, default="", readonly=False):
+        return f"""
+        <div class="mt-1">
+            <input type="file" class="{self.default_classes}" {self.default_input_props}>
+        </div>
+        """
+
+    def clean(self, data, request=None):
+        if request.content_type == "application/json":
+            decoded_data = base64.b64decode(data.get(self.name, ""))
+            data[self.name] = BytesIO(decoded_data)
+        else:
+            data[self.name] = data[self.name].file
 
 
 class RawJSONField(Field):
@@ -316,7 +339,7 @@ class RawJSONField(Field):
       </div>
       """
 
-    def clean(self, data):
+    def clean(self, data, request=None):
         if type(data.get(self.name)) == str:
             data[self.name] = json.loads(data.get(self.name, "{}"))
 
@@ -374,7 +397,7 @@ class WebFormSource(WebRouteSource):
     async def clean_and_process(self, request, data):
         for field in self.fields:
             try:
-                field.clean(data)
+                field.clean(data, request=request)
             except ValueError as e:
                 return aiohttp.web.Response(
                     text=self.render_form(request, errors={field.name: e}),
@@ -442,7 +465,7 @@ class WebFormSource(WebRouteSource):
         </script>
         </head>
         <BODY>
-        <form id="main-form" method="post">
+        <form id="main-form" method="post" enctype="multipart/form-data">
         <div id="loading" style="display:none">
             <div class="fixed top-0 left-0 h-screen w-screen bg-black bg-opacity-50 z-50 flex justify-center items-center">
                 <div class="bg-white p-4 rounded-lg">
