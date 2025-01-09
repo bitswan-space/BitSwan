@@ -611,6 +611,7 @@ class WebSink(Sink):
                 )
             )
 
+
 class JSONWebSink(Sink):
     """
     JSONWebSink is a sink that sends HTTP requests with JSON content.
@@ -665,7 +666,7 @@ class JSONWebSink(Sink):
         checkbox_fields = []
         other_fields = []
 
-        for (key, value) in json_data.items():
+        for key, value in json_data.items():
             if isinstance(value, bool):
                 fd = CheckboxField(key, readonly=True, default=value)
                 checkbox_fields.append(fd.html())
@@ -684,6 +685,3 @@ class JSONWebSink(Sink):
         </html>
         """
         return "".join([top] + other_fields + checkbox_fields + [bottom])
-
-
-
