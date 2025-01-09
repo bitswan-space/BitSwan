@@ -3,7 +3,6 @@ import asyncio
 import json
 import jwt
 from jwt.exceptions import ExpiredSignatureError, DecodeError
-from html import escape
 
 from ...abc.source import Source
 from ...abc.sink import Sink
@@ -636,7 +635,7 @@ class JSONWebSink(Sink):
             )
 
     def format_as_html(self, json_data):
-        top = f"""
+        top = """
         <html>
         <head>
         <script src="https://cdn.tailwindcss.com"></script>
