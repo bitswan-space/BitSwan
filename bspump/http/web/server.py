@@ -625,7 +625,8 @@ class JSONWebSink(Sink):
                 aiohttp.web.json_response(event["response"], status=event["status"])
             )
         else:
-            html_content = self.format_as_html(event["response"])
+            html_content = self.format(event["response"])
+            self.test_format()
             event["response_future"].set_result(
                 aiohttp.web.Response(
                     text=html_content,
@@ -634,56 +635,123 @@ class JSONWebSink(Sink):
                 )
             )
 
-    def format_as_html(self, json_data):
+    def format(self, json_data):
         top = f"""
-        <html>
-        <head>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script>
+              <html>
+              <head>
+              <script src="https://cdn.tailwindcss.com"></script>
+              <script>
 
-            function submitForm() {{
-                document.getElementById("loading").style.display = "block";
-                document.getElementById("main-form").submit();
-            }}
-        </script>
-        </head>
-        <BODY>
-        <form id="main-form" method="post">
-        <div id="loading" style="display:none">
-            <div class="fixed top-0 left-0 h-screen w-screen bg-black bg-opacity-50 z-50 flex justify-center items-center">
-                <div class="bg-white p-4 rounded-lg">
-                    <div class="text-center">Processing...</div>
-                </div>
-            </div>
-        </div>
-        <div class="space-y-12">
-        <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 bg-gray shadow sm:rounded-lg">
-        Results
-        """
-
-        # separate the text fields and checkbox fields so the checkbox fields are displayed as last
-        checkbox_fields = []
-        other_fields = []
-
-        for (key, value) in json_data.items():
-            if isinstance(value, bool):
-                fd = CheckboxField(key, readonly=True, default=value)
-                checkbox_fields.append(fd.html())
-            elif isinstance(value, int):
-                fd = IntField(key, readonly=True, default=value)
-                other_fields.append(fd.html())
-            else:
-                fd = TextField(key, readonly=True, default=value)
-                other_fields.append(fd.html())
+                  function submitForm() {{
+                      document.getElementById("loading").style.display = "block";
+                      document.getElementById("main-form").submit();
+                  }}
+              </script>
+              </head>
+              <BODY>
+              <form id="main-form" method="post">
+              <div id="loading" style="display:none">
+                  <div class="fixed top-0 left-0 h-screen w-screen bg-black bg-opacity-50 z-50 flex justify-center items-center">
+                      <div class="bg-white p-4 rounded-lg">
+                          <div class="text-center">Processing...</div>
+                      </div>
+                  </div>
+              </div>
+              <div class="space-y-12">
+              <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 bg-gray shadow sm:rounded-lg">
+              Results
+              """
 
         bottom = """
-        </div>
-        </div>
-        </form>
-        </body>
-        </html>
-        """
-        return "".join([top] + other_fields + checkbox_fields + [bottom])
+              </div>
+              </div>
+              </form>
+              </body>
+              </html>
+              """
+        # Combine the parts into the final HTML
+        fields = []
+        res_string = self.format_as_html(json_data, fields)
+        return top + res_string  + bottom
 
+    def format_as_html(self, json_data, fields):
 
+        for (key, value) in json_data.items():
+            if isinstance(value, dict):  # Handle nested dictionaries
+                fields.append(f" <div> {key} </div>")
+                self.format_as_html(value, fields)
+            elif isinstance(value, list):  # Handle lists
+                fields.append(f" <div> {key} </div>")
+                self.format_list(key, value, fields)
+            else:
+                self.format_key_value(key, value, fields)
 
+        return "".join(fields)
+
+    def format_list(self, key, json_data_lst, fields):
+        for item in json_data_lst:
+            if isinstance(item, list):
+                self.format_list(key, item, fields)
+            if isinstance(item, dict):
+                self.format_as_html(item, fields)
+            else:
+                self.format_key_value(key, item, fields)
+
+    def format_key_value(self, key, value, fields):
+        if isinstance(value, bool):
+            fd = CheckboxField(key, readonly=True, default=value)
+        elif isinstance(value, int):
+            fd = IntField(key, readonly=True, default=value)
+        else:
+            fd = TextField(key, readonly=True, default=value)
+        fields.append(fd.html())
+
+    def test_format(self):
+        print('testing....')
+        json_data = {
+              "user": {
+                "name": "John Doe",
+                "email": "john.doe@example.com",
+                "profile": {
+                  "age": 30,
+                  "verified": True,
+                  "preferences": {
+                    "newsletter": False,
+                    "notifications": {
+                      "email": True,
+                      "sms": False
+                    }
+                  }
+                }
+              },
+              "order": {
+                "id": 12345,
+                "items": [
+                  {
+                    "name": "Laptop",
+                    "price": 1200,
+                    "quantity": 1
+                  },
+                  {
+                    "name": "Mouse",
+                    "price": 25,
+                    "quantity": 2
+                  }
+                ],
+                "shipped": False
+              },
+              "settings": {
+                "theme": "dark",
+                "language": "en-US",
+                "shortcuts": [
+                  "Ctrl+S",
+                  "Ctrl+P",
+                  "Ctrl+Z"
+                ]
+              }
+        }
+        full_html = self.format(json_data)
+        file_name = r"/home/monca/res.html"
+        # Save the HTML content to a file
+        with open(file_name, "w", encoding="utf-8") as f:
+            f.write(full_html)
