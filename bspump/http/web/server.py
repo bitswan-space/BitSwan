@@ -6,6 +6,7 @@ from jwt.exceptions import ExpiredSignatureError, DecodeError
 import base64
 from io import BytesIO
 
+
 from ...abc.source import Source
 from ...abc.sink import Sink
 from ...abc.connection import Connection
