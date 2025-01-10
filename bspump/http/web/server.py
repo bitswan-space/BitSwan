@@ -3,9 +3,6 @@ import asyncio
 import json
 import jwt
 from jwt.exceptions import ExpiredSignatureError, DecodeError
-import base64
-from io import BytesIO
-
 
 from ...abc.source import Source
 from ...abc.sink import Sink
@@ -638,16 +635,16 @@ class JSONWebSink(Sink):
             )
 
     def format(self, json_data):
-        top = f"""
+        top = """
               <html>
               <head>
               <script src="https://cdn.tailwindcss.com"></script>
               <script>
 
-                  function submitForm() {{
+                  function submitForm() {
                       document.getElementById("loading").style.display = "block";
                       document.getElementById("main-form").submit();
-                  }}
+                  }
               </script>
               </head>
               <BODY>
@@ -680,28 +677,28 @@ class JSONWebSink(Sink):
         for key, value in json_data.items():
             if isinstance(value, dict):  # Handle nested dictionaries
                 fields.append(
-                    f""" 
+                    """ 
                 <div class="p-2 border border-gray-100 shadow-md rounded mt-4 mb-2">
                 <h2 class="font-semibold text-lg">{key}</h2>
                 <div class="ml-4">"""
                 )
                 self.format_as_html(value, fields)
                 fields.append(
-                    f""" 
+                    """ 
                            </div>
                            </div>
                             """
                 )
             elif isinstance(value, list):  # Handle lists
                 fields.append(
-                    f""" 
+                    """ 
                 <div class="p-2 border border-gray-100 shadow-md rounded mt-4 mb-2">
                 <h2 class="font-semibold text-lg">{key}</h2>
                 <div class="ml-4">"""
                 )
                 self.format_list(key, value, fields)
                 fields.append(
-                    f""" 
+                    """ 
                                </div>
                                </div>
                                 """
