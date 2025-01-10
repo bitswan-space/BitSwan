@@ -23,4 +23,4 @@ COPY Caddyfile /etc/caddy/Caddyfile
 EXPOSE 8080
 
 # Command to run Caddy and MkDocs at the same time
-CMD ["sh", "-c", "mkdocs build -d /opt/pipelines && caddy run"]
+CMD ["sh", "-c", "mkdocs build -d /docs && caddy run"]
