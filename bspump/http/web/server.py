@@ -682,12 +682,20 @@ class JSONWebSink(Sink):
                 <h2 class="font-semibold text-lg">{key}</h2>
                 <div class="ml-4">""")
                 self.format_as_html(value, fields)
+                fields.append(f""" 
+               </div>
+               </div>
+                """)
             elif isinstance(value, list):  # Handle lists
                 fields.append(f""" 
                 <div class="p-4 border-l-4 border-amber-500 bg-amber-50 rounded my-4">
                 <h2 class="font-semibold text-lg">{key}</h2>
                 <div class="ml-4">""")
                 self.format_list(key, value, fields)
+                fields.append(f""" 
+                               </div>
+                               </div>
+                                """)
             else:
                 self.format_key_value(key, value, fields)
 
