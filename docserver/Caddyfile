@@ -1,4 +1,4 @@
 :8080 {
-    root * /app/site
+    root * /docs
     file_server
 }
