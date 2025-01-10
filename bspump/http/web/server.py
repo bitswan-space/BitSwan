@@ -674,31 +674,38 @@ class JSONWebSink(Sink):
         # Combine the parts into the final HTML
         fields = []
         res_string = self.format_as_html(json_data, fields)
-        return top + res_string  + bottom
+        return top + res_string + bottom
 
     def format_as_html(self, json_data, fields):
-
-        for (key, value) in json_data.items():
+        for key, value in json_data.items():
             if isinstance(value, dict):  # Handle nested dictionaries
-                fields.append(f""" 
+                fields.append(
+                    f""" 
                 <div class="p-2 border border-gray-100 shadow-md rounded mt-4 mb-2">
                 <h2 class="font-semibold text-lg">{key}</h2>
-                <div class="ml-4">""")
+                <div class="ml-4">"""
+                )
                 self.format_as_html(value, fields)
-                fields.append(f""" 
+                fields.append(
+                    f""" 
                            </div>
                            </div>
-                            """)
+                            """
+                )
             elif isinstance(value, list):  # Handle lists
-                fields.append(f""" 
+                fields.append(
+                    f""" 
                 <div class="p-2 border border-gray-100 shadow-md rounded mt-4 mb-2">
                 <h2 class="font-semibold text-lg">{key}</h2>
-                <div class="ml-4">""")
+                <div class="ml-4">"""
+                )
                 self.format_list(key, value, fields)
-                fields.append(f""" 
+                fields.append(
+                    f""" 
                                </div>
                                </div>
-                                """)
+                                """
+                )
             else:
                 self.format_key_value(key, value, fields)
 
@@ -721,4 +728,3 @@ class JSONWebSink(Sink):
         else:
             fd = TextField(key, readonly=True, default=value)
         fields.append(fd.html())
-
