@@ -3,7 +3,6 @@ import asyncio
 import json
 import jwt
 from jwt.exceptions import ExpiredSignatureError, DecodeError
-from html import escape
 
 from ...abc.source import Source
 from ...abc.sink import Sink
@@ -659,7 +658,7 @@ class JSONWebSink(Sink):
               </div>
               <div class="space-y-12">
               <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 bg-gray shadow sm:rounded-lg">
-              Results
+              <h1 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-4">Results</h1>
               """
 
         bottom = """
@@ -678,10 +677,16 @@ class JSONWebSink(Sink):
 
         for (key, value) in json_data.items():
             if isinstance(value, dict):  # Handle nested dictionaries
-                fields.append(f" <div> {key} </div>")
+                fields.append(f""" 
+                <div class="p-4 border-l-4 border-amber-500 bg-amber-50 rounded my-4">
+                <h2 class="font-semibold text-lg">{key}</h2>
+                <div class="ml-4">""")
                 self.format_as_html(value, fields)
             elif isinstance(value, list):  # Handle lists
-                fields.append(f" <div> {key} </div>")
+                fields.append(f""" 
+                <div class="p-4 border-l-4 border-amber-500 bg-amber-50 rounded my-4">
+                <h2 class="font-semibold text-lg">{key}</h2>
+                <div class="ml-4">""")
                 self.format_list(key, value, fields)
             else:
                 self.format_key_value(key, value, fields)
