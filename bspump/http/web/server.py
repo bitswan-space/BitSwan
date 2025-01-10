@@ -3,9 +3,6 @@ import asyncio
 import json
 import jwt
 from jwt.exceptions import ExpiredSignatureError, DecodeError
-import base64
-from io import BytesIO
-
 
 from ...abc.source import Source
 from ...abc.sink import Sink
@@ -306,29 +303,9 @@ class FloatField(Field):
         </div>
         """
 
-    def clean(self, data, request=None):
+    def clean(self, data):
         if type(data.get(self.name)) == str:
             data[self.name] = float(data.get(self.name, 0))
-
-
-class FileField(Field):
-    """
-    The value ends up being the bytes of the uploaded file.
-    """
-
-    def inner_html(self, default="", readonly=False):
-        return f"""
-        <div class="mt-1">
-            <input type="file" class="{self.default_classes}" {self.default_input_props}>
-        </div>
-        """
-
-    def clean(self, data, request=None):
-        if request.content_type == "application/json":
-            decoded_data = base64.b64decode(data.get(self.name, ""))
-            data[self.name] = BytesIO(decoded_data)
-        else:
-            data[self.name] = data[self.name].file
 
 
 class RawJSONField(Field):
@@ -339,7 +316,7 @@ class RawJSONField(Field):
       </div>
       """
 
-    def clean(self, data, request=None):
+    def clean(self, data):
         if type(data.get(self.name)) == str:
             data[self.name] = json.loads(data.get(self.name, "{}"))
 
@@ -397,7 +374,7 @@ class WebFormSource(WebRouteSource):
     async def clean_and_process(self, request, data):
         for field in self.fields:
             try:
-                field.clean(data, request=request)
+                field.clean(data)
             except ValueError as e:
                 return aiohttp.web.Response(
                     text=self.render_form(request, errors={field.name: e}),
@@ -465,7 +442,7 @@ class WebFormSource(WebRouteSource):
         </script>
         </head>
         <BODY>
-        <form id="main-form" method="post" enctype="multipart/form-data">
+        <form id="main-form" method="post">
         <div id="loading" style="display:none">
             <div class="fixed top-0 left-0 h-screen w-screen bg-black bg-opacity-50 z-50 flex justify-center items-center">
                 <div class="bg-white p-4 rounded-lg">
@@ -648,7 +625,7 @@ class JSONWebSink(Sink):
                 aiohttp.web.json_response(event["response"], status=event["status"])
             )
         else:
-            html_content = self.format_as_html(event["response"])
+            html_content = self.format(event["response"])
             event["response_future"].set_result(
                 aiohttp.web.Response(
                     text=html_content,
@@ -657,53 +634,94 @@ class JSONWebSink(Sink):
                 )
             )
 
-    def format_as_html(self, json_data):
+    def format(self, json_data):
         top = """
-        <html>
-        <head>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script>
+              <html>
+              <head>
+              <script src="https://cdn.tailwindcss.com"></script>
+              <script>
 
-            function submitForm() {{
-                document.getElementById("loading").style.display = "block";
-                document.getElementById("main-form").submit();
-            }}
-        </script>
-        </head>
-        <BODY>
-        <form id="main-form" method="post">
-        <div id="loading" style="display:none">
-            <div class="fixed top-0 left-0 h-screen w-screen bg-black bg-opacity-50 z-50 flex justify-center items-center">
-                <div class="bg-white p-4 rounded-lg">
-                    <div class="text-center">Processing...</div>
-                </div>
-            </div>
-        </div>
-        <div class="space-y-12">
-        <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 bg-gray shadow sm:rounded-lg">
-        Results
-        """
-
-        # separate the text fields and checkbox fields so the checkbox fields are displayed as last
-        checkbox_fields = []
-        other_fields = []
-
-        for key, value in json_data.items():
-            if isinstance(value, bool):
-                fd = CheckboxField(key, readonly=True, default=value)
-                checkbox_fields.append(fd.html())
-            elif isinstance(value, int):
-                fd = IntField(key, readonly=True, default=value)
-                other_fields.append(fd.html())
-            else:
-                fd = TextField(key, readonly=True, default=value)
-                other_fields.append(fd.html())
+                  function submitForm() {
+                      document.getElementById("loading").style.display = "block";
+                      document.getElementById("main-form").submit();
+                  }
+              </script>
+              </head>
+              <BODY>
+              <form id="main-form" method="post">
+              <div id="loading" style="display:none">
+                  <div class="fixed top-0 left-0 h-screen w-screen bg-black bg-opacity-50 z-50 flex justify-center items-center">
+                      <div class="bg-white p-4 rounded-lg">
+                          <div class="text-center">Processing...</div>
+                      </div>
+                  </div>
+              </div>
+              <div class="space-y-12">
+              <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 bg-gray shadow sm:rounded-lg">
+              <h1 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-4">Results</h1>
+              """
 
         bottom = """
-        </div>
-        </div>
-        </form>
-        </body>
-        </html>
-        """
-        return "".join([top] + other_fields + checkbox_fields + [bottom])
+              </div>
+              </div>
+              </form>
+              </body>
+              </html>
+              """
+        # Combine the parts into the final HTML
+        fields = []
+        res_string = self.format_as_html(json_data, fields)
+        return top + res_string + bottom
+
+    def format_as_html(self, json_data, fields):
+        for key, value in json_data.items():
+            if isinstance(value, dict):  # Handle nested dictionaries
+                fields.append(
+                    """ 
+                <div class="p-2 border border-gray-100 shadow-md rounded mt-4 mb-2">
+                <h2 class="font-semibold text-lg">{key}</h2>
+                <div class="ml-4">"""
+                )
+                self.format_as_html(value, fields)
+                fields.append(
+                    """ 
+                           </div>
+                           </div>
+                            """
+                )
+            elif isinstance(value, list):  # Handle lists
+                fields.append(
+                    """ 
+                <div class="p-2 border border-gray-100 shadow-md rounded mt-4 mb-2">
+                <h2 class="font-semibold text-lg">{key}</h2>
+                <div class="ml-4">"""
+                )
+                self.format_list(key, value, fields)
+                fields.append(
+                    """ 
+                               </div>
+                               </div>
+                                """
+                )
+            else:
+                self.format_key_value(key, value, fields)
+
+        return "".join(fields)
+
+    def format_list(self, key, json_data_lst, fields):
+        for item in json_data_lst:
+            if isinstance(item, list):
+                self.format_list(key, item, fields)
+            if isinstance(item, dict):
+                self.format_as_html(item, fields)
+            else:
+                self.format_key_value(key, item, fields)
+
+    def format_key_value(self, key, value, fields):
+        if isinstance(value, bool):
+            fd = CheckboxField(key, readonly=True, default=value)
+        elif isinstance(value, int):
+            fd = IntField(key, readonly=True, default=value)
+        else:
+            fd = TextField(key, readonly=True, default=value)
+        fields.append(fd.html())
