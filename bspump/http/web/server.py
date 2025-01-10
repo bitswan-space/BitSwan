@@ -625,7 +625,6 @@ class JSONWebSink(Sink):
             )
         else:
             html_content = self.format(event["response"])
-            self.test_format()
             event["response_future"].set_result(
                 aiohttp.web.Response(
                     text=html_content,
@@ -678,17 +677,17 @@ class JSONWebSink(Sink):
         for (key, value) in json_data.items():
             if isinstance(value, dict):  # Handle nested dictionaries
                 fields.append(f""" 
-                <div class="p-4 border-l-4 border-amber-500 bg-amber-50 rounded my-4">
+                <div class="p-2 border border-gray-100 shadow-md rounded mt-4 mb-2">
                 <h2 class="font-semibold text-lg">{key}</h2>
                 <div class="ml-4">""")
                 self.format_as_html(value, fields)
                 fields.append(f""" 
-               </div>
-               </div>
-                """)
+                           </div>
+                           </div>
+                            """)
             elif isinstance(value, list):  # Handle lists
                 fields.append(f""" 
-                <div class="p-4 border-l-4 border-amber-500 bg-amber-50 rounded my-4">
+                <div class="p-2 border border-gray-100 shadow-md rounded mt-4 mb-2">
                 <h2 class="font-semibold text-lg">{key}</h2>
                 <div class="ml-4">""")
                 self.format_list(key, value, fields)
@@ -719,52 +718,3 @@ class JSONWebSink(Sink):
             fd = TextField(key, readonly=True, default=value)
         fields.append(fd.html())
 
-    def test_format(self):
-        print('testing....')
-        json_data = {
-              "user": {
-                "name": "John Doe",
-                "email": "john.doe@example.com",
-                "profile": {
-                  "age": 30,
-                  "verified": True,
-                  "preferences": {
-                    "newsletter": False,
-                    "notifications": {
-                      "email": True,
-                      "sms": False
-                    }
-                  }
-                }
-              },
-              "order": {
-                "id": 12345,
-                "items": [
-                  {
-                    "name": "Laptop",
-                    "price": 1200,
-                    "quantity": 1
-                  },
-                  {
-                    "name": "Mouse",
-                    "price": 25,
-                    "quantity": 2
-                  }
-                ],
-                "shipped": False
-              },
-              "settings": {
-                "theme": "dark",
-                "language": "en-US",
-                "shortcuts": [
-                  "Ctrl+S",
-                  "Ctrl+P",
-                  "Ctrl+Z"
-                ]
-              }
-        }
-        full_html = self.format(json_data)
-        file_name = r"/home/monca/res.html"
-        # Save the HTML content to a file
-        with open(file_name, "w", encoding="utf-8") as f:
-            f.write(full_html)
