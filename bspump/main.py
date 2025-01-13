@@ -5,90 +5,93 @@ import asyncio
 
 config = None
 __bitswan_dev = False
-__bs_cell_code_contents: dict[int, str] = {}
+# cls._cell_code_contents: dict[int, str] = {}
 __bs_step_locals = {}
 
 from bspump.jupyter import *  # noqa: F403
 import bspump.jupyter
 
+def contains_function_call(ast_tree, function_name):
+    for node in ast.walk(ast_tree):
+        if isinstance(node, ast.Call):  # Check if the node is a function call
+            if isinstance(node.func, ast.Name) and node.func.id == function_name:
+                return True
+    return False
 
-def exec_cell(cell, cell_number, ctx):
-    if cell["cell_type"] == "code":
-        source = cell["source"]
-        if len(source) > 0 and "#ignore" not in source[0]:
-            code = (
-                "\n".join(cell["source"])
-                if isinstance(cell["source"], list)
-                else cell["source"]
-            )
-            clean_code = ""
-            for line in code.split("\n"):
-                if line.startswith("!"):
+class NotebookParser:
+    _in_autopipeline = False
+    _cell_number = 0
+    _cell_processor_contents: dict[int, str] = {}
+
+    @classmethod
+    def parse_cell(cls, cell, fout):
+        def cell_str(contents, indent=False):
+            if not indent:
+                return contents + "\n\n"
+            multiline = False
+            lines = contents.split("\n")
+            indent_lines = []
+            for i, line in enumerate(lines):
+                if not multiline:
+                    indent_lines.append(i)
+                if '"""' in line:
+                    multiline = not multiline
                     continue
-                clean_code += line + "\n"
-            __bs_cell_code_contents[cell_number] = clean_code
-            try:
-                # print("ASYNC")
-                if bspump.jupyter.bitswan_auto_pipeline.get("sink") is not None:
-                    # print(f"DEBUG {__bs_cell_code_contents[cell_number]}")
-                    clean_code = f"""
-global __bs_step_locals
-# if undefined define __bs_step_locals as empty dict
-if not "__bs_step_locals" in globals():
-    __bs_step_locals = locals().copy()
-elif not __bs_step_locals:
-    __bs_step_locals = locals().copy()
-for k, v in __bs_step_locals.items():
-    globals()[k] = v
-print("Before: ", __bs_step_locals)
-{__bs_cell_code_contents[cell_number]}
-print("After: ", __bs_step_locals)
-for k, v in locals().items():
-    __bs_step_locals[k] = v
-await __bs_step_locals['inject'](__bs_step_locals['event'])
-"""
-                    # print("--------")
-                    # print(clean_code)
-                    # print("--------")
+            lines_out = []
+            for i in range(len(lines)):
+                _indent = ("    " if i in indent_lines else "")
+                lines_out.append(_indent + lines[i])
+            # return "\n".join([f"    {line}" for line in lines]) + "\n\n"
+            return "\n".join(lines_out) + "\n\n"
 
-                    parsed_code = ast.parse(clean_code)
-
-                    # Step 3: Create a new function definition
-                    new_function = ast.AsyncFunctionDef(
-                        name=f"step_{cell_number}_internal",
-                        args=ast.arguments(
-                            posonlyargs=[],
-                            args=[
-                                ast.arg(arg="inject", annotation=None),
-                                ast.arg(arg="event", annotation=None),
-                            ],
-                            kwonlyargs=[],
-                            kw_defaults=[],
-                            defaults=[],
-                        ),
-                        body=parsed_code.body,
-                        decorator_list=[ast.Name(id="async_step", ctx=ast.Load())],
-                    )
-
-                    # Step 4: Wrap the function definition in a module
-                    module = ast.Module(body=[new_function], type_ignores=[])
-
-                    # Step 5: Compile the module
-                    module = ast.fix_missing_locations(module)
-                    compiled_code = compile(module, filename="<ast>", mode="exec")
-                    # exec the code
-                    exec(compiled_code, globals(), __bs_step_locals)
+        if cell["cell_type"] == "code":
+            source = cell["source"]
+            if len(source) > 0 and "#ignore" not in source[0]:
+                code = (
+                    "".join(cell["source"])
+                    if isinstance(cell["source"], list)
+                    else cell["source"]
+                )
+                clean_code = ""
+                for line in code.split("\n"):
+                    if line.startswith("!"):
+                        continue
+                    clean_code += line.replace("\t", "    ") + "\n"
+                if not clean_code:
+                    return
+                    # if bspump.jupyter.bitswan_auto_pipeline.get("sink") is not None:
+                if not cls._in_autopipeline:
+                    fout.write(cell_str(clean_code))
                 else:
-                    glob = globals()
-                    exec(clean_code, glob)
-                    for k,v in glob.items():
-                        globals()[k] = v
-            except Exception:
-                print(f"Error in cell: {cell_number}\n{clean_code}")
-                # print traceback
-                import traceback
+                    cls._cell_processor_contents[cls._cell_number] = cell_str(clean_code, True)
+                if not cls._in_autopipeline and contains_function_call(ast.parse(clean_code), "auto_pipeline"):
+                    cls._in_autopipeline = True
 
-                traceback.print_exc()
+    @classmethod
+    def parse_notebook(cls, ntb, out_path="tmp.py"):
+        cls._cell_number = 0
+        cls._in_autopipeline = False
+        cls._cell_processor_contents = {}
+        with open(out_path, "w") as f:
+            for cell in ntb["cells"]:
+                cls._cell_number += 1
+                cls.parse_cell(cell, f)
+            # for cell_number, pcell in cls._cell_processor_contents:
+            print(f"PROCESSOR CONTENTS {cls._cell_processor_contents}")
+            j = ''.join(list(cls._cell_processor_contents.values()))
+            print(f"JOIN {j}")
+
+
+            step_func_code = f"""@async_step
+async def processor_internal(inject, event):
+{''.join(list(cls._cell_processor_contents.values()))}
+    await inject(event)
+            """
+            f.write(step_func_code)
+
+
+
+            
 
 
 def main():
@@ -99,10 +102,8 @@ def main():
     if os.path.exists(app.Notebook):
         with open(app.Notebook) as nb:
             notebook = json.load(nb)
-            cell_number = 0
-            for cell in notebook["cells"]:
-                cell_number += 1
-                exec_cell(cell, cell_number, globals())
+            NotebookParser.parse_notebook(notebook)
+            from tmp import app
     else:
         print(f"Notebook {app.Notebook} not found")
 
