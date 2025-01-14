@@ -4,6 +4,7 @@ import collections
 
 
 class Session(collections.MutableMapping):
+
     """Session dict-like object."""
 
     def __init__(self, storage, id, new, max_age=None):
@@ -22,11 +23,9 @@ class Session(collections.MutableMapping):
     def __repr__(self):
         return "<{} [{}, new:{}, changed:{}, created:{} expired:{}] {!r}>".format(
             self.__class__.__name__,
-            (
-                hashlib.sha224(self._id.encode("utf-8")).hexdigest()
-                if self._id is not None
-                else "-"
-            ),
+            hashlib.sha224(self._id.encode("utf-8")).hexdigest()
+            if self._id is not None
+            else "-",
             self._new,
             self._changed,
             self._created,

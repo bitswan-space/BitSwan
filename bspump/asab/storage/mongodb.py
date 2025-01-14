@@ -138,9 +138,9 @@ class MongoDBUpsertor(UpsertorABC):
                 ret = await coll.find_one_and_update(
                     filtr,
                     update=addobj,
-                    upsert=(
-                        True if (self.Version == 0) or (self.Version is None) else False
-                    ),
+                    upsert=True
+                    if (self.Version == 0) or (self.Version is None)
+                    else False,
                     return_document=pymongo.collection.ReturnDocument.AFTER,
                 )
             except pymongo.errors.DuplicateKeyError as e:

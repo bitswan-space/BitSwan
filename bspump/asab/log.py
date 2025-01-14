@@ -135,16 +135,12 @@ class Logging(object):
                             socket.AF_INET,
                             socket.SOCK_STREAM,
                             (
-                                (
-                                    url.hostname
-                                    if url.hostname is not None
-                                    else "localhost"
-                                ),
-                                (
-                                    url.port
-                                    if url.port is not None
-                                    else logging.handlers.SYSLOG_UDP_PORT
-                                ),
+                                url.hostname
+                                if url.hostname is not None
+                                else "localhost",
+                                url.port
+                                if url.port is not None
+                                else logging.handlers.SYSLOG_UDP_PORT,
                             ),
                         )
 
@@ -154,16 +150,12 @@ class Logging(object):
                             socket.AF_INET,
                             socket.SOCK_DGRAM,
                             (
-                                (
-                                    url.hostname
-                                    if url.hostname is not None
-                                    else "localhost"
-                                ),
-                                (
-                                    url.port
-                                    if url.port is not None
-                                    else logging.handlers.SYSLOG_UDP_PORT
-                                ),
+                                url.hostname
+                                if url.hostname is not None
+                                else "localhost",
+                                url.port
+                                if url.port is not None
+                                else logging.handlers.SYSLOG_UDP_PORT,
                             ),
                         )
 

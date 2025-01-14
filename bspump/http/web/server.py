@@ -632,7 +632,6 @@ class WebSink(Sink):
                 )
             )
 
-
 class JSONWebSink(Sink):
     """
     JSONWebSink is a sink that sends HTTP requests with JSON content.
