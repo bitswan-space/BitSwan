@@ -699,7 +699,7 @@ class JSONWebSink(Sink):
         for key, value in json_data.items():
             if isinstance(value, dict):  # Handle nested dictionaries
                 fields.append(
-                    """ 
+                    f""" 
                 <div class="p-2 border border-gray-100 shadow-md rounded mt-4 mb-2">
                 <h2 class="font-semibold text-lg">{key}</h2>
                 <div class="ml-4">"""
@@ -713,7 +713,7 @@ class JSONWebSink(Sink):
                 )
             elif isinstance(value, list):  # Handle lists
                 fields.append(
-                    """ 
+                    f""" 
                 <div class="p-2 border border-gray-100 shadow-md rounded mt-4 mb-2">
                 <h2 class="font-semibold text-lg">{key}</h2>
                 <div class="ml-4">"""
