@@ -221,9 +221,9 @@ class WebContainer(Configurable):
         if self.CORS != "":
             # TODO: Be more precise about "allow origin" header
             response.headers["Access-Control-Allow-Origin"] = "*"
-            response.headers[
-                "Access-Control-Allow-Methods"
-            ] = "GET, POST, DELETE, PUT, PATCH, OPTIONS"
+            response.headers["Access-Control-Allow-Methods"] = (
+                "GET, POST, DELETE, PUT, PATCH, OPTIONS"
+            )
 
     def get_ports(self) -> typing.List[str]:
         """

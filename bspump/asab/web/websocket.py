@@ -12,7 +12,6 @@ L = logging.getLogger(__name__)
 
 
 class WebSocketFactory(object):
-
     """
     wsfactory = asab.web.WebSocketFactory(self)
     websvc.WebApp.router.add_get('/api/ws', wsfactory)

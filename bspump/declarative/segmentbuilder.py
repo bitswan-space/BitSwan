@@ -146,14 +146,14 @@ class SegmentBuilder(object):
             reset=pipeline.ResetProfiler,
         )
         if isinstance(processor, bspump.analyzer.Analyzer):
-            pipeline.ProfilerCounter[
-                "analyzer_" + processor.Id
-            ] = pipeline.MetricsService.create_counter(
-                "bspump.pipeline.profiler",
-                tags={
-                    "analyzer": processor.Id,
-                    "pipeline": pipeline.Id,
-                },
-                init_values={"duration": 0.0, "run": 0},
-                reset=pipeline.ResetProfiler,
+            pipeline.ProfilerCounter["analyzer_" + processor.Id] = (
+                pipeline.MetricsService.create_counter(
+                    "bspump.pipeline.profiler",
+                    tags={
+                        "analyzer": processor.Id,
+                        "pipeline": pipeline.Id,
+                    },
+                    init_values={"duration": 0.0, "run": 0},
+                    reset=pipeline.ResetProfiler,
+                )
             )

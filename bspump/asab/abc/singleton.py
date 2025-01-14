@@ -1,5 +1,4 @@
 class Singleton(type):
-
     """
     The `singleton pattern <https://en.wikipedia.org/wiki/Singleton_pattern>`_ is a software design pattern that restricts the instantiation of a class to one object.
 

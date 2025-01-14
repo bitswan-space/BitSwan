@@ -21,7 +21,6 @@ L = logging.getLogger(__name__)
 
 
 class ZooKeeperLibraryProvider(LibraryProviderABC):
-
     """
 
     Configuration variant:

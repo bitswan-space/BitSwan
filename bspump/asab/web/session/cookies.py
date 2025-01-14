@@ -2,7 +2,6 @@ import time
 
 
 class CookieSessionMixIn(object):
-
     """
     This mixin allows to store session id in browser Cookies
     """
