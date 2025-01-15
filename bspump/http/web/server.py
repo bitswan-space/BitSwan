@@ -455,7 +455,7 @@ class WebFormSource(WebRouteSource):
         top = f"""
         <html>
         <head>
-        <script src="https://cdn.tailwindcss.com"></script>
+        <link rel="stylesheet" href="/static/css/tailwind.css">
         <script>
 
             function submitForm() {{
@@ -659,10 +659,10 @@ class JSONWebSink(Sink):
 
     def format_as_html(self, json_data):
         top = """
-        <html>
-        <head>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script>
+              <html>
+              <head>
+              <link rel="stylesheet" href="/static/css/tailwind.css">
+              <script>
 
             function submitForm() {{
                 document.getElementById("loading").style.display = "block";
