@@ -43,6 +43,7 @@ class WebServerConnection(Connection):
         self.aiohttp_app = aiohttp.web.Application(
             client_max_size=int(self.Config["max_body_size_bytes"])
         )
+        self.aiohttp_app.router.add_static("/static/", "./static", show_index=True)
         self.start_server()
 
     def start_server(self):
