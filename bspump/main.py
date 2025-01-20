@@ -77,7 +77,6 @@ class NotebookParser:
                     self._in_autopipeline = True
 
     def parse_notebook(self, ntb, out_path="tmp.py"):
-        # print(f"BLOODY TYPE {self}")
         self._cell_number = 0
         self._in_autopipeline = False
         self._cell_processor_contents = {}
@@ -96,8 +95,6 @@ def main():
     app = App()  # noqa: F405
     parser = NotebookParser()
 
-    print(f"BLOODY TYPE {type(parser)}")
-    print(parser)
     if app.Test:
         bspump.jupyter.bitswan_test_mode.append(True)
 
