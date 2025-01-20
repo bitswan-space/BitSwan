@@ -16,8 +16,11 @@ def test_notebook_parse_valid():
 
 
 def test_notebook_formatting():
-    assert False
-# def test_notebook_formatting():
-#     assert True
-# def test_notebook_formatting():
-#     assert True
+    with open("jupyter/parse_example.ipynb", "r") as ntbf:
+        ntb = json.load(ntbf)
+    NotebookParser.parse_notebook(ntb, "jupyter/tmp.py")
+    with open("jupyter/tmp.py", "r") as outf:
+        out = outf.read()
+    with open("jupyter/expected.py", "r") as expectf:
+        expect = expectf.read()
+    assert out == expect

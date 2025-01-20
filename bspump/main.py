@@ -34,7 +34,7 @@ class NotebookParser:
             lines = contents.split("\n")
             indent_lines = []
             for i, line in enumerate(lines):
-                if not multiline:
+                if not multiline and line.strip(" ") != "":
                     indent_lines.append(i)
                 if '"""' in line:
                     multiline = not multiline
@@ -55,7 +55,8 @@ class NotebookParser:
                     else cell["source"]
                 )
                 clean_code = ""
-                for line in code.split("\n"):
+                # for line in code.split("\n"):
+                for line in list(filter(None, code.split("\n"))):
                     if line.startswith("!"):
                         continue
                     clean_code += line.replace("\t", "    ") + "\n"
@@ -87,9 +88,8 @@ class NotebookParser:
 
             step_func_code = f"""@async_step
 async def processor_internal(inject, event):
-{''.join(list(cls._cell_processor_contents.values()))}
-    await inject(event)
-            """
+{''.join(list(cls._cell_processor_contents.values()))}    await inject(event)
+"""
             f.write(step_func_code)
 
 
