@@ -1,1 +1,3 @@
 include *.txt *.md
+recursive-include bspump/static *
+recursive-include data *.css
