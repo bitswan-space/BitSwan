@@ -106,12 +106,12 @@ def main():
                     notebook, out_path=f"{tmpdirname}/autopipeline_tmp.py"
                 )
                 sys.path.insert(0, tmpdirname)
-                tmp_module = __import__("autopipeline_tmp")
+                tmp_module = __import__("autopipeline_tmp")  # noqa: F405
         else:
             print(f"Notebook {app.Notebook} not found")
 
         if bspump.jupyter.bitswan_auto_pipeline.get("sink") is not None:
-            register_sink(
+            register_sink(  # noqa: F405
                 bspump.jupyter.bitswan_auto_pipeline.get("sink")
             )  # noqa: F405
             end_pipeline()  # noqa: F405
