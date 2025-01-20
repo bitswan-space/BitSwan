@@ -106,7 +106,7 @@ def main():
                     notebook, out_path=f"{tmpdirname}/autopipeline_tmp.py"
                 )
                 sys.path.insert(0, tmpdirname)
-                tmp_module = __import__("autopipeline_tmp")  # noqa: F405
+                tmp_module = __import__("autopipeline_tmp")  # noqa: F841
         else:
             print(f"Notebook {app.Notebook} not found")
 
