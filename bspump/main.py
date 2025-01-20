@@ -21,40 +21,35 @@ def contains_function_call(ast_tree, function_name):
     return False
 
 
+def indent_code(lines: list[str]) -> list[str]:
+    multiline = False
+    double_quotes = False
+    indent_lines = []
+    lines_out = []
+    for i, line in enumerate(lines):
+        if not multiline and line.strip(" ") != "":
+            indent_lines.append(i)
+        if '"""' in line or "'''" in line:
+            if not multiline:
+                double_quotes = '"""' in line
+            elif (double_quotes and "'''" in line) or (
+                not double_quotes and '"""' in line
+            ):
+                continue
+            multiline = not multiline
+            continue
+    for i in range(len(lines)):
+        _indent = "    " if i in indent_lines else ""
+        lines_out.append(_indent + lines[i])
+    return lines_out
+
+
 class NotebookParser:
     _in_autopipeline = False
-    _cell_number = 0
+    _cell_number: int = 0
     _cell_processor_contents: dict[int, str] = {}
 
-    @classmethod
-    def parse_cell(cls, cell, fout):
-        def indent_code(lines: list[str]) -> list[str]:
-            multiline = False
-            double_quotes = False
-            indent_lines = []
-            lines_out = []
-            for i, line in enumerate(lines):
-                if not multiline and line.strip(" ") != "":
-                    indent_lines.append(i)
-                if '"""' in line or "'''" in line:
-                    if not multiline:
-                        double_quotes = '"""' in line
-                    elif (double_quotes and "'''" in line) or (
-                        not double_quotes and '"""' in line
-                    ):
-                        continue
-                    multiline = not multiline
-                    continue
-            for i in range(len(lines)):
-                _indent = "    " if i in indent_lines else ""
-                lines_out.append(_indent + lines[i])
-            return lines_out
-
-        def cell_str(contents, indent=False):
-            if not indent:
-                return contents + "\n\n"
-            return "\n".join(indent_code(contents.split("\n"))) + "\n\n"
-
+    def parse_cell(self, cell, fout):
         if cell["cell_type"] == "code":
             source = cell["source"]
             if len(source) > 0 and "#ignore" not in source[0]:
@@ -70,35 +65,39 @@ class NotebookParser:
                     clean_code += re.sub(r"^\t+(?=\S)", "", line) + "\n"
                 if not clean_code:
                     return
-                if not cls._in_autopipeline:
-                    fout.write(cell_str(clean_code))
+                if not self._in_autopipeline:
+                    fout.write(clean_code + "\n\n")
                 else:
-                    cls._cell_processor_contents[cls._cell_number] = cell_str(
-                        clean_code, True
+                    self._cell_processor_contents[self._cell_number] = (
+                        "\n".join(indent_code(clean_code.split("\n"))) + "\n\n"
                     )
-                if not cls._in_autopipeline and contains_function_call(
+                if not self._in_autopipeline and contains_function_call(
                     ast.parse(clean_code), "auto_pipeline"
                 ):
-                    cls._in_autopipeline = True
+                    self._in_autopipeline = True
 
-    @classmethod
-    def parse_notebook(cls, ntb, out_path="tmp.py"):
-        cls._cell_number = 0
-        cls._in_autopipeline = False
-        cls._cell_processor_contents = {}
+    def parse_notebook(self, ntb, out_path="tmp.py"):
+        # print(f"BLOODY TYPE {self}")
+        self._cell_number = 0
+        self._in_autopipeline = False
+        self._cell_processor_contents = {}
         with open(out_path, "w") as f:
             for cell in ntb["cells"]:
-                cls._cell_number += 1
-                cls.parse_cell(cell, f)
+                self._cell_number += 1
+                self.parse_cell(cell, f)
             step_func_code = f"""@async_step
 async def processor_internal(inject, event):
-{''.join(list(cls._cell_processor_contents.values()))}    await inject(event)
+{''.join(list(self._cell_processor_contents.values()))}    await inject(event)
 """
             f.write(step_func_code)
 
 
 def main():
     app = App()  # noqa: F405
+    parser = NotebookParser()
+
+    print(f"BLOODY TYPE {type(parser)}")
+    print(parser)
     if app.Test:
         bspump.jupyter.bitswan_test_mode.append(True)
 
@@ -106,7 +105,7 @@ def main():
         if os.path.exists(app.Notebook):
             with open(app.Notebook) as nb:
                 notebook = json.load(nb)
-                NotebookParser.parse_notebook(
+                parser.parse_notebook(
                     notebook, out_path=f"{tmpdirname}/autopipeline_tmp.py"
                 )
                 sys.path.insert(0, tmpdirname)
