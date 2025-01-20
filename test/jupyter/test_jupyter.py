@@ -1,14 +1,14 @@
-from bspump.main import NotebookParser
+from bspump.main import NotebookCompiler
 import json
 import ast
 import pytest
 
 
 def test_notebook_parse_valid():
-    parser = NotebookParser()
+    compiler = NotebookCompiler()
     with open("jupyter/parse_example.ipynb", "r") as ntbf:
         ntb = json.load(ntbf)
-    parser.parse_notebook(ntb, "jupyter/tmp.py")
+    compiler.parse_notebook(ntb, "jupyter/tmp.py")
     with open("jupyter/tmp.py", "r") as outf:
         out = ast.parse(outf.read())
     with open("jupyter/expected.py", "r") as expectf:
@@ -17,10 +17,10 @@ def test_notebook_parse_valid():
 
 
 def test_notebook_formatting():
-    parser = NotebookParser()
+    compiler = NotebookCompiler()
     with open("jupyter/parse_example.ipynb", "r") as ntbf:
         ntb = json.load(ntbf)
-    parser.parse_notebook(ntb, "jupyter/tmp.py")
+    compiler.parse_notebook(ntb, "jupyter/tmp.py")
     with open("jupyter/tmp.py", "r") as outf:
         out = outf.read()
     with open("jupyter/expected.py", "r") as expectf:

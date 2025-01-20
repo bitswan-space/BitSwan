@@ -44,7 +44,7 @@ def indent_code(lines: list[str]) -> list[str]:
     return lines_out
 
 
-class NotebookParser:
+class NotebookCompiler:
     _in_autopipeline = False
     _cell_number: int = 0
     _cell_processor_contents: dict[int, str] = {}
@@ -93,7 +93,7 @@ async def processor_internal(inject, event):
 
 def main():
     app = App()  # noqa: F405
-    parser = NotebookParser()
+    compiler = NotebookCompiler()
 
     if app.Test:
         bspump.jupyter.bitswan_test_mode.append(True)
@@ -102,7 +102,7 @@ def main():
         if os.path.exists(app.Notebook):
             with open(app.Notebook) as nb:
                 notebook = json.load(nb)
-                parser.parse_notebook(
+                compiler.parse_notebook(
                     notebook, out_path=f"{tmpdirname}/autopipeline_tmp.py"
                 )
                 sys.path.insert(0, tmpdirname)
