@@ -3,6 +3,7 @@ import os
 import ast
 import sys
 import tempfile
+import re
 
 from bspump.jupyter import *  # noqa: F403
 import bspump.jupyter
@@ -27,24 +28,25 @@ class NotebookParser:
 
     @classmethod
     def parse_cell(cls, cell, fout):
-        def cell_str(contents, indent=False):
-            if not indent:
-                return contents + "\n\n"
+        def indent_code(lines: list[str]) -> list[str]:
             multiline = False
-            lines = contents.split("\n")
             indent_lines = []
+            lines_out = []
             for i, line in enumerate(lines):
                 if not multiline and line.strip(" ") != "":
                     indent_lines.append(i)
                 if '"""' in line:
                     multiline = not multiline
                     continue
-            lines_out = []
             for i in range(len(lines)):
                 _indent = "    " if i in indent_lines else ""
                 lines_out.append(_indent + lines[i])
-            # return "\n".join([f"    {line}" for line in lines]) + "\n\n"
-            return "\n".join(lines_out) + "\n\n"
+            return lines_out
+
+        def cell_str(contents, indent=False):
+            if not indent:
+                return contents + "\n\n"
+            return "\n".join(indent_code(contents.split("\n"))) + "\n\n"
 
         if cell["cell_type"] == "code":
             source = cell["source"]
@@ -55,14 +57,12 @@ class NotebookParser:
                     else cell["source"]
                 )
                 clean_code = ""
-                # for line in code.split("\n"):
                 for line in list(filter(None, code.split("\n"))):
                     if line.startswith("!"):
                         continue
-                    clean_code += line.replace("\t", "    ") + "\n"
+                    clean_code += re.sub(r"^\t+(?=\S)", "", line) + "\n"
                 if not clean_code:
                     return
-                    # if bspump.jupyter.bitswan_auto_pipeline.get("sink") is not None:
                 if not cls._in_autopipeline:
                     fout.write(cell_str(clean_code))
                 else:
@@ -83,9 +83,6 @@ class NotebookParser:
             for cell in ntb["cells"]:
                 cls._cell_number += 1
                 cls.parse_cell(cell, f)
-            # for cell_number, pcell in cls._cell_processor_contents:
-            # j = ''.join(list(cls._cell_processor_contents.values()))
-
             step_func_code = f"""@async_step
 async def processor_internal(inject, event):
 {''.join(list(cls._cell_processor_contents.values()))}    await inject(event)
