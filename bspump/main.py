@@ -76,7 +76,7 @@ class NotebookCompiler:
                 ):
                     self._in_autopipeline = True
 
-    def parse_notebook(self, ntb, out_path="tmp.py"):
+    def compile_notebook(self, ntb, out_path="tmp.py"):
         self._cell_number = 0
         self._in_autopipeline = False
         self._cell_processor_contents = {}
@@ -102,7 +102,7 @@ def main():
         if os.path.exists(app.Notebook):
             with open(app.Notebook) as nb:
                 notebook = json.load(nb)
-                compiler.parse_notebook(
+                compiler.compile_notebook(
                     notebook, out_path=f"{tmpdirname}/autopipeline_tmp.py"
                 )
                 sys.path.insert(0, tmpdirname)

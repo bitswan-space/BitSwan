@@ -8,7 +8,7 @@ def test_notebook_parse_valid():
     compiler = NotebookCompiler()
     with open("jupyter/parse_example.ipynb", "r") as ntbf:
         ntb = json.load(ntbf)
-    compiler.parse_notebook(ntb, "jupyter/tmp.py")
+    compiler.compile_notebook(ntb, "jupyter/tmp.py")
     with open("jupyter/tmp.py", "r") as outf:
         out = ast.parse(outf.read())
     with open("jupyter/expected.py", "r") as expectf:
@@ -20,7 +20,7 @@ def test_notebook_formatting():
     compiler = NotebookCompiler()
     with open("jupyter/parse_example.ipynb", "r") as ntbf:
         ntb = json.load(ntbf)
-    compiler.parse_notebook(ntb, "jupyter/tmp.py")
+    compiler.compile_notebook(ntb, "jupyter/tmp.py")
     with open("jupyter/tmp.py", "r") as outf:
         out = outf.read()
     with open("jupyter/expected.py", "r") as expectf:
