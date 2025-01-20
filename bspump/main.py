@@ -30,12 +30,19 @@ class NotebookParser:
     def parse_cell(cls, cell, fout):
         def indent_code(lines: list[str]) -> list[str]:
             multiline = False
+            double_quotes = False
             indent_lines = []
             lines_out = []
             for i, line in enumerate(lines):
                 if not multiline and line.strip(" ") != "":
                     indent_lines.append(i)
-                if '"""' in line:
+                if '"""' in line or "'''" in line:
+                    if not multiline:
+                        double_quotes = '"""' in line
+                    elif (double_quotes and "'''" in line) or (
+                        not double_quotes and '"""' in line
+                    ):
+                        continue
                     multiline = not multiline
                     continue
             for i in range(len(lines)):
