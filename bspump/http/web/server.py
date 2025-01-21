@@ -43,8 +43,8 @@ class WebServerConnection(Connection):
         self.aiohttp_app = aiohttp.web.Application(
             client_max_size=int(self.Config["max_body_size_bytes"])
         )
-        static_dir = str(files('bspump').joinpath('static'))
-        # Use the directory in your aiohttp app
+        static_dir = str(files('bspump').joinpath('static/css'))
+        print(static_dir)
         self.aiohttp_app.router.add_static("/static/", static_dir, show_index=True)
         self.start_server()
 
@@ -458,7 +458,7 @@ class WebFormSource(WebRouteSource):
         top = f"""
         <html>
         <head>
-        <link rel="stylesheet" href="/static/css/tailwind.css">
+        <link rel="stylesheet" href="/static/tailwind.css">
         <script>
 
             function submitForm() {{
@@ -664,7 +664,7 @@ class JSONWebSink(Sink):
         top = """
               <html>
               <head>
-              <link rel="stylesheet" href="/static/css/tailwind.css">
+              <link rel="stylesheet" href="/static/tailwind.css">
               <script>
 
                   function submitForm() {
