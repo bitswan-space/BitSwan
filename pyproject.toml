@@ -8,9 +8,6 @@ authors = [
 ]
 dynamic = ["version"]
 
-
-
-
 dependencies = [
         "pyasn1==0.4.8",  # version 0.5.0 is not compatible with pysnmp
         "aiohttp>=3.8.3",
@@ -76,6 +73,9 @@ allow-direct-references=true
 
 [tool.hatch.build.targets.wheel]
 packages = ["bspump"]
+include = [
+    "static/**/*"
+]
 
 [tool.hatch.version]
 source = "versioningit"
