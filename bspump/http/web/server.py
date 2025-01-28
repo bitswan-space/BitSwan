@@ -12,6 +12,7 @@ from ...abc.connection import Connection
 
 import aiohttp.web
 from aiohttp.web import Request
+from importlib.resources import files
 
 
 L = logging.getLogger(__name__)
@@ -42,6 +43,9 @@ class WebServerConnection(Connection):
         self.aiohttp_app = aiohttp.web.Application(
             client_max_size=int(self.Config["max_body_size_bytes"])
         )
+        static_dir = str(files("bspump").joinpath("static/css"))
+        print(static_dir)
+        self.aiohttp_app.router.add_static("/static/", static_dir, show_index=True)
         self.start_server()
 
     def start_server(self):
@@ -454,7 +458,7 @@ class WebFormSource(WebRouteSource):
         top = f"""
         <html>
         <head>
-        <script src="https://cdn.tailwindcss.com"></script>
+        <link rel="stylesheet" href="/static/tailwind.css">
         <script>
 
             function submitForm() {{
@@ -660,7 +664,7 @@ class JSONWebSink(Sink):
         top = """
               <html>
               <head>
-              <script src="https://cdn.tailwindcss.com"></script>
+              <link rel="stylesheet" href="/static/tailwind.css">
               <script>
 
                   function submitForm() {
