@@ -70,7 +70,7 @@ class DevRuntime:
         self.events = new_eventss
 
 
-def auto_pipeline(source=None, sink=None):
+def auto_pipeline(source=None, sink=None, name=None):
     if source is None:
         raise Exception(
             "When calling auto_pipeline must specify a function that returns a source."
@@ -81,7 +81,8 @@ def auto_pipeline(source=None, sink=None):
         )
 
     global __bitswan_autopipeline_count
-    new_pipeline(f"auto_pipeline_{__bitswan_autopipeline_count}")
+    pipeline_name = name or f"auto_pipeline_{__bitswan_autopipeline_count}"
+    new_pipeline(pipeline_name)
     __bitswan_autopipeline_count += 1
 
     import inspect
