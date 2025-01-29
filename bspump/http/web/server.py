@@ -467,6 +467,7 @@ class WebFormSource(WebRouteSource):
         <script>
 
             function submitForm() {{
+                // check for required fields and submit in case of satisfied required fields
                 let isValid = true;
                 let requiredFields = document.getElementById("main-form").querySelectorAll("[required]");
             
