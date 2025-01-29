@@ -88,6 +88,7 @@ def auto_pipeline(source=None, sink=None, name=None):
     new_pipeline(pipeline_name)
     __bitswan_autopipeline_count += 1
     import inspect
+
     frame = inspect.currentframe()
     register_source(source, test_events=frame.f_back.f_locals.get("test_events"))
     bitswan_auto_pipeline["sink"] = sink
