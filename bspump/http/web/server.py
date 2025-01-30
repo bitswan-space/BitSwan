@@ -336,7 +336,11 @@ class FileField(Field):
             decoded_data = base64.b64decode(data.get(self.name, ""))
             data[self.name] = BytesIO(decoded_data)
         else:
-            data[self.name] = data[self.name].file
+            # in case of not submitting any file
+            if data[self.name] == b"":
+                data[self.name] = BytesIO(b"")
+            else:
+                data[self.name] = data[self.name].file
 
 
 class RawJSONField(Field):
