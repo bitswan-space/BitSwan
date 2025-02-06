@@ -219,7 +219,12 @@ class Field:
             readonly = "readonly"
         else:
             readonly = ""
-        return f'name="{self.field_name}" id="{self.field_name}" {readonly}'
+
+        if self.required:
+            required = 'required aria-required="true"'
+        else:
+            required = ""
+        return f'name="{self.field_name}" id="{self.field_name}" {readonly} {required}'
 
     def restructure_data(self, dfrom, dto):
         dto[self.name] = dfrom.get(self.field_name, self.default)
@@ -331,7 +336,11 @@ class FileField(Field):
             decoded_data = base64.b64decode(data.get(self.name, ""))
             data[self.name] = BytesIO(decoded_data)
         else:
-            data[self.name] = data[self.name].file
+            # in case of not submitting any file
+            if data[self.name] == b"":
+                data[self.name] = BytesIO(b"")
+            else:
+                data[self.name] = data[self.name].file
 
 
 class RawJSONField(Field):
@@ -462,6 +471,23 @@ class WebFormSource(WebRouteSource):
         <script>
 
             function submitForm() {{
+                // check for required fields and submit in case of satisfied required fields
+                let isValid = true;
+                let requiredFields = document.getElementById("main-form").querySelectorAll("[required]");
+            
+                requiredFields.forEach(field => {{
+                        if (!field.value.trim()) {{
+                            isValid = false;
+                            field.style.border = "2px solid red"; // Highlight empty fields
+                        }} else {{
+                            field.style.border = ""; // Reset style
+                        }}
+                    }});
+
+                if (!isValid) {{
+                    alert("All required fields must be filled.");
+                    return ;
+                }}
                 document.getElementById("loading").style.display = "block";
                 document.getElementById("main-form").submit();
             }}
