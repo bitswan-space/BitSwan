@@ -223,7 +223,6 @@ class FieldSet(BaseField):
 
 class Field(BaseField):
     def __init__(self, name, **kwargs):
-        # self.name = name
         if "___" in name:
             raise ValueError("Field name cannot contain '___'")
         su = super()
@@ -412,7 +411,7 @@ class WebFormSource(WebRouteSource):
         self.generate_fields = None
         if isinstance(fields, list):
             self.fields = fields
-        elif isinstance(Callable[[Request], list[BaseField]], fields):
+        elif isinstance(fields, Callable):
             self.generate_fields = fields
         else:
             raise ValueError(
@@ -427,19 +426,7 @@ class WebFormSource(WebRouteSource):
             self.fields = self.generate_fields(request)
         if request.content_type == "application/json":
             defaults = self.extract_defaults(request)
-            print(f"Extracted defaults: {defaults}")
             field_info = {f.name: f.get_params(defaults) for f in self.fields}
-            # for field in self.fields:
-            #     if isinstance(field, FieldSet):
-            #         field_info[field.name] = {sf.name: {
-            #             "type": str(type(sf)),
-            #             "description": sf.description
-            #         } for sf in field.fields}
-            #     else:
-            #         field_info[field.name] = {
-            #             "type": str(type(field)),
-            #             "description": field.description
-            #         }
             return aiohttp.web.json_response(field_info)
         return aiohttp.web.Response(
             text=self.render_form(request),
