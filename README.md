@@ -80,7 +80,8 @@ In case you do not want to use `auto_pipeline` function, you can define pipeline
         ])
     ```
 3) Define behaviour of pipeline by using decorator `@async_step` and `@step` for asynchronous and synchronous steps.
-4) Lastly define the data sink of pipeline using `@register_sink` decorator
+4) Define the data sink of pipeline using `@register_sink` decorator
+5) Lastly define the end of the pipeline using `end_pipeline()`
 
 Running pipelines
 --------------------
