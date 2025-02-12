@@ -3,6 +3,7 @@ import asyncio
 import json
 import jwt
 from jwt.exceptions import ExpiredSignatureError, DecodeError
+from typing import Callable
 import base64
 from io import BytesIO
 
@@ -132,7 +133,7 @@ class ProtectedWebRouteSource(WebRouteSource):
     Web route source that requires a secret in a qparam or in the BearerToken.
     """
 
-    async def handle_request(self, request):
+    async def handle_request(self, request: Request):
         try:
 
             async def response_fn():
@@ -152,23 +153,45 @@ class ProtectedWebRouteSource(WebRouteSource):
             return aiohttp.web.Response(status=500)
 
 
-class FieldSet:
+class BaseField:
+    def __init__(self, name, **kwargs):
+        self.name = name
+        self.hidden: bool = kwargs.get("hidden", False)
+        self.required: bool = kwargs.get("required", True)
+        self.display: str = kwargs.get("display", self.name)
+        self.description: str = kwargs.get("description", "")
+        self.default = kwargs.get("default", "")
+
+    def html(self, defaults) -> str:
+        pass
+
+    def get_params(self, defaults) -> dict:
+        pass
+
+    def restructure_data(self, dfrom, dto):
+        pass
+
+    def clean(self, data, request: Request = None):
+        pass
+
+
+class FieldSet(BaseField):
     def __init__(self, name, fields=None, fieldset_intro="", display="", required=True):
+        su = super()
         self.fields = fields
         if fields is None:
             self.fields = []
-        self.name = name
-        self.default = {}
+        su.__init__(name, required=required)
         self.display = display if display else name
+        self.default = {}
         self.fieldset_intro = fieldset_intro
-        self.required: bool = required
         self.prefix = f"fieldset___{self.name}___"
 
     def set_subfield_names(self):
         for field in self.fields:
             field.field_name = f"{self.prefix}{field.name}"
 
-    def html(self, defaults, *args, **kwargs):
+    def html(self, defaults={}):
         fields = ""
         self.set_subfield_names()
         for field in self.fields:
@@ -181,26 +204,30 @@ class FieldSet:
         </div>
         """
 
+    def get_params(self, defaults) -> dict:
+        params = {}
+        for field in self.fields:
+            params[field.name] = field.get_params(defaults.get(field.name, ""))
+        return params
+
     def restructure_data(self, dfrom, dto):
         self.set_subfield_names()
         dto[self.name] = {}
         for field in self.fields:
             field.restructure_data(dfrom, dto[self.name])
 
-    def clean(self, data, request=None):
+    def clean(self, data, request: Request = None):
         for field in self.fields:
             field.clean(data[self.name])
 
 
-class Field:
+class Field(BaseField):
     def __init__(self, name, **kwargs):
-        self.name = name
         if "___" in name:
             raise ValueError("Field name cannot contain '___'")
-        self.hidden: bool = kwargs.get("hidden", False)
+        su = super()
+        su.__init__(name, **kwargs)
         self.readonly: bool = kwargs.get("readonly", False)
-        self.required: bool = kwargs.get("required", True)
-        self.display: str = kwargs.get("display", self.name)
         self.default = kwargs.get("default", "")
         self.field_name: str = f"f___{self.name}"
         self.default_classes = kwargs.get(
@@ -229,7 +256,7 @@ class Field:
     def restructure_data(self, dfrom, dto):
         dto[self.name] = dfrom.get(self.field_name, self.default)
 
-    def clean(self, data, request=None):
+    def clean(self, data, request: Request | None = None):
         pass
 
     def html(self, default=""):
@@ -244,6 +271,9 @@ class Field:
         </div>
         </div>
         """
+
+    def get_params(self, default="") -> dict:
+        return {self.name: {"type": str(type(self)), "description": self.description}}
 
 
 class TextField(Field):
@@ -284,7 +314,7 @@ class CheckboxField(Field):
                     <input type="checkbox" {"checked" if default == True or (default and default.lower() in ("true", "t")) else ""} class="{self.default_classes}" {self.default_input_props} {readonly_attr}>
                 """
 
-    def clean(self, data, request=None):
+    def clean(self, data, request: Request | None = None):
         if type(data.get(self.name)) == str:
             data[self.name] = data.get(self.name, False) == "on"
 
@@ -299,7 +329,7 @@ class IntField(Field):
         </div>
         """
 
-    def clean(self, data, request=None):
+    def clean(self, data, request: Request | None = None):
         if type(data.get(self.name)) == str:
             data[self.name] = int(data.get(self.name, 0))
 
@@ -314,7 +344,7 @@ class FloatField(Field):
         </div>
         """
 
-    def clean(self, data, request=None):
+    def clean(self, data, request: Request | None = None):
         if type(data.get(self.name)) == str:
             data[self.name] = float(data.get(self.name, 0))
 
@@ -331,7 +361,7 @@ class FileField(Field):
         </div>
         """
 
-    def clean(self, data, request=None):
+    def clean(self, data, request: Request | None = None):
         if request.content_type == "application/json":
             decoded_data = base64.b64decode(data.get(self.name, ""))
             data[self.name] = BytesIO(decoded_data)
@@ -351,7 +381,7 @@ class RawJSONField(Field):
       </div>
       """
 
-    def clean(self, data, request=None):
+    def clean(self, data, request: Request | None = None):
         if type(data.get(self.name)) == str:
             data[self.name] = json.loads(data.get(self.name, "{}"))
 
@@ -363,7 +393,7 @@ class WebFormSource(WebRouteSource):
         pipeline,
         connection="DefaultWebServerConnection",
         route="/",
-        fields: Field = None,
+        fields: list[BaseField] | Callable[[Request], list[BaseField]] = lambda r: [],
         id=None,
         config=None,
         form_intro="",
@@ -377,15 +407,35 @@ class WebFormSource(WebRouteSource):
             id=id,
             config=config,
         )
-        self.fields = fields
+        self.fields = []
+        self.generate_fields = None
+        if isinstance(fields, list):
+            self.fields = fields
+        elif isinstance(fields, Callable):
+            self.generate_fields = fields
+        else:
+            raise ValueError(
+                f"incorrect type {type(fields)}. Expected list[Field] or Callable[[Request] -> list[Field]]"
+            )
+
         self.form_intro = form_intro
         self.aiohttp_app.router.add_route("POST", route, self.handle_post)
 
-    async def handle_request(self, request):
+    async def handle_request(self, request: Request):
+        if self.generate_fields:
+            self.fields = self.generate_fields(request)
+        if request.content_type == "application/json":
+            defaults = self.extract_defaults(request)
+            field_info = {f.name: f.get_params(defaults) for f in self.fields}
+            return aiohttp.web.json_response(field_info)
         return aiohttp.web.Response(
             text=self.render_form(request),
             content_type="text/html",
         )
+
+    def load_fields(self, request: Request):
+        if self.generate_fields:
+            self.fields = self.generate_fields(request)
 
     def validate_field_presence(self, data, fields=None):
         if not fields:
@@ -396,7 +446,7 @@ class WebFormSource(WebRouteSource):
             if field.required and hasattr(field, "fields"):
                 self.validate_field_presence(data[field.name], field.fields)
 
-    async def extract_data(self, request):
+    async def extract_data(self, request: Request):
         if request.content_type == "application/json":
             data = await request.json()
         else:
@@ -406,7 +456,7 @@ class WebFormSource(WebRouteSource):
                 field.restructure_data(dfrom, data)
         return data
 
-    async def clean_and_process(self, request, data):
+    async def clean_and_process(self, request: Request, data):
         for field in self.fields:
             try:
                 field.clean(data, request=request)
@@ -442,7 +492,7 @@ class WebFormSource(WebRouteSource):
             )
         return await self.clean_and_process(request, data)
 
-    def extract_defaults(self, request):
+    def extract_defaults(self, request: Request):
         defaults = {}
         for query_param, value in request.query.items():
             if "___" in query_param:
@@ -455,7 +505,7 @@ class WebFormSource(WebRouteSource):
                 current_dict[parts[-1]] = value
         return defaults
 
-    def render_form(self, request, errors={}):
+    def render_form(self, request: Request, errors={}):
         defaults = self.extract_defaults(request)
 
         for field in self.fields:
@@ -527,7 +577,7 @@ class WebFormSource(WebRouteSource):
 
 
 class ProtectedWebFormSource(WebFormSource):
-    async def handle_request(self, request):
+    async def handle_request(self, request: Request):
         su = super()
 
         async def response_fn():
@@ -540,7 +590,7 @@ class ProtectedWebFormSource(WebFormSource):
     def test_secret(self, secret):
         return secret == self.Config["secret"]
 
-    async def handle_post(self, request):
+    async def handle_post(self, request: Request):
         su = super()
 
         async def response_fn():
@@ -594,7 +644,7 @@ class JWTWebFormSource(ProtectedWebFormSource):
             return False
         return True
 
-    def extract_defaults(self, request):
+    def extract_defaults(self, request: Request):
         su = super()
         defaults = su.extract_defaults(request)
         defaults = recursive_merge(
@@ -605,7 +655,7 @@ class JWTWebFormSource(ProtectedWebFormSource):
         )
         return defaults
 
-    async def handle_post(self, request):
+    async def handle_post(self, request: Request):
         try:
             data = await self.extract_data(request)
         except json.decoder.JSONDecodeError:
