@@ -199,7 +199,7 @@ class Field:
             raise ValueError("Field name cannot contain '___'")
         self.hidden: bool = kwargs.get("hidden", False)
         self.readonly: bool = kwargs.get("readonly", False)
-        self.required: bool = kwargs.get("required", True)
+        self.required: bool = kwargs.get("required", False)
         self.display: str = kwargs.get("display", self.name)
         self.default = kwargs.get("default", "")
         self.field_name: str = f"f___{self.name}"
