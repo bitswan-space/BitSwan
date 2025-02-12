@@ -691,8 +691,8 @@ class JSONWebSink(Sink):
                  <html>
                  <head>
                  <link rel="stylesheet" href="/static/tailwind.css">
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js">
-                </script>
+                 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js">
+                 </script>
                  </head>
                  <BODY>
                  <form id="main-form" method="post">
@@ -706,11 +706,11 @@ class JSONWebSink(Sink):
                  <div class="space-y-12">
                  <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 bg-gray shadow sm:rounded-lg">
                  <h1 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-4">Results</h1>
-               <button id="downloadButton" class="bg-blue-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-700">
+                 <button id="downloadButton" class="bg-blue-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-700">
                        Download as PDF
-                   </button>
+                 </button>
 
-                   <script>
+                 <script>
                      document.getElementById('downloadButton').addEventListener('click', function() {
                        const element = document.getElementById('main-form');
                        const options = {
@@ -722,8 +722,8 @@ class JSONWebSink(Sink):
                        };            
                        html2pdf().set(options).from(element).save();
                      });
-                   </script>              
-                   """
+                 </script>              
+                """
 
         bottom = """
               </div>
