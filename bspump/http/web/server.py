@@ -688,30 +688,42 @@ class JSONWebSink(Sink):
 
     def render_html_output(self, json_data):
         top = """
-              <html>
-              <head>
-              <link rel="stylesheet" href="/static/tailwind.css">
-              <script>
+                 <html>
+                 <head>
+                 <link rel="stylesheet" href="/static/tailwind.css">
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js">
+                </script>
+                 </head>
+                 <BODY>
+                 <form id="main-form" method="post">
+                 <div id="loading" style="display:none">
+                     <div class="fixed top-0 left-0 h-screen w-screen bg-black bg-opacity-50 z-50 flex justify-center items-center">
+                         <div class="bg-white p-4 rounded-lg">
+                             <div class="text-center">Processing...</div>
+                         </div>
+                     </div>
+                 </div>
+                 <div class="space-y-12">
+                 <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 bg-gray shadow sm:rounded-lg">
+                 <h1 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-4">Results</h1>
+               <button id="downloadButton" class="bg-blue-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-700">
+                       Download as PDF
+                   </button>
 
-                  function submitForm() {
-                      document.getElementById("loading").style.display = "block";
-                      document.getElementById("main-form").submit();
-                  }
-              </script>
-              </head>
-              <BODY>
-              <form id="main-form" method="post">
-              <div id="loading" style="display:none">
-                  <div class="fixed top-0 left-0 h-screen w-screen bg-black bg-opacity-50 z-50 flex justify-center items-center">
-                      <div class="bg-white p-4 rounded-lg">
-                          <div class="text-center">Processing...</div>
-                      </div>
-                  </div>
-              </div>
-              <div class="space-y-12">
-              <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 bg-gray shadow sm:rounded-lg">
-              <h1 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-4">Results</h1>
-              """
+                   <script>
+                     document.getElementById('downloadButton').addEventListener('click', function() {
+                       const element = document.getElementById('main-form');
+                       const options = {
+                         margin: 1,
+                         filename: 'my-document.pdf',
+                         image: { type: 'jpeg', quality: 0.98 },
+                         html2canvas: { scale: 2 },
+                         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+                       };            
+                       html2pdf().set(options).from(element).save();
+                     });
+                   </script>              
+                   """
 
         bottom = """
               </div>
