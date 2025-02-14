@@ -522,66 +522,13 @@ class WebFormSource(WebRouteSource):
             elif field.name not in defaults:
                 defaults[field.name] = field.default
 
-        top = f"""
-        <html>
-        <head>
-        <link rel="stylesheet" href="/static/tailwind.css">
-        <script>
-
-            function submitForm() {{
-                // check for required fields and submit in case of satisfied required fields
-                let isValid = true;
-                let requiredFields = document.getElementById("main-form").querySelectorAll("[required]");
-            
-                requiredFields.forEach(field => {{
-                        if (!field.value.trim()) {{
-                            isValid = false;
-                            field.style.border = "2px solid red"; // Highlight empty fields
-                        }} else {{
-                            field.style.border = ""; // Reset style
-                        }}
-                    }});
-
-                if (!isValid) {{
-                    alert("All required fields must be filled.");
-                    return ;
-                }}
-                document.getElementById("loading").style.display = "block";
-                document.getElementById("main-form").submit();
-            }}
-        </script>
-        </head>
-        <BODY>
-        <form id="main-form" method="post" enctype="multipart/form-data">
-        <div id="loading" style="display:none">
-            <div class="fixed top-0 left-0 h-screen w-screen bg-black bg-opacity-50 z-50 flex justify-center items-center">
-                <div class="bg-white p-4 rounded-lg">
-                    <div class="text-center">Processing...</div>
-                </div>
-            </div>
-        </div>
-        <div class="space-y-12">
-        <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 bg-gray shadow sm:rounded-lg">
-        {self.form_intro}
-        """
-        fields = ""
-        for field in self.fields:
-            fields += field.html(defaults[field.name])
-            if field.name in errors:
-                fields += f'<div class="text-red-500">{errors[field.name]}</div>'
-        bottom = """
-        <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
-        <div class="sm:col-span-4">
-        <button type="button" onclick=submitForm() class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Submit</button>
-        </div>
-        </div>
-        </div>
-        </div>
-        </form>
-        </body>
-        </html>
-        """
-        return top + fields + bottom
+        template = env.get_template("source-form.html")
+        return template.render(
+            form_intro=self.form_intro,
+            fields=self.fields,
+            defaults=defaults,
+            errors=errors
+        )
 
 
 class ProtectedWebFormSource(WebFormSource):
