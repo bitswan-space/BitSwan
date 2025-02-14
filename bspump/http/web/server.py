@@ -221,6 +221,7 @@ class FieldSet(BaseField):
 
 class Field(BaseField):
     def __init__(self, name, **kwargs):
+        super().__init__(name, **kwargs)
         if "___" in name:
             raise ValueError("Field name cannot contain '___'")
         su = super()
