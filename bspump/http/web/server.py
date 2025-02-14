@@ -291,16 +291,13 @@ class ChoiceField(Field):
         self.choices = choices
 
     def inner_html(self, default="", readonly=False):
-        return f"""
-        <div class="mt-1">
-            <select class="{self.default_classes}" value="{default}" {self.default_input_props}>
-                {"".join(
-                    f'<option value="{choice}" {"selected" if choice == default else ""}>{choice}</option>'
-                    for choice in self.choices
-                )}
-            </select>
-        </div>
-        """
+        template = env.get_template("choice-field.html")
+        return template.render(
+            default=default,
+            choices=self.choices,
+            default_classes=self.default_classes,
+            default_input_props=self.default_input_props,
+        )
 
 
 class CheckboxField(Field):

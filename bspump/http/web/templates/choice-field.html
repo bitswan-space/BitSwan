@@ -1,0 +1,7 @@
+<div class="mt-1">
+    <select class="{{ default_classes }}" value="{{ default }}" {{ default_input_props|safe }}>
+        {% for choice in choices %}
+            <option value="{{ choice }}" {% if choice == default %}selected{% endif %}>{{ choice }}</option>
+        {% endfor %}
+    </select>
+</div>
