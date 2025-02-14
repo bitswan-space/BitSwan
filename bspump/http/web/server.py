@@ -6,6 +6,7 @@ from jwt.exceptions import ExpiredSignatureError, DecodeError
 from typing import Callable
 import base64
 from io import BytesIO
+from jinja2 import Environment, FileSystemLoader
 
 from ...abc.source import Source
 from ...abc.sink import Sink
@@ -17,7 +18,7 @@ from importlib.resources import files
 
 
 L = logging.getLogger(__name__)
-
+env = Environment(loader=FileSystemLoader("bspump/http/web/templates"))
 
 def recursive_merge(dict1, dict2):
     for key, value in dict2.items():
@@ -176,7 +177,8 @@ class BaseField:
 
 
 class FieldSet(BaseField):
-    def __init__(self, name, fields=None, fieldset_intro="", display="", required=True):
+    def __init__(self, name, fields=None, fieldset_intro="", display="", required=True, **kwargs):
+        super().__init__(name, **kwargs)
         su = super()
         self.fields = fields
         if fields is None:
@@ -192,23 +194,17 @@ class FieldSet(BaseField):
             field.field_name = f"{self.prefix}{field.name}"
 
     def html(self, defaults={}):
-        fields = ""
         self.set_subfield_names()
-        for field in self.fields:
-            fields += field.html(defaults.get(field.name, field.default))
-        return f"""
-        <div style="margin-left: 20px; border-left: 1px solid black; padding-left: 10px;margin-top: 30px;">
-            <legend><b>{self.display}</b></legend>
-            {self.fieldset_intro}
-            {fields}
-        </div>
-        """
+        fields_html = [field.html(defaults.get(field.name, field.default)) for field in self.fields]
+        template = env.get_template("fieldset.html")
+        return template.render(display=self.display, fieldset_intro=self.fieldset_intro, fields=fields_html)
+
 
     def get_params(self, defaults) -> dict:
-        params = {}
-        for field in self.fields:
-            params[field.name] = field.get_params(defaults.get(field.name, ""))
-        return params
+            params = {}
+            for field in self.fields:
+                params[field.name] = field.get_params(defaults.get(field.name, ""))
+            return params
 
     def restructure_data(self, dfrom, dto):
         self.set_subfield_names()
