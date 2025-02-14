@@ -362,11 +362,11 @@ class FileField(Field):
     """
 
     def inner_html(self, default="", readonly=False):
-        return f"""
-        <div class="mt-1">
-            <input type="file" class="{self.default_classes}" {self.default_input_props}>
-        </div>
-        """
+        template = env.get_template("file-field.html")
+        return template.render(
+            default_input_props=self.default_input_props,
+            default_classes=self.default_classes,
+        )
 
     def clean(self, data, request: Request | None = None):
         if request.content_type == "application/json":
