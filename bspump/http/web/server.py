@@ -20,6 +20,7 @@ from importlib.resources import files
 L = logging.getLogger(__name__)
 env = Environment(loader=FileSystemLoader("bspump/http/web/templates"))
 
+
 def recursive_merge(dict1, dict2):
     for key, value in dict2.items():
         if key in dict1 and isinstance(dict1[key], dict) and isinstance(value, dict):
@@ -195,6 +196,7 @@ class FieldSet(BaseField):
 
     def html(self, defaults={}):
         self.set_subfield_names()
+        self.set_subfield_names()
         fields_html = [field.html(defaults.get(field.name, field.default)) for field in self.fields]
         template = env.get_template("fieldset.html")
         return template.render(display=self.display, fieldset_intro=self.fieldset_intro, fields=fields_html)
@@ -258,15 +260,15 @@ class Field(BaseField):
     def html(self, default=""):
         if not default:
             default = self.default
-        return f"""
 
-      <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6" style='{'display: none' if self.hidden else ''}'>
-        <div class="sm:col-span-4">
-                <label for="{self.field_name}" class="block text-sm font-bold text-gray-700">{self.display}</label>
-                {self.inner_html(default, self.readonly)}
-        </div>
-        </div>
-        """
+        template = env.get_template("field.html")
+        return template.render(
+            field_name=self.field_name,
+            display=self.display,
+            default_classes=self.default_classes,
+            hidden=self.hidden,
+            inner_html=self.inner_html(default, self.readonly),
+        )
 
     def get_params(self, default="") -> dict:
         return {self.name: {"type": str(type(self)), "description": self.description}}
