@@ -45,7 +45,6 @@ class WebServerConnection(Connection):
             client_max_size=int(self.Config["max_body_size_bytes"])
         )
         static_dir = str(files("bspump").joinpath("static/css"))
-        print(static_dir)
         self.aiohttp_app.router.add_static("/static/", static_dir, show_index=True)
         self.start_server()
 
@@ -738,30 +737,46 @@ class JSONWebSink(Sink):
 
     def render_html_output(self, json_data):
         top = """
-              <html>
-              <head>
-              <link rel="stylesheet" href="/static/tailwind.css">
-              <script>
+                 <html>
+                 <head>
+                 <link rel="stylesheet" href="/static/tailwind.css">
+                 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js">
+                 </script>
+                 </head>
+                 <BODY>
+                 <div class="ml-8 mt-8">
+                    <button id="downloadButton" class="bg-blue-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-700">
+                       Download as PDF
+                    </button>
+                 </div>
+                 <form id="main-form" method="post">
+                 <div id="loading" style="display:none">
+                     <div class="fixed top-0 left-0 h-screen w-screen bg-black bg-opacity-50 z-50 flex justify-center items-center">
+                         <div class="bg-white p-4 rounded-lg">
+                             <div class="text-center">Processing...</div>
+                         </div>
+                     </div>
+                 </div>
+                 <div class="space-y-12">
+                 <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 bg-gray shadow sm:rounded-lg">
+                 <h1 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-4">Results</h1>
+                 <script>
+                     document.getElementById('downloadButton').addEventListener('click', function() {
+                       const element = document.getElementById('main-form');
+                       const currentDate = new Date();
+                       const filename = `document_${currentDate.getFullYear()}_${currentDate.getMonth() + 1}_${currentDate.getDate()}_${currentDate.getHours()}${currentDate.getMinutes()}.pdf`;
 
-                  function submitForm() {
-                      document.getElementById("loading").style.display = "block";
-                      document.getElementById("main-form").submit();
-                  }
-              </script>
-              </head>
-              <BODY>
-              <form id="main-form" method="post">
-              <div id="loading" style="display:none">
-                  <div class="fixed top-0 left-0 h-screen w-screen bg-black bg-opacity-50 z-50 flex justify-center items-center">
-                      <div class="bg-white p-4 rounded-lg">
-                          <div class="text-center">Processing...</div>
-                      </div>
-                  </div>
-              </div>
-              <div class="space-y-12">
-              <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 bg-gray shadow sm:rounded-lg">
-              <h1 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-4">Results</h1>
-              """
+                       const options = {
+                         margin: 1,
+                         filename: filename,
+                         image: { type: 'jpeg', quality: 0.98 },
+                         html2canvas: { scale: 2 },
+                         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+                       };            
+                       html2pdf().set(options).from(element).save();
+                     });
+                 </script>              
+                """
 
         bottom = """
               </div>
