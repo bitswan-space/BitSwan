@@ -713,9 +713,12 @@ class JSONWebSink(Sink):
                  <script>
                      document.getElementById('downloadButton').addEventListener('click', function() {
                        const element = document.getElementById('main-form');
+                       const currentDate = new Date();
+                       const filename = `document_${currentDate.getFullYear()}_${currentDate.getMonth() + 1}_${currentDate.getDate()}_${currentDate.getHours()}${currentDate.getMinutes()}.pdf`;
+
                        const options = {
                          margin: 1,
-                         filename: 'my-document.pdf',
+                         filename: filename,
                          image: { type: 'jpeg', quality: 0.98 },
                          html2canvas: { scale: 2 },
                          jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
