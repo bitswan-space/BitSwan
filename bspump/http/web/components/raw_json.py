@@ -2,7 +2,7 @@ from aiohttp.web import Request
 import json
 
 from bspump.http.web.components.field import Field
-from bspump.http.web.server import env
+from bspump.http.web.template_env import env
 
 
 class RawJSONField(Field):

@@ -4,7 +4,6 @@ import json
 import jwt
 from jwt.exceptions import ExpiredSignatureError, DecodeError
 from typing import Callable
-from jinja2 import Environment, FileSystemLoader
 
 from .components.base_field import BaseField
 from .components.field import Field
@@ -12,6 +11,7 @@ from .components.float_field import FloatField
 from .components.int_field import IntField
 from .components.checkbox_field import CheckboxField
 from .components.text_field import TextField
+from .template_env import env
 
 from ...abc.source import Source
 from ...abc.sink import Sink
@@ -22,8 +22,6 @@ from aiohttp.web import Request
 from importlib.resources import files
 
 L = logging.getLogger(__name__)
-env = Environment(loader=FileSystemLoader("bspump/http/web/templates"))
-
 
 def recursive_merge(dict1, dict2):
     for key, value in dict2.items():
