@@ -4,9 +4,14 @@ import json
 import jwt
 from jwt.exceptions import ExpiredSignatureError, DecodeError
 from typing import Callable
-import base64
-from io import BytesIO
 from jinja2 import Environment, FileSystemLoader
+
+from .components.base_field import BaseField
+from .components.field import Field
+from .components.float_field import FloatField
+from .components.int_field import IntField
+from .components.checkbox_field import CheckboxField
+from .components.text_field import TextField
 
 from ...abc.source import Source
 from ...abc.sink import Sink
@@ -15,7 +20,6 @@ from ...abc.connection import Connection
 import aiohttp.web
 from aiohttp.web import Request
 from importlib.resources import files
-
 
 L = logging.getLogger(__name__)
 env = Environment(loader=FileSystemLoader("bspump/http/web/templates"))
@@ -153,245 +157,6 @@ class ProtectedWebRouteSource(WebRouteSource):
         except Exception:
             L.exception("Exception in WebSource")
             return aiohttp.web.Response(status=500)
-
-
-class BaseField:
-    def __init__(self, name, **kwargs):
-        self.name = name
-        self.hidden: bool = kwargs.get("hidden", False)
-        self.required: bool = kwargs.get("required", True)
-        self.display: str = kwargs.get("display", self.name)
-        self.description: str = kwargs.get("description", "")
-        self.default = kwargs.get("default", "")
-
-    def html(self, defaults) -> str:
-        pass
-
-    def get_params(self, defaults) -> dict:
-        pass
-
-    def restructure_data(self, dfrom, dto):
-        pass
-
-    def clean(self, data, request: Request = None):
-        pass
-
-
-class FieldSet(BaseField):
-    def __init__(self, name, fields=None, fieldset_intro="", display="", required=True, **kwargs):
-        super().__init__(name, **kwargs)
-        su = super()
-        self.fields = fields
-        if fields is None:
-            self.fields = []
-        su.__init__(name, required=required)
-        self.display = display if display else name
-        self.default = {}
-        self.fieldset_intro = fieldset_intro
-        self.prefix = f"fieldset___{self.name}___"
-
-    def set_subfield_names(self):
-        for field in self.fields:
-            field.field_name = f"{self.prefix}{field.name}"
-
-    def html(self, defaults={}):
-        self.set_subfield_names()
-        self.set_subfield_names()
-        fields_html = [field.html(defaults.get(field.name, field.default)) for field in self.fields]
-        template = env.get_template("fieldset.html")
-        return template.render(display=self.display, fieldset_intro=self.fieldset_intro, fields=fields_html)
-
-
-    def get_params(self, defaults) -> dict:
-            params = {}
-            for field in self.fields:
-                params[field.name] = field.get_params(defaults.get(field.name, ""))
-            return params
-
-    def restructure_data(self, dfrom, dto):
-        self.set_subfield_names()
-        dto[self.name] = {}
-        for field in self.fields:
-            field.restructure_data(dfrom, dto[self.name])
-
-    def clean(self, data, request: Request = None):
-        for field in self.fields:
-            field.clean(data[self.name])
-
-
-class Field(BaseField):
-    def __init__(self, name, **kwargs):
-        super().__init__(name, **kwargs)
-        if "___" in name:
-            raise ValueError("Field name cannot contain '___'")
-        su = super()
-        su.__init__(name, **kwargs)
-        self.readonly: bool = kwargs.get("readonly", False)
-        self.default = kwargs.get("default", "")
-        self.field_name: str = f"f___{self.name}"
-        self.default_classes = kwargs.get(
-            "default_css_classes",
-            "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
-        )
-        if self.readonly:
-            self.default_classes = kwargs.get(
-                "default_css_classes",
-                "bg-gray-500 border border-gray-300 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
-            )
-
-    @property
-    def default_input_props(self):
-        if self.readonly:
-            readonly = "readonly"
-        else:
-            readonly = ""
-
-        if self.required:
-            required = 'required aria-required="true"'
-        else:
-            required = ""
-        return f'name="{self.field_name}" id="{self.field_name}" {readonly} {required}'
-
-    def restructure_data(self, dfrom, dto):
-        dto[self.name] = dfrom.get(self.field_name, self.default)
-
-    def clean(self, data, request: Request | None = None):
-        pass
-
-    def html(self, default=""):
-        if not default:
-            default = self.default
-
-        template = env.get_template("field.html")
-        return template.render(
-            field_name=self.field_name,
-            display=self.display,
-            default_classes=self.default_classes,
-            hidden=self.hidden,
-            inner_html=self.inner_html(default, self.readonly),
-        )
-
-    def get_params(self, default="") -> dict:
-        return {self.name: {"type": str(type(self)), "description": self.description}}
-
-
-class TextField(Field):
-    def inner_html(self, default="", readonly=False):
-        template = env.get_template("text-field.html")
-        return template.render(
-            default=default,
-            default_classes=self.default_classes,
-            default_input_props=self.default_input_props,
-        )
-
-
-class ChoiceField(Field):
-    def __init__(self, name, choices, **kwargs):
-        super().__init__(name, **kwargs)
-        self.choices = choices
-
-    def inner_html(self, default="", readonly=False):
-        template = env.get_template("choice-field.html")
-        return template.render(
-            default=default,
-            choices=self.choices,
-            default_classes=self.default_classes,
-            default_input_props=self.default_input_props,
-        )
-
-
-class CheckboxField(Field):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.default = self.default or False
-
-    def inner_html(self, default="", readonly=False):
-        readonly_attr = "disabled" if readonly else ""
-
-        template = env.get_template("checkbox-field.html")
-        return template.render(
-            default=default,
-            readonly=readonly,
-            default_classes=self.default_classes,
-            default_input_props=self.default_input_props,
-            readonly_attr=readonly_attr,
-        )
-
-    def clean(self, data, request: Request | None = None):
-        if type(data.get(self.name)) == str:
-            data[self.name] = data.get(self.name, False) == "on"
-
-
-class IntField(Field):
-    def inner_html(self, default=0, readonly=False):
-        if not default:
-            default = 0
-
-        template = env.get_template("number-field.html")
-        return template.render(
-            default=default,
-            default_input_props=self.default_input_props,
-            default_classes=self.default_classes
-        )
-
-    def clean(self, data, request: Request | None = None):
-        if type(data.get(self.name)) == str:
-            data[self.name] = int(data.get(self.name, 0))
-
-
-class FloatField(Field):
-    def inner_html(self, default=0, readonly=False):
-        if not default:
-            default = 0.0
-
-        template = env.get_template("number-field.html")
-        return template.render(
-            default=default,
-            default_input_props=self.default_input_props,
-            default_classes=self.default_classes
-        )
-
-    def clean(self, data, request: Request | None = None):
-        if type(data.get(self.name)) == str:
-            data[self.name] = float(data.get(self.name, 0))
-
-
-class FileField(Field):
-    """
-    The value ends up being the bytes of the uploaded file.
-    """
-
-    def inner_html(self, default="", readonly=False):
-        template = env.get_template("file-field.html")
-        return template.render(
-            default_input_props=self.default_input_props,
-            default_classes=self.default_classes,
-        )
-
-    def clean(self, data, request: Request | None = None):
-        if request.content_type == "application/json":
-            decoded_data = base64.b64decode(data.get(self.name, ""))
-            data[self.name] = BytesIO(decoded_data)
-        else:
-            # in case of not submitting any file
-            if data[self.name] == b"":
-                data[self.name] = BytesIO(b"")
-            else:
-                data[self.name] = data[self.name].file
-
-
-class RawJSONField(Field):
-    def inner_html(self, default="", readonly=False):
-        template = env.get_template("raw-json_field.html")
-        return template.render(
-            default=default,
-            default_input_props=self.default_input_props,
-            default_classes=self.default_classes,
-        )
-
-    def clean(self, data, request: Request | None = None):
-        if type(data.get(self.name)) == str:
-            data[self.name] = json.loads(data.get(self.name, "{}"))
 
 
 class WebFormSource(WebRouteSource):
@@ -731,6 +496,8 @@ class JSONWebSink(Sink):
             fd = CheckboxField(key, readonly=True, default=value)
         elif isinstance(value, int):
             fd = IntField(key, readonly=True, default=value)
+        elif isinstance(value, float):
+            fd = FloatField(key, readonly=True, default=value)
         else:
             fd = TextField(key, readonly=True, default=value)
         return fd.html()
