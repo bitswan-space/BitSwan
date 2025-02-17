@@ -692,93 +692,45 @@ class JSONWebSink(Sink):
             )
 
     def render_html_output(self, json_data):
-        top = """
-              <html>
-              <head>
-              <link rel="stylesheet" href="/static/tailwind.css">
-              <script>
+        template = env.get_template("output-form.html")
+        fields_html = self.format_json_to_html(json_data)
+        return template.render(fields=fields_html)
 
-                  function submitForm() {
-                      document.getElementById("loading").style.display = "block";
-                      document.getElementById("main-form").submit();
-                  }
-              </script>
-              </head>
-              <BODY>
-              <form id="main-form" method="post">
-              <div id="loading" style="display:none">
-                  <div class="fixed top-0 left-0 h-screen w-screen bg-black bg-opacity-50 z-50 flex justify-center items-center">
-                      <div class="bg-white p-4 rounded-lg">
-                          <div class="text-center">Processing...</div>
-                      </div>
-                  </div>
-              </div>
-              <div class="space-y-12">
-              <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 bg-gray shadow sm:rounded-lg">
-              <h1 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-4">Results</h1>
-              """
+    def format_json_to_html(self, json_data):
+        fields_html = []
 
-        bottom = """
-              </div>
-              </div>
-              </form>
-              </body>
-              </html>
-              """
-
-        fields = []
-        res_string = self.format_json_to_html(json_data, fields)
-        return top + res_string + bottom
-
-    def format_json_to_html(self, json_data, fields):
         for key, value in json_data.items():
-            if isinstance(value, dict):  # Handle nested dictionaries
-                fields.append(
-                    f""" 
-                <div class="p-2 border border-gray-100 shadow-md rounded mt-4 mb-2">
-                <h2 class="font-semibold text-lg">{key}</h2>
-                <div class="ml-4">"""
-                )
-                self.format_json_to_html(value, fields)
-                fields.append(
-                    """ 
-                           </div>
-                           </div>
-                            """
-                )
-            elif isinstance(value, list):  # Handle lists
-                fields.append(
-                    f""" 
-                <div class="p-2 border border-gray-100 shadow-md rounded mt-4 mb-2">
-                <h2 class="font-semibold text-lg">{key}</h2>
-                <div class="ml-4">"""
-                )
-                self.format_list(key, value, fields)
-                fields.append(
-                    """ 
-                               </div>
-                               </div>
-                                """
-                )
+            if isinstance(value, dict):
+                nested_html = self.format_json_to_html(value)
+                template = env.get_template("dictionary.html")
+                fields_html.append(template.render(key=key, content=nested_html))
+            elif isinstance(value, list):
+                nested_html = self.format_list(key, value)
+                template = env.get_template("list.html")
+                fields_html.append(template.render(key=key, content=nested_html))
             else:
-                self.format_key_value(key, value, fields)
+                fields_html.append(self.format_key_value(key, value))
 
-        return "".join(fields)
+        return "".join(fields_html)
 
-    def format_list(self, key, json_data_lst, fields):
+    def format_list(self, key, json_data_lst):
+        list_items_html = []
+
         for item in json_data_lst:
             if isinstance(item, list):
-                self.format_list(key, item, fields)
-            if isinstance(item, dict):
-                self.format_json_to_html(item, fields)
+                list_items_html.append(self.format_list(key, item))
+            elif isinstance(item, dict):
+                list_items_html.append(self.format_json_to_html(item))
             else:
-                self.format_key_value(key, item, fields)
+                list_items_html.append(self.format_key_value(key, item))
 
-    def format_key_value(self, key, value, fields):
+        return "".join(list_items_html)
+
+    def format_key_value(self, key, value):
         if isinstance(value, bool):
             fd = CheckboxField(key, readonly=True, default=value)
         elif isinstance(value, int):
             fd = IntField(key, readonly=True, default=value)
         else:
             fd = TextField(key, readonly=True, default=value)
-        fields.append(fd.html())
+        return fd.html()

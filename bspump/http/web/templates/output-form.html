@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="/static/tailwind.css">
+</head>
+<body>
+    <form id="main-form" method="post">
+        <div id="loading" style="display:none">
+            <div class="fixed top-0 left-0 h-screen w-screen bg-black bg-opacity-50 z-50 flex justify-center items-center">
+                <div class="bg-white p-4 rounded-lg">
+                    <div class="text-center">Processing...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-12">
+            <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 bg-gray shadow sm:rounded-lg">
+                <h1 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-4">Results</h1>
+
+                {{ fields }}
+            </div>
+        </div>
+    </form>
+</body>
+</html>
