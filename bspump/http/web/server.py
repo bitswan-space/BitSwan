@@ -702,7 +702,7 @@ class JSONWebSink(Sink):
         for key, value in json_data.items():
             if isinstance(value, dict):
                 nested_html = self.format_json_to_html(value)
-                template = env.get_template("dictionary.html")
+                template = env.get_template("nested-json.html")
                 fields_html.append(template.render(key=key, content=nested_html))
             elif isinstance(value, list):
                 nested_html = self.format_list(key, value)
