@@ -44,7 +44,6 @@ class WebServerConnection(Connection):
             client_max_size=int(self.Config["max_body_size_bytes"])
         )
         static_dir = str(files("bspump").joinpath("static/css"))
-        print(static_dir)
         self.aiohttp_app.router.add_static("/static/", static_dir, show_index=True)
         self.start_server()
 
@@ -454,9 +453,8 @@ class JSONWebSink(Sink):
         fields_html = self.format_json_to_html(json_data)
         return template.render(fields=fields_html)
 
-    def format_json_to_html(self, json_data):
+    def format_json_to_html(self, json_data, fields):
         fields_html = []
-
         for key, value in json_data.items():
             if isinstance(value, dict):
                 nested_html = self.format_json_to_html(value)
