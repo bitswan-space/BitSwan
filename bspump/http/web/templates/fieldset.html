@@ -1,0 +1,9 @@
+<div class="ml-5 border-l border-black pl-2 mt-7">
+    <legend class="font-bold text-lg">{{ display }}</legend>
+    <p class="text-gray-700">{{ fieldset_intro }}</p>
+    <div class="space-y-4">
+        {% for field in fields %}
+            {{ field | safe }}
+        {% endfor %}
+    </div>
+</div>

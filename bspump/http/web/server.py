@@ -4,8 +4,22 @@ import json
 import jwt
 from jwt.exceptions import ExpiredSignatureError, DecodeError
 from typing import Callable
-import base64
-from io import BytesIO
+
+from .components import (
+    BaseField,
+    Field,
+    FloatField,
+    IntField,
+    CheckboxField,
+    TextField,
+    ChoiceField,  # noqa: F401
+    FieldSet,  # noqa: F401
+    RawJSONField,  # noqa: F401
+    FileField,  # noqa: F401
+)
+
+
+from .template_env import env
 
 from ...abc.source import Source
 from ...abc.sink import Sink
@@ -14,7 +28,6 @@ from ...abc.connection import Connection
 import aiohttp.web
 from aiohttp.web import Request
 from importlib.resources import files
-
 
 L = logging.getLogger(__name__)
 
@@ -152,239 +165,6 @@ class ProtectedWebRouteSource(WebRouteSource):
             return aiohttp.web.Response(status=500)
 
 
-class BaseField:
-    def __init__(self, name, **kwargs):
-        self.name = name
-        self.hidden: bool = kwargs.get("hidden", False)
-        self.required: bool = kwargs.get("required", True)
-        self.display: str = kwargs.get("display", self.name)
-        self.description: str = kwargs.get("description", "")
-        self.default = kwargs.get("default", "")
-
-    def html(self, defaults) -> str:
-        pass
-
-    def get_params(self, defaults) -> dict:
-        pass
-
-    def restructure_data(self, dfrom, dto):
-        pass
-
-    def clean(self, data, request: Request = None):
-        pass
-
-
-class FieldSet(BaseField):
-    def __init__(self, name, fields=None, fieldset_intro="", display="", required=True):
-        su = super()
-        self.fields = fields
-        if fields is None:
-            self.fields = []
-        su.__init__(name, required=required)
-        self.display = display if display else name
-        self.default = {}
-        self.fieldset_intro = fieldset_intro
-        self.prefix = f"fieldset___{self.name}___"
-
-    def set_subfield_names(self):
-        for field in self.fields:
-            field.field_name = f"{self.prefix}{field.name}"
-
-    def html(self, defaults={}):
-        fields = ""
-        self.set_subfield_names()
-        for field in self.fields:
-            fields += field.html(defaults.get(field.name, field.default))
-        return f"""
-        <div style="margin-left: 20px; border-left: 1px solid black; padding-left: 10px;margin-top: 30px;">
-            <legend><b>{self.display}</b></legend>
-            {self.fieldset_intro}
-            {fields}
-        </div>
-        """
-
-    def get_params(self, defaults) -> dict:
-        params = {}
-        for field in self.fields:
-            params[field.name] = field.get_params(defaults.get(field.name, ""))
-        return params
-
-    def restructure_data(self, dfrom, dto):
-        self.set_subfield_names()
-        dto[self.name] = {}
-        for field in self.fields:
-            field.restructure_data(dfrom, dto[self.name])
-
-    def clean(self, data, request: Request = None):
-        for field in self.fields:
-            field.clean(data[self.name])
-
-
-class Field(BaseField):
-    def __init__(self, name, **kwargs):
-        if "___" in name:
-            raise ValueError("Field name cannot contain '___'")
-        su = super()
-        su.__init__(name, **kwargs)
-        self.readonly: bool = kwargs.get("readonly", False)
-        self.default = kwargs.get("default", "")
-        self.field_name: str = f"f___{self.name}"
-        self.default_classes = kwargs.get(
-            "default_css_classes",
-            "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
-        )
-        if self.readonly:
-            self.default_classes = kwargs.get(
-                "default_css_classes",
-                "bg-gray-500 border border-gray-300 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
-            )
-
-    @property
-    def default_input_props(self):
-        if self.readonly:
-            readonly = "readonly"
-        else:
-            readonly = ""
-
-        if self.required:
-            required = 'required aria-required="true"'
-        else:
-            required = ""
-        return f'name="{self.field_name}" id="{self.field_name}" {readonly} {required}'
-
-    def restructure_data(self, dfrom, dto):
-        dto[self.name] = dfrom.get(self.field_name, self.default)
-
-    def clean(self, data, request: Request | None = None):
-        pass
-
-    def html(self, default=""):
-        if not default:
-            default = self.default
-        return f"""
-
-      <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6" style='{'display: none' if self.hidden else ''}'>
-        <div class="sm:col-span-4">
-                <label for="{self.field_name}" class="block text-sm font-bold text-gray-700">{self.display}</label>
-                {self.inner_html(default, self.readonly)}
-        </div>
-        </div>
-        """
-
-    def get_params(self, default="") -> dict:
-        return {self.name: {"type": str(type(self)), "description": self.description}}
-
-
-class TextField(Field):
-    def inner_html(self, default="", readonly=False):
-        return f"""
-        <div class="mt-1">
-            <input type="text" class="{self.default_classes}" value="{default}" {self.default_input_props}>
-        </div>
-        """
-
-
-class ChoiceField(Field):
-    def __init__(self, name, choices, **kwargs):
-        super().__init__(name, **kwargs)
-        self.choices = choices
-
-    def inner_html(self, default="", readonly=False):
-        return f"""
-        <div class="mt-1">
-            <select class="{self.default_classes}" value="{default}" {self.default_input_props}>
-                {"".join(
-                    f'<option value="{choice}" {"selected" if choice == default else ""}>{choice}</option>'
-                    for choice in self.choices
-                )}
-            </select>
-        </div>
-        """
-
-
-class CheckboxField(Field):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.default = self.default or False
-
-    def inner_html(self, default="", readonly=False):
-        readonly_attr = "disabled" if readonly else ""
-        return f"""
-                    <input type="checkbox" {"checked" if default == True or (default and default.lower() in ("true", "t")) else ""} class="{self.default_classes}" {self.default_input_props} {readonly_attr}>
-                """
-
-    def clean(self, data, request: Request | None = None):
-        if type(data.get(self.name)) == str:
-            data[self.name] = data.get(self.name, False) == "on"
-
-
-class IntField(Field):
-    def inner_html(self, default=0, readonly=False):
-        if not default:
-            default = 0
-        return f"""
-        <div class="mt-1">
-            <input type="number" value="{default}" class="{self.default_classes}" {self.default_input_props}>
-        </div>
-        """
-
-    def clean(self, data, request: Request | None = None):
-        if type(data.get(self.name)) == str:
-            data[self.name] = int(data.get(self.name, 0))
-
-
-class FloatField(Field):
-    def inner_html(self, default=0, readonly=False):
-        if not default:
-            default = 0.0
-        return f"""
-        <div class="mt-1">
-            <input type="number" value="{default}" class="{self.default_classes}" {self.default_input_props}>
-        </div>
-        """
-
-    def clean(self, data, request: Request | None = None):
-        if type(data.get(self.name)) == str:
-            data[self.name] = float(data.get(self.name, 0))
-
-
-class FileField(Field):
-    """
-    The value ends up being the bytes of the uploaded file.
-    """
-
-    def inner_html(self, default="", readonly=False):
-        return f"""
-        <div class="mt-1">
-            <input type="file" class="{self.default_classes}" {self.default_input_props}>
-        </div>
-        """
-
-    def clean(self, data, request: Request | None = None):
-        if request.content_type == "application/json":
-            decoded_data = base64.b64decode(data.get(self.name, ""))
-            data[self.name] = BytesIO(decoded_data)
-        else:
-            # in case of not submitting any file
-            if data[self.name] == b"":
-                data[self.name] = BytesIO(b"")
-            else:
-                data[self.name] = data[self.name].file
-
-
-class RawJSONField(Field):
-    def inner_html(self, default="", readonly=False):
-        return f"""
-      <div class="mt-1">
-      <textarea class="{self.default_classes}" {self.default_input_props}>{default}</textarea>
-      </div>
-      """
-
-    def clean(self, data, request: Request | None = None):
-        if type(data.get(self.name)) == str:
-            data[self.name] = json.loads(data.get(self.name, "{}"))
-
-
 class WebFormSource(WebRouteSource):
     def __init__(
         self,
@@ -513,66 +293,13 @@ class WebFormSource(WebRouteSource):
             elif field.name not in defaults:
                 defaults[field.name] = field.default
 
-        top = f"""
-        <html>
-        <head>
-        <link rel="stylesheet" href="/static/tailwind.css">
-        <script>
-
-            function submitForm() {{
-                // check for required fields and submit in case of satisfied required fields
-                let isValid = true;
-                let requiredFields = document.getElementById("main-form").querySelectorAll("[required]");
-            
-                requiredFields.forEach(field => {{
-                        if (!field.value.trim()) {{
-                            isValid = false;
-                            field.style.border = "2px solid red"; // Highlight empty fields
-                        }} else {{
-                            field.style.border = ""; // Reset style
-                        }}
-                    }});
-
-                if (!isValid) {{
-                    alert("All required fields must be filled.");
-                    return ;
-                }}
-                document.getElementById("loading").style.display = "block";
-                document.getElementById("main-form").submit();
-            }}
-        </script>
-        </head>
-        <BODY>
-        <form id="main-form" method="post" enctype="multipart/form-data">
-        <div id="loading" style="display:none">
-            <div class="fixed top-0 left-0 h-screen w-screen bg-black bg-opacity-50 z-50 flex justify-center items-center">
-                <div class="bg-white p-4 rounded-lg">
-                    <div class="text-center">Processing...</div>
-                </div>
-            </div>
-        </div>
-        <div class="space-y-12">
-        <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 bg-gray shadow sm:rounded-lg">
-        {self.form_intro}
-        """
-        fields = ""
-        for field in self.fields:
-            fields += field.html(defaults[field.name])
-            if field.name in errors:
-                fields += f'<div class="text-red-500">{errors[field.name]}</div>'
-        bottom = """
-        <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
-        <div class="sm:col-span-4">
-        <button type="button" onclick=submitForm() class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Submit</button>
-        </div>
-        </div>
-        </div>
-        </div>
-        </form>
-        </body>
-        </html>
-        """
-        return top + fields + bottom
+        template = env.get_template("source-form.html")
+        return template.render(
+            form_intro=self.form_intro,
+            fields=self.fields,
+            defaults=defaults,
+            errors=errors,
+        )
 
 
 class ProtectedWebFormSource(WebFormSource):
@@ -736,109 +463,46 @@ class JSONWebSink(Sink):
             )
 
     def render_html_output(self, json_data):
-        top = """
-                 <html>
-                 <head>
-                 <link rel="stylesheet" href="/static/tailwind.css">
-                 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js">
-                 </script>
-                 </head>
-                 <BODY>
-                 <div class="ml-8 mt-8">
-                    <button id="downloadButton" class="bg-blue-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-700">
-                       Download as PDF
-                    </button>
-                 </div>
-                 <form id="main-form" method="post">
-                 <div id="loading" style="display:none">
-                     <div class="fixed top-0 left-0 h-screen w-screen bg-black bg-opacity-50 z-50 flex justify-center items-center">
-                         <div class="bg-white p-4 rounded-lg">
-                             <div class="text-center">Processing...</div>
-                         </div>
-                     </div>
-                 </div>
-                 <div class="space-y-12">
-                 <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 bg-gray shadow sm:rounded-lg">
-                 <h1 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-4">Results</h1>
-                 <script>
-                     document.getElementById('downloadButton').addEventListener('click', function() {
-                       const element = document.getElementById('main-form');
-                       const currentDate = new Date();
-                       const filename = `document_${currentDate.getFullYear()}_${currentDate.getMonth() + 1}_${currentDate.getDate()}_${currentDate.getHours()}${currentDate.getMinutes()}.pdf`;
+        template = env.get_template("output-form.html")
+        fields_html = self.format_json_to_html(json_data)
+        return template.render(fields=fields_html)
 
-                       const options = {
-                         margin: 1,
-                         filename: filename,
-                         image: { type: 'jpeg', quality: 0.98 },
-                         html2canvas: { scale: 2 },
-                         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-                       };            
-                       html2pdf().set(options).from(element).save();
-                     });
-                 </script>              
-                """
-
-        bottom = """
-              </div>
-              </div>
-              </form>
-              </body>
-              </html>
-              """
-
-        fields = []
-        res_string = self.format_json_to_html(json_data, fields)
-        return top + res_string + bottom
-
-    def format_json_to_html(self, json_data, fields):
+    def format_json_to_html(self, json_data):
+        fields_html = []
         for key, value in json_data.items():
-            if isinstance(value, dict):  # Handle nested dictionaries
-                fields.append(
-                    f""" 
-                <div class="p-2 border border-gray-100 shadow-md rounded mt-4 mb-2">
-                <h2 class="font-semibold text-lg">{key}</h2>
-                <div class="ml-4">"""
-                )
-                self.format_json_to_html(value, fields)
-                fields.append(
-                    """ 
-                           </div>
-                           </div>
-                            """
-                )
-            elif isinstance(value, list):  # Handle lists
-                fields.append(
-                    f""" 
-                <div class="p-2 border border-gray-100 shadow-md rounded mt-4 mb-2">
-                <h2 class="font-semibold text-lg">{key}</h2>
-                <div class="ml-4">"""
-                )
-                self.format_list(key, value, fields)
-                fields.append(
-                    """ 
-                               </div>
-                               </div>
-                                """
-                )
+            if isinstance(value, dict):
+                nested_html = self.format_json_to_html(value)
+                template = env.get_template("nested-json.html")
+                fields_html.append(template.render(key=key, content=nested_html))
+            elif isinstance(value, list):
+                nested_html = self.format_list(key, value)
+                template = env.get_template("list.html")
+                fields_html.append(template.render(key=key, content=nested_html))
             else:
-                self.format_key_value(key, value, fields)
+                fields_html.append(self.format_key_value(key, value))
 
-        return "".join(fields)
+        return "".join(fields_html)
 
-    def format_list(self, key, json_data_lst, fields):
+    def format_list(self, key, json_data_lst):
+        list_items_html = []
+
         for item in json_data_lst:
             if isinstance(item, list):
-                self.format_list(key, item, fields)
-            if isinstance(item, dict):
-                self.format_json_to_html(item, fields)
+                list_items_html.append(self.format_list(key, item))
+            elif isinstance(item, dict):
+                list_items_html.append(self.format_json_to_html(item))
             else:
-                self.format_key_value(key, item, fields)
+                list_items_html.append(self.format_key_value(key, item))
 
-    def format_key_value(self, key, value, fields):
+        return "".join(list_items_html)
+
+    def format_key_value(self, key, value):
         if isinstance(value, bool):
             fd = CheckboxField(key, readonly=True, default=value)
         elif isinstance(value, int):
             fd = IntField(key, readonly=True, default=value)
+        elif isinstance(value, float):
+            fd = FloatField(key, readonly=True, default=value)
         else:
             fd = TextField(key, readonly=True, default=value)
-        fields.append(fd.html())
+        return fd.html()

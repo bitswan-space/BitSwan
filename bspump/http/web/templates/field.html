@@ -1,0 +1,6 @@
+<div class="flex justify-center mt-4 {% if hidden %}hidden{% endif %}">
+    <div class="sm:col-span-4 w-full max-w-xl">
+            <label for="{{ field_name }}" class="block text-base font-bold text-cyan-950">{{ display }}</label>
+            {{ inner_html | safe }}
+    </div>
+</div>
