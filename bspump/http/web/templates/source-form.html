@@ -1,6 +1,7 @@
 <html>
 <head>
     <link rel="stylesheet" href="/static/tailwind.css">
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
     <script>
         function submitForm() {
             let isValid = true;
@@ -24,8 +25,8 @@
         }
     </script>
 </head>
-<body>
-    <form id="main-form" method="post" enctype="multipart/form-data">
+<body class="h-screen flex justify-center items-center py-20">
+    <form id="main-form" method="post" enctype="multipart/form-data" class="w-full max-w-3xl bg-gray-50 shadow sm:rounded-lg">
         <div id="loading" style="display:none">
             <div class="fixed top-0 left-0 h-screen w-screen bg-black bg-opacity-50 z-50 flex justify-center items-center">
                 <div class="bg-white p-4 rounded-lg">
@@ -35,7 +36,7 @@
         </div>
 
         <div class="space-y-12">
-            <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 bg-gray shadow sm:rounded-lg">
+            <div class="px-4 sm:px-6 lg:py-16 lg:px-8">
                 {{ form_intro|safe }}
 
                 {% for field in fields %}
