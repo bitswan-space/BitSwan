@@ -467,7 +467,7 @@ class JSONWebSink(Sink):
         fields_html = self.format_json_to_html(json_data)
         return template.render(fields=fields_html)
 
-    def format_json_to_html(self, json_data, fields):
+    def format_json_to_html(self, json_data):
         fields_html = []
         for key, value in json_data.items():
             if isinstance(value, dict):
