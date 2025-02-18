@@ -19,5 +19,5 @@ __all__ = [
     "ChoiceField",
     "FieldSet",
     "RawJSONField",
-    "FileField"
+    "FileField",
 ]

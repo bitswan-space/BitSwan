@@ -13,7 +13,7 @@ class IntField(Field):
         return template.render(
             default=default,
             default_input_props=self.default_input_props,
-            default_classes=self.default_classes
+            default_classes=self.default_classes,
         )
 
     def clean(self, data, request: Request | None = None):

@@ -1,5 +1,6 @@
 from aiohttp.web import Request
 
+
 class BaseField:
     def __init__(self, name, **kwargs):
         self.name = name

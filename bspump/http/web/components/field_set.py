@@ -3,7 +3,9 @@ from bspump.http.web.template_env import env
 
 
 class FieldSet(BaseField):
-    def __init__(self, name, fields=None, fieldset_intro="", display="", required=True, **kwargs):
+    def __init__(
+        self, name, fields=None, fieldset_intro="", display="", required=True, **kwargs
+    ):
         super().__init__(name, **kwargs)
         su = super()
         self.fields = fields
@@ -22,6 +24,10 @@ class FieldSet(BaseField):
     def html(self, defaults={}):
         self.set_subfield_names()
         self.set_subfield_names()
-        fields_html = [field.html(defaults.get(field.name, field.default)) for field in self.fields]
+        fields_html = [
+            field.html(defaults.get(field.name, field.default)) for field in self.fields
+        ]
         template = env.get_template("fieldset.html")
-        return template.render(display=self.display, fieldset_intro=self.fieldset_intro, fields=fields_html)
+        return template.render(
+            display=self.display, fieldset_intro=self.fieldset_intro, fields=fields_html
+        )
