@@ -21,7 +21,7 @@ class Field(BaseField):
         if self.readonly:
             self.default_classes = kwargs.get(
                 "default_css_classes",
-                "bg-slate-200 border-2 border-slate-200 text-gray-900 text-md rounded-lg shadow-lg shadow-slate-100 focus:outline-none focus:ring-none block w-full p-2.5",
+                "bg-slate-100 border-2 border-slate-200 text-gray-900 text-md rounded-lg shadow-lg shadow-slate-100 focus:outline-none focus:ring-none block w-full p-2.5",
             )
 
     @property
