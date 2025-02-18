@@ -16,12 +16,12 @@ class Field(BaseField):
         self.field_name: str = f"f___{self.name}"
         self.default_classes = kwargs.get(
             "default_css_classes",
-            "bg-slate-50 border border-slate-300 text-gray-900 text-sm rounded-lg focus:ring-slate-500 focus:border-slate-500 block w-full p-2.5 dark:bg-slate-500 dark:placeholder-slate-400 dark:text-slate-50 dark:focus:ring-slate-500 dark:focus:border-slate-400",
+            "bg-slate-50 autofill:shadow-[inset_0_0_0px_1000px_theme(colors.slate.50)] autofill:bg-slate-50 border-2 border-slate-200 text-gray-900 text-md rounded-lg shadow-lg shadow-slate-100 focus:outline-none focus:ring-slate-400 focus:border-slate-400 focus:bg-slate-50 block w-full p-2.5 transition-shadow duration-200 ease-in-out autofill:bg-slate-50",
         )
         if self.readonly:
             self.default_classes = kwargs.get(
                 "default_css_classes",
-                "bg-slate-100 border border-slate-300 text-gray-900 text-sm rounded-lg focus:ring-slate-500 focus:border-slate-500 block w-full p-2.5 dark:bg-slate-600 dark:placeholder-slate-400 dark:text-slate-50 dark:focus:ring-slate-500 dark:focus:border-slate-400",
+                "bg-slate-200 border-2 border-slate-200 text-gray-900 text-md rounded-lg shadow-lg shadow-slate-100 focus:outline-none focus:ring-none block w-full p-2.5",
             )
 
     @property

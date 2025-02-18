@@ -1,6 +1,5 @@
-<input type="checkbox"
+<input type="checkbox" class="{{ default_classes }} accent-cyan-600 shadow-slate-50 h-4 w-4 border-none border-slate-50"
               {% if default == true or (default and default.lower() in ["true", "t"]) %}checked{% endif %}
-              class="{{ default_classes }} accent-cyan-600"
               {{ default_input_props|safe }}
               {{ readonly_attr|safe }}
-       >
+>

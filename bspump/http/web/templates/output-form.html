@@ -2,9 +2,12 @@
 <html lang="en">
 <head>
     <link rel="stylesheet" href="/static/tailwind.css">
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <form id="main-form" method="post">
+<body class="min-h-screen bg-gradient-to-b from-cyan-50 to-cyan-100 bg-cyan-200 flex justify-center items-center py-10 px-4 sm:px-6 lg:px-8">
+    <form id="main-form" method="post" class="w-full max-w-3xl bg-neutral-50 shadow-xl rounded-lg p-8 border border-cyan-00">
+
+        <!-- Loading Overlay -->
         <div id="loading" style="display:none">
             <div class="fixed top-0 left-0 h-screen w-screen bg-black bg-opacity-50 z-50 flex justify-center items-center">
                 <div class="bg-white p-4 rounded-lg">
@@ -13,10 +16,9 @@
             </div>
         </div>
 
-        <div class="space-y-12">
-            <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 bg-gray shadow sm:rounded-lg">
-                <h1 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-4">Results</h1>
-
+        <div class="space-y-8">
+            <div class="max-w-7xl mx-auto pt-5 pb-12 px-4 sm:px-6 lg:pb-16 lg:px-8 bg-gray sm:rounded-lg">
+                <h1 class="text-3xl font-bold text-gray-800 mb-6 pb-4">Results</h1>
                 {{ fields }}
             </div>
         </div>
