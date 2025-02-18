@@ -2,8 +2,8 @@
 module.exports = {
   content: [
     './bspump/**/*.py',
-    './static/**/*.js',
-    './static/**/*.html',
+    './bspump/**/*.js',
+    './bspump/**/*.html',
   ],
   theme: {
     extend: {},
