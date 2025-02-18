@@ -5,12 +5,7 @@ import jwt
 from jwt.exceptions import ExpiredSignatureError, DecodeError
 from typing import Callable
 
-from .components.base_field import BaseField
-from .components.field import Field
-from .components.float_field import FloatField
-from .components.int_field import IntField
-from .components.checkbox_field import CheckboxField
-from .components.text_field import TextField
+from .components import *
 from .template_env import env
 
 from ...abc.source import Source
