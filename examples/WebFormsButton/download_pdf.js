@@ -1,5 +1,5 @@
 try {
-        await loadHtml2Pdf(); // Ensure the script is fully loaded before proceeding
+        await loadHtml2Pdf();
 
         const mainForm = document.getElementById("main-form");
 
