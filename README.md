@@ -30,13 +30,15 @@ $ bitswan-cli examples/WebForms/main.ipynb
 
 For example this pipeline will set up the Web Form on your localhost which will allow you to submit a form.
 
-Pipelines can be also deployed using IDE. We have Visual Studio Code Extension. [Check it out!](https://marketplace.visualstudio.com/items?itemName=LibertyAcesLtd.bitswan)
 
 When developing web endpoints it can be helpful to instruct the pipeline to automatically restart if the source code changes.
 
 ```
 $ bitswan-cli examples/WebForms/main.ipynb --watch
 ```
+
+Pipelines can be also deployed using IDE. We have Visual Studio Code Extension. [Check it out!](https://marketplace.visualstudio.com/items?itemName=LibertyAcesLtd.bitswan)
+
 
 Creating Pipelines
 --------------
