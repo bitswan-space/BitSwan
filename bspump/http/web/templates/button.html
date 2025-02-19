@@ -1,0 +1,13 @@
+<button id="{{ button_id }}" type="button" class="{{ default_classes }}" onclick="handleButtonClick_{{ button_id }}()">
+    {{ name }}
+</button>
+
+<script>
+    async function handleButtonClick_{{ button_id }}() {
+        try {
+            {{ action }}
+        } catch (error) {
+            console.error("Error:", error);
+        }
+    }
+</script>

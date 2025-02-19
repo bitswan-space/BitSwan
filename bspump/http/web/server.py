@@ -16,6 +16,7 @@ from .components import (
     FieldSet,  # noqa: F401
     RawJSONField,  # noqa: F401
     FileField,  # noqa: F401
+    Button, # noqa: F401
 )
 
 
@@ -172,7 +173,7 @@ class WebFormSource(WebRouteSource):
         pipeline,
         connection="DefaultWebServerConnection",
         route="/",
-        fields: list[BaseField] | Callable[[Request], list[BaseField]] = lambda r: [],
+        fields: list[BaseField | Button] | Callable[[Request], list[BaseField]] = lambda r: [],
         id=None,
         config=None,
         form_intro="",
@@ -454,6 +455,7 @@ class JSONWebSink(Sink):
             )
         else:
             html_content = self.render_html_output(event["response"])
+            print(event["response"])
             event["response_future"].set_result(
                 aiohttp.web.Response(
                     text=html_content,
@@ -470,7 +472,11 @@ class JSONWebSink(Sink):
     def format_json_to_html(self, json_data):
         fields_html = []
         for key, value in json_data.items():
-            if isinstance(value, dict):
+            if key == 'button':
+                button = Button(name=value['name'], action=value['action'], id=value['id'])
+                template = button.inner_html()
+                fields_html.append(template)
+            elif isinstance(value, dict):
                 nested_html = self.format_json_to_html(value)
                 template = env.get_template("nested-json.html")
                 fields_html.append(template.render(key=key, content=nested_html))
