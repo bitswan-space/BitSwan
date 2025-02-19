@@ -9,8 +9,10 @@ class Button(BaseField):
         self.on_click = on_click
         self.button_id = button_id
         self.required: bool = kwargs.get("required", False)
-        self.default_classes = kwargs.get("default_css_classes", "bg-cyan-600 hover:bg-cyan-900 text-slate-100 font-bold py-2 px-4 rounded-lg mt-10"
-)
+        self.default_classes = kwargs.get(
+            "default_css_classes",
+            "bg-cyan-600 hover:bg-cyan-900 text-slate-100 font-bold py-2 px-4 rounded-lg mt-10",
+        )
 
     def html(self, default="", readonly=False):
         template = env.get_template("button.html")
@@ -18,5 +20,5 @@ class Button(BaseField):
             name=self.name,
             default_classes=self.default_classes,
             on_click=self.on_click,
-            button_id=self.button_id
+            button_id=self.button_id,
         )

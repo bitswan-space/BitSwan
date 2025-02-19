@@ -21,5 +21,5 @@ __all__ = [
     "FieldSet",
     "RawJSONField",
     "FileField",
-    "Button"
+    "Button",
 ]

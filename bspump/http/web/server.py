@@ -16,7 +16,7 @@ from .components import (
     FieldSet,  # noqa: F401
     RawJSONField,  # noqa: F401
     FileField,  # noqa: F401
-    Button, # noqa: F401
+    Button,  # noqa: F401
 )
 
 
@@ -472,8 +472,12 @@ class JSONWebSink(Sink):
     def format_json_to_html(self, json_data):
         fields_html = []
         for key, value in json_data.items():
-            if key == 'button':
-                button = Button(name=value['name'], on_click=value['on_click'], button_id=value['id'])
+            if key == "button":
+                button = Button(
+                    name=value["name"],
+                    on_click=value["on_click"],
+                    button_id=value["id"],
+                )
                 template = button.html()
                 fields_html.append(template)
             elif isinstance(value, dict):
