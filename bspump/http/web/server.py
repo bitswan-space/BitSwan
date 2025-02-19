@@ -58,7 +58,7 @@ class WebServerConnection(Connection):
         self.aiohttp_app = aiohttp.web.Application(
             client_max_size=int(self.Config["max_body_size_bytes"])
         )
-        static_dir = str(files("bspump").joinpath("static/css"))
+        static_dir = str(files("bspump").joinpath("static"))
         self.aiohttp_app.router.add_static("/static/", static_dir, show_index=True)
         self.start_server()
 
