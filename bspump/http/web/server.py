@@ -473,7 +473,7 @@ class JSONWebSink(Sink):
         fields_html = []
         for key, value in json_data.items():
             if key == 'button':
-                button = Button(name=value['name'], action=value['action'], id=value['id'])
+                button = Button(name=value['name'], action=value['action'], button_id=value['id'])
                 template = button.inner_html()
                 fields_html.append(template)
             elif isinstance(value, dict):
