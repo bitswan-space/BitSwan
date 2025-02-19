@@ -1,12 +1,14 @@
+from bspump.http.web.components import BaseField
 from bspump.http.web.template_env import env
 
 
-class Button:
+class Button(BaseField):
     def __init__(self, button_id, name, action, **kwargs):
+        super().__init__(name, **kwargs)
         self.name = name
         self.action = action
         self.button_id = button_id
-        self.default = kwargs.get("default", "")
+        self.required: bool = kwargs.get("required", False)
         self.default_classes = kwargs.get("default_css_classes", "bg-cyan-600 hover:bg-cyan-900 text-slate-100 font-bold py-2 px-4 rounded-lg mt-10"
 )
 
