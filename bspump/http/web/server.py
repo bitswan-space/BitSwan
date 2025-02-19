@@ -455,7 +455,6 @@ class JSONWebSink(Sink):
             )
         else:
             html_content = self.render_html_output(event["response"])
-            print(event["response"])
             event["response_future"].set_result(
                 aiohttp.web.Response(
                     text=html_content,
