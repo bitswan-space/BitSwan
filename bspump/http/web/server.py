@@ -173,7 +173,7 @@ class WebFormSource(WebRouteSource):
         pipeline,
         connection="DefaultWebServerConnection",
         route="/",
-        fields: list[BaseField | Button] | Callable[[Request], list[BaseField]] = lambda r: [],
+        fields: list[BaseField] | Callable[[Request], list[BaseField]] = lambda r: [],
         id=None,
         config=None,
         form_intro="",
