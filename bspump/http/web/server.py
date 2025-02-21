@@ -16,6 +16,7 @@ from .components import (
     FieldSet,  # noqa: F401
     RawJSONField,  # noqa: F401
     FileField,  # noqa: F401
+    Button,  # noqa: F401
 )
 
 
@@ -57,7 +58,7 @@ class WebServerConnection(Connection):
         self.aiohttp_app = aiohttp.web.Application(
             client_max_size=int(self.Config["max_body_size_bytes"])
         )
-        static_dir = str(files("bspump").joinpath("static/css"))
+        static_dir = str(files("bspump").joinpath("static"))
         self.aiohttp_app.router.add_static("/static/", static_dir, show_index=True)
         self.start_server()
 
@@ -470,7 +471,15 @@ class JSONWebSink(Sink):
     def format_json_to_html(self, json_data):
         fields_html = []
         for key, value in json_data.items():
-            if isinstance(value, dict):
+            if key == "button":
+                button = Button(
+                    name=value["name"],
+                    on_click=value["on_click"],
+                    button_id=value["id"],
+                )
+                template = button.html()
+                fields_html.append(template)
+            elif isinstance(value, dict):
                 nested_html = self.format_json_to_html(value)
                 template = env.get_template("nested-json.html")
                 fields_html.append(template.render(key=key, content=nested_html))
