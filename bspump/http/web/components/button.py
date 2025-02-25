@@ -11,7 +11,7 @@ class Button(BaseField):
         self.required: bool = kwargs.get("required", False)
         self.default_classes = kwargs.get(
             "default_css_classes",
-            "bg-cyan-600 hover:bg-cyan-900 text-slate-100 font-bold py-2 px-4 rounded-lg mt-10",
+            "bg-cyan-600 hover:bg-cyan-900 text-slate-100 font-bold py-2 px-4 rounded-lg",
         )
 
     def html(self, default="", readonly=False):
