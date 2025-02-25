@@ -5,7 +5,7 @@ class BaseField:
     def __init__(self, name, **kwargs):
         self.name = name
         self.hidden: bool = kwargs.get("hidden", False)
-        self.required: bool = kwargs.get("required", True)
+        self.required: bool = kwargs.get("required", not self.hidden)
         self.display: str = kwargs.get("display", self.name)
         self.description: str = kwargs.get("description", "")
         self.default = kwargs.get("default", "")
