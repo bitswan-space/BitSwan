@@ -439,6 +439,16 @@ class WebSink(Sink):
                 )
             )
 
+class RichJSONOutput(dict):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.buttons = []
+
+    def add_button(self, name, on_click, button_id):
+        self.buttons.append(
+            Button(name=name, on_click=on_click, button_id=button_id)
+        )
+
 
 class JSONWebSink(Sink):
     """
@@ -470,16 +480,14 @@ class JSONWebSink(Sink):
 
     def format_json_to_html(self, json_data):
         fields_html = []
+
+        if hasattr(json_data, "buttons"):
+            for button in json_data.buttons:
+                fields_html.append(button.html())
+
         for key, value in json_data.items():
-            if key == "button":
-                button = Button(
-                    name=value["name"],
-                    on_click=value["on_click"],
-                    button_id=value["id"],
-                )
-                template = button.html()
-                fields_html.append(template)
-            elif isinstance(value, dict):
+
+            if isinstance(value, dict):
                 nested_html = self.format_json_to_html(value)
                 template = env.get_template("nested-json.html")
                 fields_html.append(template.render(key=key, content=nested_html))
