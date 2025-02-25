@@ -16,6 +16,7 @@ from .components import (
     FieldSet,  # noqa: F401
     RawJSONField,  # noqa: F401
     FileField,  # noqa: F401
+    Button,  # noqa: F401
 )
 
 
@@ -57,7 +58,7 @@ class WebServerConnection(Connection):
         self.aiohttp_app = aiohttp.web.Application(
             client_max_size=int(self.Config["max_body_size_bytes"])
         )
-        static_dir = str(files("bspump").joinpath("static/css"))
+        static_dir = str(files("bspump").joinpath("static"))
         self.aiohttp_app.router.add_static("/static/", static_dir, show_index=True)
         self.start_server()
 
@@ -439,6 +440,15 @@ class WebSink(Sink):
             )
 
 
+class RichJSONOutput(dict):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.buttons = []
+
+    def add_button(self, name, on_click, button_id):
+        self.buttons.append(Button(name=name, on_click=on_click, button_id=button_id))
+
+
 class JSONWebSink(Sink):
     """
     JSONWebSink is a sink that sends HTTP requests with JSON content.
@@ -469,6 +479,11 @@ class JSONWebSink(Sink):
 
     def format_json_to_html(self, json_data):
         fields_html = []
+
+        if hasattr(json_data, "buttons"):
+            for button in json_data.buttons:
+                fields_html.append(button.html())
+
         for key, value in json_data.items():
             if isinstance(value, dict):
                 nested_html = self.format_json_to_html(value)
