@@ -64,7 +64,9 @@ class WebServerConnection(Connection):
 
         scripts_dir = str(pathlib.Path().resolve().joinpath("scripts"))
         if pathlib.Path(scripts_dir).exists():
-            self.aiohttp_app.router.add_static("/scripts/", scripts_dir, show_index=True)
+            self.aiohttp_app.router.add_static(
+                "/scripts/", scripts_dir, show_index=True
+            )
         self.start_server()
 
     def start_server(self):
