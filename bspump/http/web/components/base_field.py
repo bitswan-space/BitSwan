@@ -5,10 +5,15 @@ class BaseField:
     def __init__(self, name, **kwargs):
         self.name = name
         self.hidden: bool = kwargs.get("hidden", False)
-        self.required: bool = kwargs.get("required", not self.hidden)
+        self.required: bool | None = kwargs.get("required", True)
         self.display: str = kwargs.get("display", self.name)
         self.description: str = kwargs.get("description", "")
         self.default = kwargs.get("default", "")
+
+        if self.required is None:
+            self.required = not self.hidden
+        else:
+            self.required = True
 
     def html(self, defaults) -> str:
         pass
