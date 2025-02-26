@@ -5,7 +5,6 @@ import jwt
 from jwt.exceptions import ExpiredSignatureError, DecodeError
 from typing import Callable
 import pathlib
-from importlib_resources import files
 
 from .components import (
     BaseField,
