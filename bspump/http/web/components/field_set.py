@@ -31,3 +31,8 @@ class FieldSet(BaseField):
         return template.render(
             display=self.display, fieldset_intro=self.fieldset_intro, fields=fields_html
         )
+
+    def restructure_data(self, dfrom, dto):
+        dto[self.name] = {}
+        for field in self.fields:
+            field.restructure_data(dfrom, dto[self.name])
