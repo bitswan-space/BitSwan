@@ -223,8 +223,12 @@ class WebFormSource(WebRouteSource):
         for field in fields:
             if field.required and field.name not in data:
                 raise ValueError(f"Field {field.name} is required")
-            if field.required and hasattr(field, "fields"):
-                self.validate_field_presence(data[field.name], field.fields)
+
+            if isinstance(field, FieldSet):
+                if hasattr(field, "fields") and field.fields:
+                    self.validate_field_presence(data[field.name], field.fields)
+                elif field.required:
+                    raise ValueError(f"Field {field.name} is required")
 
     async def extract_data(self, request: Request):
         if request.content_type == "application/json":
