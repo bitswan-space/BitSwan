@@ -1,6 +1,9 @@
 import logging
 import asyncio
 import json
+import os
+import pathlib
+
 import jwt
 from jwt.exceptions import ExpiredSignatureError, DecodeError
 from typing import Callable
@@ -58,8 +61,15 @@ class WebServerConnection(Connection):
         self.aiohttp_app = aiohttp.web.Application(
             client_max_size=int(self.Config["max_body_size_bytes"])
         )
-        static_dir = str(files("bspump").joinpath("static"))
-        self.aiohttp_app.router.add_static("/static/", static_dir, show_index=True)
+        static_dir = str(files("bspump").joinpath("styles"))
+        self.aiohttp_app.router.add_static("/styles/", static_dir, show_index=True)
+
+        notebook_dir = os.path.dirname(app.Notebook)
+        scripts_dir = str(pathlib.Path().resolve().joinpath(notebook_dir).joinpath("scripts"))
+        if pathlib.Path(scripts_dir).exists():
+            self.aiohttp_app.router.add_static(
+                "/scripts/", scripts_dir, show_index=True
+            )
         self.start_server()
 
     def start_server(self):
