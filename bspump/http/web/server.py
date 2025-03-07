@@ -65,7 +65,9 @@ class WebServerConnection(Connection):
         self.aiohttp_app.router.add_static("/styles/", static_dir, show_index=True)
 
         notebook_dir = os.path.dirname(app.Notebook)
-        scripts_dir = str(pathlib.Path().resolve().joinpath(notebook_dir).joinpath("scripts"))
+        scripts_dir = str(
+            pathlib.Path().resolve().joinpath(notebook_dir).joinpath("scripts")
+        )
         if pathlib.Path(scripts_dir).exists():
             self.aiohttp_app.router.add_static(
                 "/scripts/", scripts_dir, show_index=True
