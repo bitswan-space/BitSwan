@@ -504,6 +504,10 @@ class JSONWebSink(Sink):
                 )
             )
 
+    def handle_error(self, context, event, exception):
+        print("JSONWebSink handle error")
+        raise exception
+
     def render_html_output(self, json_data):
         template = env.get_template("output-form.html")
         fields_html = self.format_json_to_html(json_data)
