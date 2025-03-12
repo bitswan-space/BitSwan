@@ -36,3 +36,9 @@ class FieldSet(BaseField):
         dto[self.name] = {}
         for field in self.fields:
             field.restructure_data(dfrom, dto[self.name])
+
+    def get_params(self, default="") -> dict:
+        out = {}
+        for field in self.fields:
+            out[field.name] = field.get_params()
+        return out

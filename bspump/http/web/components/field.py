@@ -57,4 +57,6 @@ class Field(BaseField):
         )
 
     def get_params(self, default="") -> dict:
-        return {self.name: {"type": str(type(self)), "description": self.description}}
+        if not default:
+            default = self.default
+        return {"type": type(self).__name__, "description": self.description}
