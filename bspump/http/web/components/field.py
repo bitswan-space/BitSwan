@@ -56,7 +56,5 @@ class Field(BaseField):
             inner_html=self.inner_html(default, self.readonly),
         )
 
-    def get_params(self, default="") -> dict:
-        if not default:
-            default = self.default
+    def get_params(self) -> dict:
         return {"type": type(self).__name__, "description": self.description}
