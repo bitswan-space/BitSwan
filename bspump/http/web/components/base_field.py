@@ -13,7 +13,7 @@ class BaseField:
     def html(self, defaults) -> str:
         pass
 
-    def get_params(self, defaults) -> dict:
+    def get_params(defaults) -> dict:
         pass
 
     def restructure_data(self, dfrom, dto):
