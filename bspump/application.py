@@ -67,7 +67,14 @@ class BSPumpApplication(Application):
             from .mqtt import MQTTService, MQTTConnection
 
             self.PumpService.add_connection(
-                MQTTConnection(self, "MQTTServiceConnection")
+                MQTTConnection(
+                    self,
+                    "MQTTServiceConnection",
+                    {
+                        "username": os.environ.get("MQTT_USERNAME"),
+                        "password": os.environ.get("MQTT_PASSWORD"),
+                    },
+                )
             )
             self.MQTTService = MQTTService(self, connection="MQTTServiceConnection")
 
