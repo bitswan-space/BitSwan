@@ -217,5 +217,5 @@ class MQTTService(Service):
         data["remaining_subscription_count"] = count_remaining
         self.Connection.publish_to_topic(
             f"/c/{self.App.DeploymentId}/c/{pipeline}/c/{component.Id}/events",
-            json.dumps(data),
+            json.dumps(data, default=lambda x: x.__class__.__name__),
         )
