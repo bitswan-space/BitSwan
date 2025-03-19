@@ -4,7 +4,6 @@ import json
 import os
 import pathlib
 
-import aiohttp
 import jwt
 from jwt.exceptions import ExpiredSignatureError, DecodeError
 from typing import Callable
