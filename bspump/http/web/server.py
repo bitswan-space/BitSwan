@@ -112,7 +112,23 @@ class WebRouteSource(Source):
             self.Connection = pipeline.locate_connection(app, connection)
         except KeyError:
             if connection == "DefaultWebServerConnection":
-                self.Connection = WebServerConnection(app, "DefaultWebServerConnection")
+                try:
+                    default_port = int(
+                        os.environ.get("DEFAULT_WEB_SERVER_CONNECTION_PORT") or "8080"
+                    )
+                except ValueError:
+                    default_port = 8080
+                    L.warning(
+                        "DEFAULT_WEB_SERVER_CONNECTION_PORT is not a valid integer. Using default value {}.".format(
+                            default_port
+                        )
+                    )
+
+                self.Connection = WebServerConnection(
+                    app,
+                    "DefaultWebServerConnection",
+                    {"port": default_port},
+                )
                 app.PumpService.add_connection(self.Connection)
         self.aiohttp_app = self.Connection.aiohttp_app
         self.aiohttp_app.router.add_route(method, route, self.handle_request)

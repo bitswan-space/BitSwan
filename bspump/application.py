@@ -63,11 +63,23 @@ class BSPumpApplication(Application):
             self.WebContainer = initialize_web(self.WebService.WebContainer)
             self.ASABApiService.initialize_web()
 
-        if "mqtt" in Config and self.DeploymentId:
+        mqtt_username = os.environ.get("MQTT_USERNAME")
+        mqtt_password = os.environ.get("MQTT_PASSWORD")
+        mqtt_broker_url = os.environ.get("MQTT_BROKER_URL")
+
+        if mqtt_broker_url and self.DeploymentId and (mqtt_username or mqtt_password):
             from .mqtt import MQTTService, MQTTConnection
 
             self.PumpService.add_connection(
-                MQTTConnection(self, "MQTTServiceConnection")
+                MQTTConnection(
+                    self,
+                    "MQTTServiceConnection",
+                    {
+                        "username": mqtt_username,
+                        "password": mqtt_password,
+                        "broker": mqtt_broker_url,
+                    },
+                )
             )
             self.MQTTService = MQTTService(self, connection="MQTTServiceConnection")
 
