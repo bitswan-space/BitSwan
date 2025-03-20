@@ -465,12 +465,10 @@ class Pipeline(abc.ABC, bspump.asab.Configurable):
 
         :return:
         """
-        err = None
         for processor in self.Processors[depth]:
             t0 = time.perf_counter()
             try:
                 self.ProcessorsCounter[processor.Id].add("event.in", 1)
-                print(f"Processor process {context} ;; {event}")
                 event = processor.process(context, event)
                 processor.EventCount += 1
                 if (
@@ -487,12 +485,13 @@ class Pipeline(abc.ABC, bspump.asab.Configurable):
                     self.PublishingProcessors[processor.Id] -= 1
             except SystemExit as e:
                 raise e
-            except Exception as e:
-                print(f"Processor error caught {err}")
-                err = e
-                break
+            except BaseException as e:
+                self.ProcessorsCounter[processor.Id].add("event.drop", 1)
+                if depth > 0:
+                    raise e  # Handle error on the top depth
+                self.set_error(context, event, e)
+                event = None  # Event is discarted
             finally:
-                print("Processor finally")
                 self.ProcessorsCounter[processor.Id].add("event.out", 1)
                 self.ProfilerCounter[processor.Id].add(
                     "duration", time.perf_counter() - t0
@@ -511,25 +510,14 @@ class Pipeline(abc.ABC, bspump.asab.Configurable):
                         self.MetricsCounter.add("event.drop", 1)
                 return
 
+        # NOTE The sink does not come up in self.Sinks. What was this supposed to do?
         if self.Sinks:
             for c, s in self.Sinks:
                 if c(event):
-                    if not err:
-                        e = s.process(context, event)
-                        if e is not None:
-                            event = e
-                            break
-                    else:
-                        try:
-                            s.handle_error(context, event, err)
-                        except BaseException as e:
-                            print("Caught exception last")
-                            self.ProcessorsCounter[processor.Id].add("event.drop", 1)
-                            if depth > 0:
-                                raise  # Handle error on the top depth
-                            self.set_error(context, event, e)
-                            event = None  # Event is discarted
-                            return
+                    e = s.process(context, event)
+                    if e is not None:
+                        event = e
+                        break
             else:
                 event = None
                 return
@@ -571,6 +559,7 @@ class Pipeline(abc.ABC, bspump.asab.Configurable):
             context = context.copy()
             context.update(self._context)
 
+        self._error = (context, event, None, self.App.time())
         self._do_process(event, depth, context)
 
     async def process(self, event, context=None):
@@ -657,7 +646,15 @@ class Pipeline(abc.ABC, bspump.asab.Configurable):
 
         exception = future.exception()
         if exception is not None:
-            self.set_error(None, None, exception)
+            try:
+                *_, sink = self.iter_processors()
+                context, event, _, timestamp = self._error
+                event = sink.handle_error(context, event, exception, timestamp)
+                self._error = None
+                L.warn(f"Error handled by sink {event}")
+            except Exception as e:
+                L.error(f"Sink failed to handle {e}")
+                self.set_error(None, None, e)
 
     # Construction
 

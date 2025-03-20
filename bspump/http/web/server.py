@@ -486,27 +486,40 @@ class JSONWebSink(Sink):
     JSONWebSink is a sink that sends HTTP requests with JSON content.
     """
 
-    def process(self, context, event):
-        """
-        Process the incoming event and respond with either JSON or HTML.
-        """
-        if event["request"].content_type == "application/json":
-            event["response_future"].set_result(
-                aiohttp.web.json_response(event["response"], status=event["status"])
-            )
-        else:
+    def handle_response(self, event):
+        accept = event["request"].headers.get("Accept")
+        return_html = event["request"].content_type == "text/html"
+        if accept:
+            if "text/html" in accept:
+                return_html = True
+        if return_html:
             html_content = self.render_html_output(event["response"])
             event["response_future"].set_result(
                 aiohttp.web.Response(
                     text=html_content,
                     content_type="text/html",
-                    status=200,
+                    status=event["status"],
                 )
             )
+        else:
+            event["response_future"].set_result(
+                aiohttp.web.json_response(event["response"], status=event["status"])
+            )
 
-    def handle_error(self, context, event, exception):
-        print("JSONWebSink handle error")
-        raise exception
+    def process(self, context, event):
+        """
+        Process the incoming event and respond with either JSON or HTML.
+        """
+        self.handle_response(event)
+
+    def handle_error(self, context, event, exception, timestamp):
+        """
+        If an exception is raised in the pipeline step, return 500 and
+        a page for the user
+        """
+        event["status"] = 500
+        event["response"] = {"error": "Internal Server Error"}
+        self.handle_response(event)
 
     def render_html_output(self, json_data):
         template = env.get_template("output-form.html")
