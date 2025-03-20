@@ -45,6 +45,15 @@ def recursive_merge(dict1, dict2):
     return dict1
 
 
+def expects_html(request):
+    html = request.content_type == "text/html"
+    accept = request.headers.get("Accept")
+    if accept:
+        if "text/html" in accept and request.content_type != "text/html":
+            html = True
+    return html
+
+
 class WebServerConnection(Connection):
     """
     Source with events from a specific route.
@@ -261,6 +270,8 @@ class WebFormSource(WebRouteSource):
     async def extract_data(self, request: Request):
         if request.content_type == "application/json":
             data = await request.json()
+        elif request.content_type == "application/x-www-form-urlencoded":
+            data = await request.json()
         else:
             dfrom = dict(await request.post())
             data = {}
@@ -273,11 +284,16 @@ class WebFormSource(WebRouteSource):
             try:
                 field.clean(data, request=request)
             except ValueError as e:
-                return aiohttp.web.Response(
-                    text=self.render_form(request, errors={field.name: e}),
-                    content_type="text/html",
-                    status=400,
-                )
+                if expects_html(request):
+                    return aiohttp.web.Response(
+                        text=self.render_form(request, errors={field.name: e}),
+                        content_type="text/html",
+                        status=400,
+                    )
+                else:
+                    return aiohttp.web.json_response(
+                        {"error": f"{field.name} is incorrectly formatted"}, status=400
+                    )
         response_future = asyncio.Future()
         await self.process(
             {
@@ -487,12 +503,7 @@ class JSONWebSink(Sink):
     """
 
     def handle_response(self, event):
-        accept = event["request"].headers.get("Accept")
-        return_html = event["request"].content_type == "text/html"
-        if accept:
-            if "text/html" in accept:
-                return_html = True
-        if return_html:
+        if expects_html(event["request"]):
             html_content = self.render_html_output(event["response"])
             event["response_future"].set_result(
                 aiohttp.web.Response(

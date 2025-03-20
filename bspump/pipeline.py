@@ -651,9 +651,7 @@ class Pipeline(abc.ABC, bspump.asab.Configurable):
                 context, event, _, timestamp = self._error
                 event = sink.handle_error(context, event, exception, timestamp)
                 self._error = None
-                L.warn(f"Error handled by sink {event}")
             except Exception as e:
-                L.error(f"Sink failed to handle {e}")
                 self.set_error(None, None, e)
 
     # Construction
