@@ -11,8 +11,13 @@
 
     <img src="/static/Bitswan logo.svg" alt="Logo" class="fixed top-4 left-4 w-36 h-auto">
 
-    <div class="bg-white p-8 rounded-lg shadow-lg w-[50%] max-w-screen-lg h-[90%] flex flex-col">
+    <div class="bg-white p-8 pr-0 rounded-lg shadow-lg w-[50%] max-w-screen-lg h-[90%] flex flex-col relative">
         <div class="flex-grow"></div>
+
+    <div class="absolute top-4 right-0 translate-x-[40px]">
+        {% include "components/welcome-window.html" %}
+        </div>
+
         {% include "components/fond-input.html" %}
     </div>
 
