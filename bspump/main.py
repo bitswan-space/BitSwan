@@ -58,13 +58,14 @@ class NotebookCompiler:
                     if isinstance(cell["source"], list)
                     else cell["source"]
                 )
-                clean_code = ""
-                for line in list(filter(None, code.split("\n"))):
-                    if line.startswith("!"):
-                        continue
-                    clean_code += re.sub(r"^\t+(?=\S)", "", line) + "\n"
-                if not clean_code:
+
+                clean_code = "\n".join(
+                    [re.sub(r"^\t+(?=\S)", "", line) if not line.startswith("!") else "" for line in code.split("\n")]
+                ).rstrip("\n") + "\n"
+
+                if not clean_code.strip():
                     return
+
                 if not self._in_autopipeline:
                     fout.write(clean_code + "\n\n")
                 else:
