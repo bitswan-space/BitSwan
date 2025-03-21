@@ -61,11 +61,10 @@ class NotebookCompiler:
 
                 clean_code = "\n".join(
                     [re.sub(r"^\t+(?=\S)", "", line) if not line.startswith("!") else "" for line in code.split("\n")]
-                ).rstrip("\n") + "\n"
+                ).strip("\n") + "\n"
 
                 if not clean_code.strip():
                     return
-
                 if not self._in_autopipeline:
                     fout.write(clean_code + "\n\n")
                 else:
