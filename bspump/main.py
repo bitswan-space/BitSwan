@@ -59,9 +59,17 @@ class NotebookCompiler:
                     else cell["source"]
                 )
 
-                clean_code = "\n".join(
-                    [re.sub(r"^\t+(?=\S)", "", line) if not line.startswith("!") else "" for line in code.split("\n")]
-                ).strip("\n") + "\n"
+                clean_code = (
+                    "\n".join(
+                        [
+                            re.sub(r"^\t+(?=\S)", "", line)
+                            if not line.startswith("!")
+                            else ""
+                            for line in code.split("\n")
+                        ]
+                    ).strip("\n")
+                    + "\n"
+                )
 
                 if not clean_code.strip():
                     return
