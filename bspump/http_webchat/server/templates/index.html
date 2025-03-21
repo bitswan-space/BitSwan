@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fund Info</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body class="bg-cyan-50 flex justify-center items-center h-screen">
+
+    <img src="/static/Bitswan logo.svg" alt="Logo" class="fixed top-4 left-4 w-36 h-auto">
+
+    <div class="bg-white p-8 rounded-lg shadow-lg w-[50%] max-w-screen-lg h-[90%] flex flex-col">
+        <div class="flex-grow"></div>
+        {% include "components/fond-input.html" %}
+    </div>
+
+</body>
+</html>
