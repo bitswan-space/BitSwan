@@ -650,6 +650,7 @@ class Pipeline(abc.ABC, bspump.asab.Configurable):
                 *_, sink = self.iter_processors()
                 context, event, _, timestamp = self._error
                 event = sink.handle_error(context, event, exception, timestamp)
+                self.set_error(context, event, exception)
                 self._error = None
             except Exception as e:
                 self.set_error(None, None, e)

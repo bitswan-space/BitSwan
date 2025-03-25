@@ -11,6 +11,3 @@ class Sink(ProcessorBase):
 
     def handle_error(self, context, event, exception, timestamp):
         raise exception
-
-    def _handle_error(self, context, event, exception, timestamp):
-        self.handle_error(context, event, exception, timestamp)
