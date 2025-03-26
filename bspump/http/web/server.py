@@ -502,7 +502,7 @@ class JSONWebSink(Sink):
     JSONWebSink is a sink that sends HTTP requests with JSON content.
     """
 
-    def handle_response(self, event):
+    def send_response(self, event):
         if expects_html(event["request"]):
             html_content = self.render_html_output(event["response"])
             event["response_future"].set_result(
@@ -521,7 +521,7 @@ class JSONWebSink(Sink):
         """
         Process the incoming event and respond with either JSON or HTML.
         """
-        self.handle_response(event)
+        self.send_response(event)
 
     def handle_error(self, context, event, exception, timestamp):
         """
@@ -530,7 +530,7 @@ class JSONWebSink(Sink):
         """
         event["status"] = 500
         event["response"] = {"error": "Internal Server Error"}
-        self.handle_response(event)
+        self.send_response(event)
 
     def render_html_output(self, json_data):
         template = env.get_template("output-form.html")

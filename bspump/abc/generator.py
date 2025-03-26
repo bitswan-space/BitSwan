@@ -49,6 +49,7 @@ class Generator(ProcessorBase):
         """
         Description:
 
+
         **Parameters**
 
         context :
@@ -58,11 +59,9 @@ class Generator(ProcessorBase):
 
 
         """
-
-        async def _fn():
-            return await self.generate(context, event, self.PipelineDepth + 1)
-
-        self.Pipeline.ensure_future(_fn())
+        self.Pipeline.ensure_future(
+            self.generate(context, event, self.PipelineDepth + 1)
+        )
         return None
 
     async def generate(self, context, event, depth):
