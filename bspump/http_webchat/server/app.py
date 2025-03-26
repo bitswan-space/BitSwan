@@ -1,11 +1,13 @@
 import aiohttp.web
 import aiohttp_jinja2
 import jinja2
-
+import os
 
 async def serve_index(request):
-    return aiohttp_jinja2.render_template("index.html", request, {})
-
+    context = {
+        'prompt-input': '/api/prompt-input'
+    }
+    return aiohttp_jinja2.render_template('index.html', request, context)
 
 async def get_fund_info(request):
     fund_id = request.query.get('fund_id')
@@ -21,12 +23,21 @@ async def get_fund_info(request):
 
     return aiohttp.web.json_response(fund_info)
 
+async def get_welcome_message(request):
+    return aiohttp_jinja2.render_template("welcome-message.html", request, {})
+
 app = aiohttp.web.Application()
-aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader('templates'))
+template_dirs = [
+    'templates',
+    os.path.abspath(os.path.join(os.path.dirname(__file__), '../api'))
+]
+
+aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(template_dirs))
 
 app.add_routes([
     aiohttp.web.get("/", serve_index),
-    aiohttp.web.get("/api/fund", get_fund_info)
+    aiohttp.web.get("/api/fund", get_fund_info),
+    aiohttp.web.get("/api/welcome-message", get_welcome_message)
 ])
 
 app.add_routes([aiohttp.web.static("/static", './static')])
