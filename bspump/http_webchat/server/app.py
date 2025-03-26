@@ -5,7 +5,8 @@ import os
 
 async def serve_index(request):
     context = {
-        'prompt-input': '/api/prompt-input'
+        'welcome_message': '/api/welcome-message',
+        'prompt_input': '/api/prompt-input'
     }
     return aiohttp_jinja2.render_template('index.html', request, context)
 
@@ -26,6 +27,9 @@ async def get_fund_info(request):
 async def get_welcome_message(request):
     return aiohttp_jinja2.render_template("welcome-message.html", request, {})
 
+async def get_prompt_input(request):
+    return aiohttp_jinja2.render_template("prompt-input.html", request, {})
+
 app = aiohttp.web.Application()
 template_dirs = [
     'templates',
@@ -37,7 +41,8 @@ aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(template_dirs))
 app.add_routes([
     aiohttp.web.get("/", serve_index),
     aiohttp.web.get("/api/fund", get_fund_info),
-    aiohttp.web.get("/api/welcome-message", get_welcome_message)
+    aiohttp.web.get("/api/welcome-message", get_welcome_message),
+    aiohttp.web.get("/api/prompt-input", get_prompt_input)
 ])
 
 app.add_routes([aiohttp.web.static("/static", './static')])
