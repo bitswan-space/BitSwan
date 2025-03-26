@@ -2,6 +2,7 @@ import aiohttp.web
 import aiohttp_jinja2
 import jinja2
 import os
+from bspump.http_webchat.api.endpoints import get_welcome_message, get_fund_info, get_prompt_input, get_web_chat_response
 
 async def serve_index(request):
     context = {
@@ -11,36 +12,20 @@ async def serve_index(request):
     }
     return aiohttp_jinja2.render_template('index.html', request, context)
 
-async def get_fund_info(request):
-    fund_id = request.query.get('fund_id')
-
-    if not fund_id:
-        return aiohttp.web.json_response({"error": "Missing fund_id"}, status=400)
-
-    fund_info = {
-        "fund_id": fund_id,
-        "name": "Sample Fund",
-        "balance": 100000,
-    }
-
-    return aiohttp.web.json_response(fund_info)
-
-async def get_welcome_message(request):
-    return aiohttp_jinja2.render_template("welcome-message.html", request, {})
-
-async def get_prompt_input(request):
-    return aiohttp_jinja2.render_template("prompt-input.html", request, {})
-
-async def get_web_chat_response(request):
-    response_data = {
-        "message": "Welcome to the API!"
-    }
-    return aiohttp.web.json_response(response_data)
-
 app = aiohttp.web.Application()
+
+base_dir = os.path.dirname(os.path.abspath(__file__))
+template_dir = os.path.join(base_dir, 'templates')
+if not os.path.isdir(template_dir):
+    raise ValueError(f"Template directory '{template_dir}' does not exist")
+
+api_dir = os.path.abspath(os.path.join(base_dir, '../api/templates'))
+if not os.path.isdir(api_dir):
+    raise ValueError(f"Template directory '{api_dir}' does not exist")
+
 template_dirs = [
-    'templates',
-    os.path.abspath(os.path.join(os.path.dirname(__file__), '../mocked_api'))
+    template_dir,
+    api_dir
 ]
 
 aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(template_dirs))
@@ -53,7 +38,6 @@ app.add_routes([
     aiohttp.web.get("/api/response_box", get_web_chat_response)
 ])
 
-app.add_routes([aiohttp.web.static("/static", './static')])
-
+app.add_routes([aiohttp.web.static("/static", os.path.join(base_dir, './static'))])
 if __name__ == "__main__":
     aiohttp.web.run_app(app, host="127.0.0.1", port=8080)
