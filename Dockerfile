@@ -25,7 +25,7 @@ COPY . /src/
 
 RUN apt-get remove -y python3-yaml && apt-get autoremove -y
 
-RUN cd /src/ ; pip3 install --ignore-installed .
+RUN cd /src/ ; pip3 install .
 
 COPY pre/ /opt/
 
