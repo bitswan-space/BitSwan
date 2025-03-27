@@ -9,11 +9,18 @@ async def get_welcome_message(request):
 async def get_prompt_input(request):
     return aiohttp_jinja2.render_template('prompt-input.html', request, {})
 
+
 async def get_web_chat_response(request):
-    response_data = {
-        "message": "Welcome to the API!"
+    fund_id = request.query.get('fund_id')
+
+    if not fund_id:
+        return aiohttp.web.json_response({"error": "Missing fund_id"}, status=400)
+
+    context = {
+        'fund_id': fund_id
     }
-    return aiohttp.web.json_response(response_data)
+
+    return aiohttp_jinja2.render_template('web-chat-response.html', request, context)
 
 async def get_fund_info(request):
     fund_id = request.query.get('fund_id')
