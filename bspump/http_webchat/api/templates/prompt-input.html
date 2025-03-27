@@ -1,9 +1,4 @@
-<form
-    hx-get="/api/fund"
-    hx-target="#fund_details"
-    hx-trigger="submit"
->
-
+<form>
     <label for="fund_id" class="text-gray-700 text-sm font-semibold">Fond</label>
 
     <input
@@ -11,11 +6,19 @@
         id="fund_id"
         name="fund_id"
         class="bg-slate-600 text-white text-sm px-4 py-1 rounded-md font-mono w-full max-w-[150px] mx-2"
-        required>
+        required
+    >
 
     <button
-        type="submit"
-        class="ml-auto bg-gray-700 hover:bg-gray-300 text-neutral-50 px-3 pb-1 rounded-full transition text-2xl">
+        id="fund_button"
+        type="button"
+        class="ml-auto bg-gray-700 hover:bg-gray-300 text-neutral-50 px-3 pb-1 rounded-full transition text-2xl"
+        hx-get="api/response_box"
+        hx-target="#response-box"
+        hx-trigger="click"
+        hx-include="#fund_id">
         ↑
     </button>
 </form>
+
+<div id="fund_details"></div>
