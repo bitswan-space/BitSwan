@@ -1,6 +1,7 @@
 import aiohttp.web
 
-from bspump.http_webchat.api.api_endpoints import get_fund_info, get_welcome_message, get_prompt_input, get_web_chat_response
+from bspump.http_webchat.api.api_endpoints import get_fund_info, get_welcome_message, get_prompt_input, \
+    get_web_chat_response, get_response_123, get_response_12
 
 from bspump.http_webchat.server.app import app, set_app
 
