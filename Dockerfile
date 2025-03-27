@@ -1,4 +1,4 @@
-FROM python:3.10-slim-bullseye
+FROM python:3.13-slim-bookworm
 MAINTAINER LibertyAces Ltd
 LABEL "space.bitswan.pipeline.protocol-version"="2023.12-1"
 LABEL "space.bitswan.pipeline.ide"="Jupyter"
@@ -22,6 +22,9 @@ RUN apt-get -yqq install \
  docker-compose
 
 COPY . /src/
+
+RUN apt-get remove -y python3-yaml && apt-get autoremove -y
+
 RUN cd /src/ ; pip3 install .
 
 COPY pre/ /opt/
