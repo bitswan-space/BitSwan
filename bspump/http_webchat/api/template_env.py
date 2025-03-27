@@ -9,6 +9,8 @@ if not os.path.isdir(api_dir):
 
 template_env = create_template_env(api_dir)
 
+'''
 print("Available templates:")
 for template_name in template_env.list_templates():
     print(template_name)
+'''
