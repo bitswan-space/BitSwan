@@ -488,10 +488,9 @@ class Pipeline(abc.ABC, bspump.asab.Configurable):
             except BaseException as e:
                 self.ProcessorsCounter[processor.Id].add("event.drop", 1)
                 if depth > 0:
-                    raise  # Handle error on the top depth
+                    raise e  # Handle error on the top depth
                 self.set_error(context, event, e)
                 event = None  # Event is discarted
-
             finally:
                 self.ProcessorsCounter[processor.Id].add("event.out", 1)
                 self.ProfilerCounter[processor.Id].add(
@@ -511,6 +510,7 @@ class Pipeline(abc.ABC, bspump.asab.Configurable):
                         self.MetricsCounter.add("event.drop", 1)
                 return
 
+        # NOTE The sink does not come up in self.Sinks. What was this supposed to do?
         if self.Sinks:
             for c, s in self.Sinks:
                 if c(event):
@@ -559,6 +559,7 @@ class Pipeline(abc.ABC, bspump.asab.Configurable):
             context = context.copy()
             context.update(self._context)
 
+        self._error = (context, event, None, self.App.time())
         self._do_process(event, depth, context)
 
     async def process(self, event, context=None):
@@ -645,7 +646,14 @@ class Pipeline(abc.ABC, bspump.asab.Configurable):
 
         exception = future.exception()
         if exception is not None:
-            self.set_error(None, None, exception)
+            try:
+                *_, sink = self.iter_processors()
+                context, event, _, timestamp = self._error
+                event = sink.handle_error(context, event, exception, timestamp)
+                self.set_error(context, event, exception)
+                self._error = None
+            except Exception as e:
+                self.set_error(None, None, e)
 
     # Construction
 

@@ -9,4 +9,5 @@ class Sink(ProcessorBase):
 
     """
 
-    pass
+    def handle_error(self, context, event, exception, timestamp):
+        raise exception

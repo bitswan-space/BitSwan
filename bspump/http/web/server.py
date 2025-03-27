@@ -45,6 +45,15 @@ def recursive_merge(dict1, dict2):
     return dict1
 
 
+def expects_html(request):
+    html = request.content_type == "text/html"
+    accept = request.headers.get("Accept")
+    if accept:
+        if "text/html" in accept and request.content_type != "text/html":
+            html = True
+    return html
+
+
 class WebServerConnection(Connection):
     """
     Source with events from a specific route.
@@ -261,6 +270,8 @@ class WebFormSource(WebRouteSource):
     async def extract_data(self, request: Request):
         if request.content_type == "application/json":
             data = await request.json()
+        elif request.content_type == "application/x-www-form-urlencoded":
+            data = await request.json()
         else:
             dfrom = dict(await request.post())
             data = {}
@@ -273,11 +284,16 @@ class WebFormSource(WebRouteSource):
             try:
                 field.clean(data, request=request)
             except ValueError as e:
-                return aiohttp.web.Response(
-                    text=self.render_form(request, errors={field.name: e}),
-                    content_type="text/html",
-                    status=400,
-                )
+                if expects_html(request):
+                    return aiohttp.web.Response(
+                        text=self.render_form(request, errors={field.name: e}),
+                        content_type="text/html",
+                        status=400,
+                    )
+                else:
+                    return aiohttp.web.json_response(
+                        {"error": f"{field.name} is incorrectly formatted"}, status=400
+                    )
         response_future = asyncio.Future()
         await self.process(
             {
@@ -486,23 +502,35 @@ class JSONWebSink(Sink):
     JSONWebSink is a sink that sends HTTP requests with JSON content.
     """
 
-    def process(self, context, event):
-        """
-        Process the incoming event and respond with either JSON or HTML.
-        """
-        if event["request"].content_type == "application/json":
-            event["response_future"].set_result(
-                aiohttp.web.json_response(event["response"], status=event["status"])
-            )
-        else:
+    def send_response(self, event):
+        if expects_html(event["request"]):
             html_content = self.render_html_output(event["response"])
             event["response_future"].set_result(
                 aiohttp.web.Response(
                     text=html_content,
                     content_type="text/html",
-                    status=200,
+                    status=event["status"],
                 )
             )
+        else:
+            event["response_future"].set_result(
+                aiohttp.web.json_response(event["response"], status=event["status"])
+            )
+
+    def process(self, context, event):
+        """
+        Process the incoming event and respond with either JSON or HTML.
+        """
+        self.send_response(event)
+
+    def handle_error(self, context, event, exception, timestamp):
+        """
+        If an exception is raised in the pipeline step, return 500 and
+        a page for the user
+        """
+        event["status"] = 500
+        event["response"] = {"error": "Internal Server Error"}
+        self.send_response(event)
 
     def render_html_output(self, json_data):
         template = env.get_template("output-form.html")
