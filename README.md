@@ -6,6 +6,10 @@ You can find example pipelines in the [examples](./examples/) directory.
 Installation
 --------------
 
+This library is part of the bitswan suit which is managed by the bitswan workspace cli.
+
+You must first install the [bitswan workspaces](https://github.com/bitswan-space/bitswan-workspaces) cli before installing and using the bitswan notebooks cli.
+
 ```
 $ git clone git@github.com:bitswan-space/BitSwan.git
 $ cd BitSwan
@@ -20,13 +24,13 @@ Running pipelines
 You can run a pipeline with a simple command:
 
 ```
-$ bitswan-cli examples/WebForms/main.ipynb
+$ bitswan notebook examples/WebForms/main.ipynb
 ```
 
 When developing web endpoints it can be helpful to instruct the pipeline to automatically restart if the source code changes.
 
 ```
-$ bitswan-cli examples/WebForms/main.ipynb --watch
+$ bitswan notebook examples/WebForms/main.ipynb --watch
 ```
 
 Running Tests
@@ -37,7 +41,7 @@ You can find examples for automatically testing pipelines in the [testing exampl
 Run tests with the `--test` flag.
 
 ```
-$ bitswan-cli examples/Testing/InspectError/main.ipynb --test
+$ bitswan notebook examples/Testing/InspectError/main.ipynb --test
 
 Running tests for pipeline Kafka2KafkaPipeline.
 

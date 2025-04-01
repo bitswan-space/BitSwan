@@ -25,9 +25,9 @@ jobs:
 
     - name: Run bitswan tests
       run: |
-        bitswan-cli --test examples/Testing/main.ipynb
-        bitswan-cli --test examples/Testing/MultiplePipelines/main.ipynb
-        bitswan-cli --test examples/Testing/AutoPipeline/main.ipynb
+        bitswan-notebook --test examples/Testing/main.ipynb
+        bitswan-notebook --test examples/Testing/MultiplePipelines/main.ipynb
+        bitswan-notebook --test examples/Testing/AutoPipeline/main.ipynb
 
 
     - name: Run linter

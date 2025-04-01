@@ -7,4 +7,4 @@ cd /opt/pipelines/
 
 export PYTHONPATH="/opt/pipelines:${PYTHONPATH}"
 
-bitswan-cli /opt/pipelines/main.ipynb -c /opt/pipelines/pipelines.conf
+bitswan-notebook /opt/pipelines/main.ipynb -c /opt/pipelines/pipelines.conf
