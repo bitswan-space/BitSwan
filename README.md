@@ -6,8 +6,7 @@ You can find example pipelines in the [examples](./examples/) directory.
 Installation
 --------------
 
-This library is part of the bitswan suit which is managed by the bitswan workspace cli.
-
+This library is part of the bitswan suite which is managed by the bitswan workspace cli.
 You must first install the [bitswan workspaces](https://github.com/bitswan-space/bitswan-workspaces) cli before installing and using the bitswan notebooks cli.
 
 ```
