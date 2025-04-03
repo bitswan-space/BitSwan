@@ -59,7 +59,7 @@ pyjq-support = [
 ]
 
 [project.scripts]
-bitswan-cli = "bspump.main:main"
+bitswan-notebook = "bspump.main:main"
 
 
 [tool.ruff]
