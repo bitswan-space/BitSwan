@@ -22,7 +22,7 @@ async def get_prompt_input(request):
     rendered_html = aiohttp_jinja2.render_string('prompt-input.html', request, context)
     prompt = WebchatPrompt(input_html=rendered_html)
 
-    return aiohttp.web.Response(text=prompt.get_html(template_env), content_type='text/html')
+    return aiohttp.web.Response(text=prompt.get_html(), content_type='text/html')
 
 # /api/response_box
 async def get_web_chat_response(request):
