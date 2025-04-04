@@ -10,7 +10,7 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 # /api/welcome_message
 async def get_welcome_message(request):
     welcome_message = WebChatWelcomeWindow(input_html="Hello, welcome to the odkupy calculation assistant. Please select the fond you would like to calculate odkupy for.")
-    return aiohttp.web.Response(text=welcome_message.input_html, content_type='text/html')
+    return aiohttp.web.Response(text=welcome_message.get_html(), content_type='text/html')
 
 # /api/prompt_input -> change this endpoint if you want to change the input
 async def get_prompt_input(request):
@@ -22,7 +22,7 @@ async def get_prompt_input(request):
     rendered_html = aiohttp_jinja2.render_string('prompt-input.html', request, context)
     prompt = WebchatPrompt(input_html=rendered_html)
 
-    return aiohttp.web.Response(text=prompt.input_html, content_type='text/html')
+    return aiohttp.web.Response(text=prompt.get_html(), content_type='text/html')
 
 # /api/response_box
 async def get_web_chat_response(request):
@@ -37,18 +37,16 @@ async def get_web_chat_response(request):
         return await get_response_12()
     else:
         webchat = WebChatResponse(input_html=f"Calculating odkupy for Fund {fund_id}")
-        rendered_html = webchat.render_response(template_env)
-        return aiohttp.web.Response(text=rendered_html, content_type='text/html')
+        return aiohttp.web.Response(text=webchat.get_html(template_env), content_type='text/html')
 
 async def get_response_123():
     calculating = WebChatResponse(input_html=f"Calculating odkupy for Fund {123}")
     result = WebChatResponse(input_html=f"Total valuation is 2 300 345 CZK.")
     next_message = WebChatResponse(input_html=f"Please pick another fund for calculation.")
 
-    rendered_html = calculating.render_response(template_env) + result.render_response(template_env) + next_message.render_response(template_env)
+    rendered_html = calculating.get_html(template_env) + result.get_html(template_env) + next_message.get_html(template_env)
     return aiohttp.web.Response(text=rendered_html, content_type='text/html')
 
 async def get_response_12():
     webchat = WebChatResponse(input_html=f"Calculating odkupy for Fund {12}")
-    rendered_html = webchat.render_response(template_env)
-    return aiohttp.web.Response(text=rendered_html, content_type='text/html')
+    return aiohttp.web.Response(text=webchat.get_html(template_env), content_type='text/html')
