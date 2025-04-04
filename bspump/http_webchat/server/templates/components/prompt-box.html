@@ -7,4 +7,18 @@
     <div id="prompt-input" class="pr-2">
         Loading...
     </div>
+
+     <button
+        id="fund_button"
+        type="button"
+        class="ml-auto bg-gray-700 hover:bg-gray-300 text-neutral-50 px-3 pb-1 rounded-full transition text-2xl"
+        hx-get="{{ response_box_api }}"
+        hx-target="#response-box"
+        hx-trigger="click"
+        hx-include="#fund_id"
+        hx-swap="beforeend"
+    >
+
+        ↑
+    </button>
 </div>
