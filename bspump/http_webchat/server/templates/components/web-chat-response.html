@@ -1,4 +1,15 @@
-<div id="webchat_response"
-     class="bg-white shadow-md rounded-xl rounded-tr-none w-[90%] px-8 py-6 flex items-center border border-gray-300">
+<div class="webchat_response bg-white shadow-md rounded-xl rounded-tr-none w-[90%] px-8 py-6 flex items-center border border-gray-300 opacity-0 transition-opacity duration-500">
     {{ response_text }}
 </div>
+<script>
+  document.addEventListener("htmx:afterSwap", function(evt) {
+    if (evt.detail.target.id === "response-box") {
+      let responses = document.querySelectorAll('.webchat_response');
+      responses.forEach((response, index) => {
+        setTimeout(() => {
+          response.style.opacity = 1;
+        }, index * 500);
+      });
+    }
+  });
+</script>
