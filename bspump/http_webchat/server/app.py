@@ -8,21 +8,6 @@ import os
 app = aiohttp.web.Application()
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
-def set_app():
-    app.add_routes([aiohttp.web.static("/static", os.path.join(base_dir, './static'))])
-    app.add_routes([
-        aiohttp.web.get("/", serve_index)
-    ])
-
-async def serve_index(request):
-    # these api endpoints are set in api code
-    context = {
-        'welcome_message_api': '/api/welcome_message',
-        'prompt_input_api': '/api/prompt_input',
-        'response_box_api': '/api/response_box'
-    }
-    return aiohttp_jinja2.render_template('index.html', request, context)
-
 def create_template_env(extra_template_dir=None):
     main_template_dir = os.path.join(base_dir, 'templates')
     loader_paths = []
@@ -89,10 +74,29 @@ class WebChatResponse:
         return template.render(self.get_context())
 
 class WebChat:
-    def __init__(self, api_routes: Dict[str, Callable]):
-        set_app()
-        for api_route, api_function in api_routes.items():
-            app.add_routes([
-                aiohttp.web.get(api_route, api_function)
-            ])
+    def __init__(self, welcome_message_api: tuple[str, Callable], prompt_input_api: tuple[str, Callable], prompt_response_api: tuple[str, Callable]):
+        self.welcome_message_api = welcome_message_api
+        self.prompt_input_api = prompt_input_api
+        self.prompt_response_api = prompt_response_api
+        self.set_app()
+        app.add_routes([
+            aiohttp.web.get(welcome_message_api[0], welcome_message_api[1]),
+            aiohttp.web.get(prompt_input_api[0],prompt_input_api[1]),
+            aiohttp.web.get(prompt_response_api[0],prompt_response_api[1])
+        ])
         aiohttp.web.run_app(app, host="127.0.0.1", port=8080)
+
+    async def serve_index(self, request):
+        # these api endpoints are set in api code
+        context = {
+            'welcome_message_api': self.welcome_message_api[0],
+            'prompt_input_api': self.prompt_input_api[0],
+            'response_box_api': self.prompt_response_api[0],
+        }
+        return aiohttp_jinja2.render_template('index.html', request, context)
+
+    def set_app(self):
+        app.add_routes([aiohttp.web.static("/static", os.path.join(base_dir, './static'))])
+        app.add_routes([
+            aiohttp.web.get("/", self.serve_index)
+        ])

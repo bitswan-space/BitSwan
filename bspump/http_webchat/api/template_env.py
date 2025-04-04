@@ -8,9 +8,3 @@ if not os.path.isdir(api_dir):
     raise ValueError(f"Template directory '{api_dir}' does not exist")
 
 template_env = create_template_env(api_dir)
-
-'''
-print("Available templates:")
-for template_name in template_env.list_templates():
-    print(template_name)
-'''

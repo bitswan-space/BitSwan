@@ -52,17 +52,3 @@ async def get_response_12():
     webchat = WebChatResponse(input_html=f"Calculating odkupy for Fund {12}")
     rendered_html = webchat.render_response(template_env)
     return aiohttp.web.Response(text=rendered_html, content_type='text/html')
-
-
-async def get_fund_info(request):
-    fund_id = request.query.get('fund_id')
-
-    if not fund_id:
-        return aiohttp.web.json_response({"error": "Missing fund_id"}, status=400)
-
-    fund_info = {
-        "fund_id": fund_id,
-        "name": "Sample Fund",
-        "balance": 100000,
-    }
-    return aiohttp.web.json_response(fund_info)
