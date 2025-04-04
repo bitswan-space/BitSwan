@@ -57,11 +57,7 @@ class WebchatPrompt:
             'prompt_html': self.input_html,
         }
 
-    def get_html(self, template_env):
-        template = template_env.get_template('components/webchat-prompt.html')
-        return template.render(self.get_context())
-
-    def get_input_html(self):
+    def get_html(self):
         return self.input_html
 
 class WebChatResponse:
@@ -78,8 +74,7 @@ class WebChatResponse:
         return template.render(self.get_context())
 
 class WebChat:
-    def __init__(self, webchatprompt: WebchatPrompt, welcome_message_api: tuple[str, Callable], prompt_input_api: tuple[str, Callable], prompt_response_api: tuple[str, Callable]):
-        self.webchatprompt = webchatprompt
+    def __init__(self, welcome_message_api: tuple[str, Callable], prompt_input_api: tuple[str, Callable], prompt_response_api: tuple[str, Callable]):
         self.welcome_message_api = welcome_message_api
         self.prompt_input_api = prompt_input_api
         self.prompt_response_api = prompt_response_api
@@ -97,7 +92,6 @@ class WebChat:
             'welcome_message_api': self.welcome_message_api[0],
             'prompt_input_api': self.prompt_input_api[0],
             'response_box_api': self.prompt_response_api[0],
-            'prompt_html' : self.webchatprompt.get_input_html(),
         }
         return aiohttp_jinja2.render_template('index.html', request, context)
 
