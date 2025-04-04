@@ -7,4 +7,4 @@ api_dir = os.path.abspath(os.path.join(base_dir, 'templates'))
 if not os.path.isdir(api_dir):
     raise ValueError(f"Template directory '{api_dir}' does not exist")
 
-template_env = create_template_env(api_dir)
+template_env = create_template_env(extra_template_dir=api_dir)

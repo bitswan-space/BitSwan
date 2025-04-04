@@ -31,6 +31,11 @@ def create_template_env(extra_template_dir=None):
 
     return template_env
 
+# WebchatWelcomeWindow and PromptInput returns just the input html
+# WebChatResponse returns whole rendered html because user can create how many responses they want but welcome window and
+# prompt iw just one and is rendered on loading
+# Welcome window and prompt templates use api calls in templates to get the html they should render
+# There are no api calls in response templates because they are in the button in prompt template
 class WebChatWelcomeWindow:
     def __init__(self, input_html=None):
         self.input_html = input_html or ""
@@ -40,9 +45,8 @@ class WebChatWelcomeWindow:
             'welcome_text': self.input_html,
         }
 
-    def render(self, template_env):
-        template = template_env.get_template('components/welcome-message-box.html')
-        return template.render(self.get_context())
+    def get_html(self):
+        return self.input_html
 
 class WebchatPrompt:
     def __init__(self, input_html=None):
@@ -53,9 +57,8 @@ class WebchatPrompt:
             'prompt_html': self.input_html,
         }
 
-    def render(self, template_env):
-        template = template_env.get_template('components/prompt-box.html')
-        return template.render(self.get_context())
+    def get_html(self):
+        return self.input_html
 
 
 class WebChatResponse:
@@ -69,7 +72,7 @@ class WebChatResponse:
             'response_styling': self.styling
         }
 
-    def render_response(self, template_env):
+    def get_html(self, template_env):
         template = template_env.get_template('components/web-chat-response.html')
         return template.render(self.get_context())
 
