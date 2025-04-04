@@ -13,6 +13,7 @@ async def get_welcome_message(request):
     return aiohttp.web.Response(text=welcome_message.input_html, content_type='text/html')
 
 # /api/prompt_input -> change this endpoint if you want to change the input
+# TODO oddelit button, button by mal byt na serverovej strane
 async def get_prompt_input(request):
     context = {
         'prompt_input_api': '/api/prompt_input',
