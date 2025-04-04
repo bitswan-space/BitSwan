@@ -57,6 +57,20 @@ class WebChatWelcomeWindow:
         template = template_env.get_template('components/welcome-message-box.html')
         return template.render(self.get_context())
 
+class WebchatPrompt:
+    def __init__(self, input_html=None):
+        self.input_html = input_html or ""
+
+    def get_context(self):
+        return {
+            'prompt_html': self.input_html,
+        }
+
+    def render(self, template_env):
+        template = template_env.get_template('components/prompt-box.html')
+        return template.render(self.get_context())
+
+
 class WebChatResponse:
     def __init__(self, input_html=None):
         self.input_html = input_html or ""
