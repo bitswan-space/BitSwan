@@ -1,3 +1,5 @@
+from typing import Dict, Callable
+
 import aiohttp.web
 import aiohttp_jinja2
 import jinja2
@@ -85,3 +87,12 @@ class WebChatResponse:
     def render_response(self, template_env):
         template = template_env.get_template('components/web-chat-response.html')
         return template.render(self.get_context())
+
+class WebChat:
+    def __init__(self, api_routes: Dict[str, Callable]):
+        set_app()
+        for api_route, api_function in api_routes.items():
+            app.add_routes([
+                aiohttp.web.get(api_route, api_function)
+            ])
+        aiohttp.web.run_app(app, host="127.0.0.1", port=8080)
