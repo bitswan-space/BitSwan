@@ -12,13 +12,14 @@
 
     <img src="/static/Bitswan logo.svg" alt="Logo" class="fixed top-4 left-4 w-36 h-auto">
 
-    <div class="bg-white p-8 pr-0 rounded-lg shadow-lg w-[50%] max-w-screen-lg h-[90%] flex flex-col relative">
+    <div class="bg-white p-8 rounded-lg shadow-lg w-[50%] max-w-screen-lg h-[90%] flex flex-col relative">
 
         <div class="flex-grow"></div>
 
-        {% include "components/welcome-message-box.html" %}
-
-        {% include "components/response-box.html" %}
+        <div class="h-full w-full flex flex-col items-end">
+            {% include "components/welcome-message-box.html" %}
+            {% include "components/response-box.html" %}
+        </div>
 
         {% include "components/prompt-box.html" %}
     </div>
