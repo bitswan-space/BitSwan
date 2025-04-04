@@ -1,14 +1,17 @@
 import os
 
+import aiohttp_jinja2
+
 from bspump.http_webchat.api.api_endpoints import get_welcome_message, get_prompt_input, \
     get_web_chat_response
+from bspump.http_webchat.api.template_env import template_env
 
-from bspump.http_webchat.server.app import WebChat
-
+from bspump.http_webchat.server.app import WebChat, WebchatPrompt
 
 if __name__ == "__main__":
     base_dir = os.path.dirname(os.path.abspath(__file__))
     api_dir = os.path.abspath(os.path.join(base_dir, 'templates'))
-    webchat = WebChat(welcome_message_api=("/api/welcome_message", get_welcome_message),
+    webchatprompt = WebchatPrompt(template_env.get_template('prompt-input.html').render())
+    webchat = WebChat(webchatprompt, welcome_message_api=("/api/welcome_message", get_welcome_message),
                       prompt_input_api=("/api/prompt_input", get_prompt_input),
                       prompt_response_api=( "/api/response_box", get_web_chat_response))
