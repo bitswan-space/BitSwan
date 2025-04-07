@@ -14,14 +14,14 @@
 
     <div class="bg-white p-8 rounded-lg shadow-lg w-[50%] max-w-screen-lg h-[90%] flex flex-col relative">
 
-        <div class="flex-grow"></div>
-
-        <div class="h-full w-full flex flex-col items-end">
+        <div class="flex-grow overflow-y-auto space-y-2 flex flex-col items-end pr-2">
             {% include "components/welcome-message-box.html" %}
             {% include "components/response-box.html" %}
         </div>
 
-        {% include "components/prompt-box.html" %}
+        <div class="pt-4">
+            {% include "components/prompt-box.html" %}
+        </div>
     </div>
 
 </body>
