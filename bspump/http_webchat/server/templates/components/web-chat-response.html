@@ -1,15 +1,20 @@
-<div class="webchat_response bg-white shadow-md rounded-xl rounded-tr-none w-[90%] px-8 py-6 flex items-center border border-gray-300 opacity-0 transition-opacity duration-500">
+<style>
+  .fade-in {
+    opacity: 0;
+    transform: translateY(10px);
+    animation: fadeSlideIn 0.6s ease forwards;
+  }
+
+  @keyframes fadeSlideIn {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+</style>
+
+<div id="webchat_response"
+     class="webchat_response fade-in bg-white shadow-md rounded-xl rounded-tr-none w-[90%] px-8 py-6 flex items-center border border-gray-300">
     {{ response_text }}
 </div>
-<script>
-  document.addEventListener("htmx:afterSwap", function(evt) {
-    if (evt.detail.target.id === "response-box") {
-      let responses = document.querySelectorAll('.webchat_response');
-      responses.forEach((response, index) => {
-        setTimeout(() => {
-          response.style.opacity = 1;
-        }, index * 500);
-      });
-    }
-  });
-</script>
+
