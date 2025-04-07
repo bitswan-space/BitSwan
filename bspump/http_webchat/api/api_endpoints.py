@@ -40,6 +40,7 @@ async def get_web_chat_response(request):
         return aiohttp.web.Response(text=webchat.get_html(template_env), content_type='text/html')
 
 async def get_response_123():
+    # TODO not return the response in one
     calculating = WebChatResponse(input_html=f"Calculating odkupy for Fund {123}")
     result = WebChatResponse(input_html=f"Total valuation is 2 300 345 CZK.")
     next_message = WebChatResponse(input_html=f"Please pick another fund for calculation.")
