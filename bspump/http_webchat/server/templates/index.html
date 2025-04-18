@@ -4,9 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fund Info</title>
+
     <script>
       if (localStorage.getItem('theme') === 'dark') {
         document.documentElement.classList.add('dark');
+        window.addEventListener('DOMContentLoaded', () => {
+          const btn = document.querySelector('button');
+          if (btn) btn.textContent = '☀️';
+        });
       }
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -54,10 +59,11 @@
       onclick="
         document.documentElement.classList.toggle('dark');
         localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        this.textContent = document.documentElement.classList.contains('dark') ? '☀️' : '🌙';
       "
-      class="fixed top-4 left-4 bg-secondary dark:bg-secondary-dark text-primary dark:text-primary-dark px-3 py-1 rounded-md text-sm shadow"
+      class="fixed top-4 left-4 bg-secondary dark:bg-secondary-dark text-primary dark:text-primary-dark px-3 py-1 rounded-md text-xl shadow"
     >
-      Dark Mode
+      🌙
     </button>
 
     <div class="p-8 w-[50%] max-w-screen-lg h-[90%] flex flex-col relative">
