@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fund Info</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
        theme: {
@@ -15,9 +16,9 @@
               light: '#1c1917',
             },
             secondary: {
-              DEFAULT: '#E6E6E6',
+              DEFAULT: '#CBCACA',
               dark: '#2D2D2D',
-              light: '#E6E6E6',
+              light: '#CBCACA',
             },
             neutral: {
               DEFAULT: '#FAFAF9',
@@ -29,24 +30,21 @@
       },
       }
     </script>
-    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.js" integrity="sha384-oeUn82QNXPuVkGCkcrInrS1twIxKhkZiFfr2TdiuObZ3n3yIeMiqcRzkIcguaof1" crossorigin="anonymous"></script>
 
 </head>
-<body class="bg-cyan-50 flex justify-center items-center h-screen">
+<body class="bg-neutral flex justify-center items-center h-screen">
 
-    <img src="/static/Bitswan logo.svg" alt="Logo" class="fixed top-4 left-4 w-36 h-auto">
+    <img src="/static/Bitswan logo.svg" alt="Logo" class="fixed top-4 right-4 w-44 h-auto">
 
-    <div class="bg-white p-8 rounded-lg shadow-lg w-[50%] max-w-screen-lg h-[90%] flex flex-col relative">
+    <div class="p-8 w-[50%] max-w-screen-lg h-[90%] flex flex-col relative">
 
         <div class="flex-grow overflow-y-auto space-y-2 flex flex-col items-end pr-2">
             {% include "components/welcome-message-box.html" %}
             {% include "components/response-box.html" %}
-        </div>
-
-        <div class="pt-4">
             {% include "components/prompt-box.html" %}
         </div>
+
     </div>
 
 </body>
