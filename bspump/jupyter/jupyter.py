@@ -84,7 +84,7 @@ def auto_pipeline(source=None, sink=None, name=None):
     if name is None:
         pipeline_name = f"auto_pipeline_{__bitswan_autopipeline_count}"
     else:
-        pipeline_name = f"{name}_{__bitswan_autopipeline_count}"
+        pipeline_name = f"{name}"
     new_pipeline(pipeline_name)
     __bitswan_autopipeline_count += 1
     import inspect
