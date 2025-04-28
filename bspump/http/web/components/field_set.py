@@ -42,3 +42,7 @@ class FieldSet(BaseField):
         for field in self.fields:
             out[field.name] = field.get_params()
         return out
+
+    def clean(self, data, request=None):
+        for field in self.fields:
+            field.clean(data[self.name], request)
