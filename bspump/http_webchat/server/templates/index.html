@@ -59,11 +59,11 @@
       onclick="
         document.documentElement.classList.toggle('dark');
         localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
-        this.textContent = document.documentElement.classList.contains('dark') ? '☀️' : '🌙';
       "
-      class="fixed bottom-4 right-4 bg-secondary dark:bg-secondary-dark text-primary dark:text-primary-dark px-3 py-1 rounded-md text-xl shadow"
+      class="fixed bottom-4 right-4  text-primary dark:text-primary-dark px-3 py-1 rounded-md text-xl shadow"
     >
-      🌙
+      <img src="/static/brightness_2.svg" class="dark:hidden">
+        <img src="/static/wb_sunny.svg" class="hidden dark:block">
     </button>
     {% include "components/side-bar.html" %}
     <div class="p-8 w-[50%] max-w-screen-lg h-[90%] flex flex-col relative">

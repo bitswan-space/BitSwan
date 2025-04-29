@@ -100,3 +100,6 @@ class WebChat:
         app.add_routes([
             aiohttp.web.get("/", self.serve_index)
         ])
+
+# TODO create Response class for also making request to another endpoint and there loading
+# Chat Response by mohol zmenit prompt, prompt bude disabled pokym mu nepride
