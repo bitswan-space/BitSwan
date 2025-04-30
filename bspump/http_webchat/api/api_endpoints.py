@@ -3,7 +3,8 @@ import aiohttp_jinja2
 import os
 
 from bspump.http_webchat.api.template_env import template_env
-from bspump.http_webchat.server.app import WebChatResponse, WebChatWelcomeWindow, WebchatPrompt
+from bspump.http_webchat.server.app import WebChatResponse, WebChatWelcomeWindow, WebchatPrompt, \
+    WebChatResponseSequence, WebChatResponseWithRequest
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -40,13 +41,15 @@ async def get_web_chat_response(request):
         return aiohttp.web.Response(text=webchat.get_html(template_env), content_type='text/html')
 
 async def get_response_123():
-    # TODO not return the response in one
-    calculating = WebChatResponse(input_html=f"Calculating odkupy for Fund {123}")
-    result = WebChatResponse(input_html=f"Total valuation is 2 300 345 CZK.")
-    next_message = WebChatResponse(input_html=f"Please pick another fund for calculation.")
+    response_sequence = WebChatResponseSequence([
+        WebChatResponse(input_html="Calculating odkupy for Fund 123"),
+        WebChatResponseWithRequest(input_html="Total valuation is", api_endpoint="https://run.mocky.io/v3/1e17cf34-ab78-40b9-8512-136e290a43c2"),
+        WebChatResponse(input_html="Please pick another fund for calculation.")
+    ])
 
-    rendered_html = calculating.get_html(template_env) + result.get_html(template_env) + next_message.get_html(template_env)
+    rendered_html = response_sequence.get_html(template_env)
     return aiohttp.web.Response(text=rendered_html, content_type='text/html')
+
 
 async def get_response_12():
     webchat = WebChatResponse(input_html=f"Calculating odkupy for Fund {12}")

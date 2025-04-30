@@ -1,0 +1,18 @@
+<div id="webchat_sequence_response" class="w-full flex flex-col items-end"></div>
+<script>
+  const responses = {{ responses | safe }};
+  let current = 0;
+
+  function showNext() {
+    if (current < responses.length) {
+      const container = document.getElementById('webchat_sequence_response');
+      container.insertAdjacentHTML('beforeend', responses[current]);
+      current++;
+
+      setTimeout(showNext, 1000);
+    }
+  }
+
+  // Start the sequence automatically
+  showNext();
+</script>
