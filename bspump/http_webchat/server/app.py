@@ -1,4 +1,5 @@
-from typing import Dict, Callable
+import json
+from typing import Dict, Callable, List, Union
 
 import aiohttp.web
 import aiohttp_jinja2
@@ -73,6 +74,34 @@ class WebChatResponse:
         template = template_env.get_template('components/web-chat-response.html')
         return template.render(self.get_context())
 
+class WebChatResponseWithRequest:
+    def __init__(self, input_html="", api_endpoint=""):
+        self.input_html = input_html
+        self.api_endpoint = api_endpoint
+
+    def get_context(self):
+        return {
+            'response_text': self.input_html,
+            'api_endpoint': self.api_endpoint,
+        }
+
+    def get_html(self, template_env):
+        template = template_env.get_template('components/web-chat-response-with-request.html')
+        return template.render(self.get_context())
+
+class WebChatResponseSequence:
+    def __init__(self, responses: List[Union[WebChatResponse, WebChatResponseWithRequest]]):
+        self.responses = responses
+
+    def get_html(self, template_env):
+        rendered_responses = [response.get_html(template_env) for response in self.responses]
+        js_safe_responses = json.dumps(rendered_responses)
+        context = {
+            'responses': js_safe_responses,
+        }
+        template = template_env.get_template('components/web-chat-sequence-response.html')
+        return template.render(context)
+
 class WebChat:
     def __init__(self, welcome_message_api: tuple[str, Callable], prompt_input_api: tuple[str, Callable], prompt_response_api: tuple[str, Callable]):
         self.welcome_message_api = welcome_message_api
@@ -102,4 +131,5 @@ class WebChat:
         ])
 
 # TODO create Response class for also making request to another endpoint and there loading
+# have one response or multiple responses that would be rendered one by one
 # Chat Response by mohol zmenit prompt, prompt bude disabled pokym mu nepride
