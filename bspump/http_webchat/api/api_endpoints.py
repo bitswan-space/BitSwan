@@ -4,7 +4,7 @@ import os
 
 from bspump.http_webchat.api.template_env import template_env
 from bspump.http_webchat.server.app import WebChatResponse, WebChatWelcomeWindow, WebchatPrompt, \
-    WebChatResponseSequence, WebChatResponseWithRequest
+    WebChatResponseSequence
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -43,7 +43,7 @@ async def get_web_chat_response(request):
 async def get_response_123():
     response_sequence = WebChatResponseSequence([
         WebChatResponse(input_html="Calculating odkupy for Fund 123"),
-        WebChatResponseWithRequest(input_html="Total valuation is", api_endpoint="https://run.mocky.io/v3/1e17cf34-ab78-40b9-8512-136e290a43c2"),
+        WebChatResponse(input_html="Total valuation is", api_endpoint="https://run.mocky.io/v3/1e17cf34-ab78-40b9-8512-136e290a43c2"),
         WebChatResponse(input_html="Please pick another fund for calculation.")
     ])
 

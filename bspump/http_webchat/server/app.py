@@ -1,5 +1,5 @@
 import json
-from typing import Dict, Callable, List, Union
+from typing import Callable, List, Union
 
 import aiohttp.web
 import aiohttp_jinja2
@@ -62,35 +62,25 @@ class WebchatPrompt:
         return self.input_html
 
 class WebChatResponse:
-    def __init__(self, input_html=None):
+    def __init__(self, input_html=None, api_endpoint=""):
         self.input_html = input_html or ""
-
-    def get_context(self):
-        return {
-            'response_text': self.input_html,
-        }
-
-    def get_html(self, template_env):
-        template = template_env.get_template('components/web-chat-response.html')
-        return template.render(self.get_context())
-
-class WebChatResponseWithRequest:
-    def __init__(self, input_html="", api_endpoint=""):
-        self.input_html = input_html
         self.api_endpoint = api_endpoint
 
     def get_context(self):
-        return {
-            'response_text': self.input_html,
-            'api_endpoint': self.api_endpoint,
-        }
+        context = {'response_text': self.input_html,}
+        if self.api_endpoint != "":
+            context['api_endpoint'] = self.api_endpoint
+        return context
 
     def get_html(self, template_env):
-        template = template_env.get_template('components/web-chat-response-with-request.html')
+        if self.api_endpoint != "":
+            template = template_env.get_template('components/web-chat-response-with-request.html')
+        else:
+            template = template_env.get_template('components/web-chat-response.html')
         return template.render(self.get_context())
 
 class WebChatResponseSequence:
-    def __init__(self, responses: List[Union[WebChatResponse, WebChatResponseWithRequest]]):
+    def __init__(self, responses: List[WebChatResponse]):
         self.responses = responses
 
     def get_html(self, template_env):
@@ -130,6 +120,4 @@ class WebChat:
             aiohttp.web.get("/", self.serve_index)
         ])
 
-# TODO create Response class for also making request to another endpoint and there loading
-# have one response or multiple responses that would be rendered one by one
 # Chat Response by mohol zmenit prompt, prompt bude disabled pokym mu nepride
