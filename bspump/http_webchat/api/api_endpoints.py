@@ -52,7 +52,7 @@ async def get_response_123():
 
 
 async def get_response_12():
-    response_sequence = WebChatResponse(input_html="I need more information",
-                    prompt_html="<div>additional_information</div>")
+    response_sequence = WebChatResponseSequence([WebChatResponse(input_html="Calculating odkupy for Fund 123"),WebChatResponse(input_html="I need more information",
+                    prompt_html="<div>additional_information</div>")])
     rendered_html = response_sequence.get_html(template_env)
     return aiohttp.web.Response(text=rendered_html, content_type='text/html')

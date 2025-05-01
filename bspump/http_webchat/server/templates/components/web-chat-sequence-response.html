@@ -1,4 +1,5 @@
 <div id="webchat_sequence_response" class="w-full flex flex-col items-end"></div>
+
 <script>
   const responses = {{ responses | safe }};
   let current = 0;
@@ -7,10 +8,20 @@
     if (current < responses.length) {
       const container = document.getElementById('webchat_sequence_response');
       container.insertAdjacentHTML('beforeend', responses[current]);
+
+      // Get the newly inserted response
+      const newResponse = container.lastElementChild;
+
+      // Manually trigger htmx:afterSwap for each response
+      const event = new CustomEvent('htmx:afterSwap', { detail: { target: newResponse } });
+      document.body.dispatchEvent(event);  // Dispatch globally to ensure the prompt is updated
+
       current++;
 
+      // Show the next response after a delay
       setTimeout(showNext, 1000);
     }
   }
+
   showNext();
 </script>
