@@ -62,10 +62,9 @@ class WebchatPrompt:
         return self.input_html
 
 class WebChatResponse:
-    def __init__(self, input_html=None, api_endpoint=None, prompt_html=None):
+    def __init__(self, input_html=None, api_endpoint=None):
         self.input_html = input_html or ""
         self.api_endpoint = api_endpoint
-        self.prompt_html = prompt_html
 
     def get_context(self):
         context = {
@@ -73,8 +72,6 @@ class WebChatResponse:
         }
         if self.api_endpoint:
             context['api_endpoint'] = self.api_endpoint
-        if self.prompt_html:
-            context['prompt_html'] = self.prompt_html
         return context
 
     def get_html(self, template_env):
@@ -84,9 +81,23 @@ class WebChatResponse:
             template = template_env.get_template('components/web-chat-response.html')
         return template.render(self.get_context())
 
+class WebChatResponseWithPrompt(WebChatResponse):
+    def __init__(self, input_html=None, prompt_html=None, api_endpoint=None):
+        super().__init__(input_html, api_endpoint)
+        self.prompt_html = prompt_html
+
+    def get_context(self):
+        context = super().get_context()
+        context['prompt_html'] = self.prompt_html
+        return context
+
+    def get_html(self, template_env):
+        rendered_html = super().get_html(template_env)
+        response_with_prompt_html = f'<div id="response-with-prompt">{rendered_html}</div>'
+        return response_with_prompt_html
 
 class WebChatResponseSequence:
-    def __init__(self, responses: List[WebChatResponse]):
+    def __init__(self, responses: List[Union[WebChatResponse, WebChatResponseWithPrompt]]):
         self.responses = responses
 
     def get_html(self, template_env):
