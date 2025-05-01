@@ -1,21 +1,20 @@
-<style>
-  .fade-in {
-    opacity: 0;
-    transform: translateY(10px);
-    animation: fadeSlideIn 0.6s ease forwards;
-  }
-
-  @keyframes fadeSlideIn {
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-</style>
-
 <div id="webchat_response"
      class="webchat_response fade-in px-8 py-8 flex items-center text-primary dark:text-primary-dark border-b border-secondary w-[90%]">
     {{ response_text }}
+    <style>
+      .fade-in {
+        opacity: 0;
+        transform: translateY(10px);
+        animation: fadeSlideIn 0.6s ease forwards;
+      }
+
+      @keyframes fadeSlideIn {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
 </div>
 
 {% if prompt_html %}

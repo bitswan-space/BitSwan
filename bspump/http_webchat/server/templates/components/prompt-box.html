@@ -4,6 +4,17 @@
     hx-trigger="load"
     hx-target="#prompt-input"
 >
+    <script>
+        document.addEventListener("keydown", function (event) {
+            const input = document.querySelector('#prompt-input input');
+            const button = document.querySelector('#fund_button');
+            if (event.key === "Enter" && input === document.activeElement) {
+                event.preventDefault();
+                button.click();
+            }
+        });
+    </script>
+
     <div class="flex items-center justify-between gap-4">
         <div id="prompt-input" class="flex-1 pr-2">
             Loading...
@@ -16,7 +27,7 @@
             hx-get="{{ response_box_api }}"
             hx-target="#response-box"
             hx-trigger="click"
-            hx-include="#fund_id"
+            hx-include="previous form"
             hx-swap="beforeend"
         >
             ↑
