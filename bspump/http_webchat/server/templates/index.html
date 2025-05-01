@@ -44,18 +44,20 @@
     </script>
     <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.js" crossorigin="anonymous"></script>
    <script>
-      document.addEventListener('DOMContentLoaded', function () {
+      document.addEventListener('DOMContentLoaded', function() {
         document.body.addEventListener('htmx:afterSwap', function(evt) {
-          const promptInput = document.querySelector("#prompt-input");
-          const newPromptHTML = document.querySelector("#new-prompt-html");
+          const promptHtml = document.getElementById('new-prompt-html');
+          const promptInput = document.getElementById('prompt-input');
 
-          if (promptInput && newPromptHTML) {
-            console.log('Updating prompt input...');
-            promptInput.innerHTML = newPromptHTML.innerHTML;
+          if (promptHtml && promptInput) {
+            // Only update if the new prompt html is available
+            promptInput.innerHTML = promptHtml.innerHTML;
+            promptHtml.remove();
           }
         });
       });
     </script>
+
 
     <style>
       body, .dark\:bg-neutral-dark {
