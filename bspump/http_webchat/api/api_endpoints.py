@@ -52,5 +52,7 @@ async def get_response_123():
 
 
 async def get_response_12():
-    webchat = WebChatResponse(input_html=f"Calculating odkupy for Fund {12}")
-    return aiohttp.web.Response(text=webchat.get_html(template_env), content_type='text/html')
+    response_sequence = WebChatResponse(input_html="I need more information",
+                    prompt_html="<div>additional_information</div>")
+    rendered_html = response_sequence.get_html(template_env)
+    return aiohttp.web.Response(text=rendered_html, content_type='text/html')
