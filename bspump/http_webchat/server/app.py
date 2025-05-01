@@ -74,7 +74,6 @@ class WebChatResponse:
         if self.api_endpoint:
             context['api_endpoint'] = self.api_endpoint
         if self.prompt_html:
-            print(f"prompt_html: {self.prompt_html}")
             context['prompt_html'] = self.prompt_html
         return context
 
