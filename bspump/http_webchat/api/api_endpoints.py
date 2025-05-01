@@ -4,7 +4,7 @@ import os
 
 from bspump.http_webchat.api.template_env import template_env
 from bspump.http_webchat.server.app import WebChatResponse, WebChatWelcomeWindow, WebchatPrompt, \
-    WebChatResponseSequence
+    WebChatResponseSequence, WebChatResponseWithPrompt
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -26,19 +26,26 @@ async def get_prompt_input(request):
     return aiohttp.web.Response(text=prompt.get_html(), content_type='text/html')
 
 # /api/response_box
+# what can I get as input?
 async def get_web_chat_response(request):
-    fund_id = request.query.get('fund_id')
+    query = request.query
+    fund_id = query.get('fund_id')
+    validation_date = query.get('validation_date')
 
-    if not fund_id:
-        return aiohttp.web.json_response({"error": "Missing fund_id"}, status=400)
+    if fund_id:
+        if fund_id == "123":
+            return await get_response_123()
+        elif fund_id == "12":
+            return await get_response_12(request)
+        else:
+            webchat = WebChatResponse(input_html=f"Calculating odkupy for Fund {fund_id}")
+            return aiohttp.web.Response(text=webchat.get_html(template_env), content_type='text/html')
 
-    if fund_id == "123":
-        return await get_response_123()
-    elif fund_id == "12":
-        return await get_response_12()
-    else:
-        webchat = WebChatResponse(input_html=f"Calculating odkupy for Fund {fund_id}")
+    elif validation_date:
+        webchat = WebChatResponse(input_html="Total valuation is 155555.")
         return aiohttp.web.Response(text=webchat.get_html(template_env), content_type='text/html')
+
+    return aiohttp.web.json_response({"error": "Missing fund_id or validation_date"}, status=400)
 
 async def get_response_123():
     response_sequence = WebChatResponseSequence([
@@ -51,8 +58,18 @@ async def get_response_123():
     return aiohttp.web.Response(text=rendered_html, content_type='text/html')
 
 
-async def get_response_12():
-    response_sequence = WebChatResponseSequence([WebChatResponse(input_html="Calculating odkupy for Fund 123"),WebChatResponse(input_html="I need more information",
-                    prompt_html="<div>additional_information</div>")])
+async def get_response_12(request):
+    prompt_form = aiohttp_jinja2.render_string('prompt-form.html', request, {})
+    prompt = aiohttp_jinja2.render_string('prompt-input.html', request, {})
+    response_sequence = WebChatResponseSequence([
+        WebChatResponse(input_html="Calculating odkupy for Fund 123"),
+        WebChatResponseWithPrompt(
+            input_html="I need more information",
+            prompt_html=prompt_form
+        ),
+        WebChatResponse(input_html="Total valuation is 155555."),
+        WebChatResponseWithPrompt(input_html="Please pick another fund for calculation.", prompt_html=prompt)
+    ])
+
     rendered_html = response_sequence.get_html(template_env)
     return aiohttp.web.Response(text=rendered_html, content_type='text/html')

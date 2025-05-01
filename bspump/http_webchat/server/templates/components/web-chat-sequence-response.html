@@ -1,6 +1,7 @@
 <div id="webchat_sequence_response" class="w-full flex flex-col items-end"></div>
 
 <script>
+(function() {
   const responses = {{ responses | safe }};
   let current = 0;
 
@@ -9,19 +10,44 @@
       const container = document.getElementById('webchat_sequence_response');
       container.insertAdjacentHTML('beforeend', responses[current]);
 
-      // Get the newly inserted response
       const newResponse = container.lastElementChild;
+      console.log(newResponse);
 
-      // Manually trigger htmx:afterSwap for each response
       const event = new CustomEvent('htmx:afterSwap', { detail: { target: newResponse } });
-      document.body.dispatchEvent(event);  // Dispatch globally to ensure the prompt is updated
+      document.body.dispatchEvent(event);
 
       current++;
 
-      // Show the next response after a delay
-      setTimeout(showNext, 1000);
+      // Check if the new response has a form and needs to wait for submission
+      if (newResponse.id === 'response-with-prompt') {
+        const form = newResponse.querySelector('form');
+        if (form) {
+          waitForFormSubmission(form);
+        }
+      } else {
+        // Continue showing the next response after a delay
+        setTimeout(showNext, 1000);
+      }
     }
   }
 
+  function waitForFormSubmission(form) {
+    const listener = function(event) {
+      // Check if the form submission has completed successfully
+      if (event.target === form) {
+        // Proceed with showing the next response
+        showNext();
+      }
+    };
+
+    // Listen for HTMX request completion
+    document.body.addEventListener('htmx:afterRequest', listener, { once: true });
+
+    // Submit the form via HTMX (assuming it has an hx-post or similar HTMX attribute)
+    form.querySelector('button[type="submit"]').click();
+  }
+
+  // Start the response sequence
   showNext();
+})();
 </script>
