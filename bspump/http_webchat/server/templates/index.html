@@ -50,7 +50,6 @@
           const promptInput = document.getElementById('prompt-input');
 
           if (promptHtml && promptInput) {
-            // Only update if the new prompt html is available
             promptInput.innerHTML = promptHtml.innerHTML;
             promptHtml.remove();
           }
@@ -74,7 +73,7 @@
         document.documentElement.classList.toggle('dark');
         localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
       "
-      class="fixed bottom-4 right-4  text-primary dark:text-primary-dark px-3 py-1 rounded-md text-xl shadow"
+      class="fixed bottom-4 right-4  text-primary dark:text-primary-dark px-3 py-1 text-xl"
     >
       <img src="/static/brightness_2.svg" class="dark:hidden">
         <img src="/static/wb_sunny.svg" class="hidden dark:block">
