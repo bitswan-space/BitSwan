@@ -15,10 +15,9 @@
         }
       }
     </style>
-</div>
-
-{% if prompt_html %}
+    {% if prompt_html %}
   <div id="new-prompt-html" style="display: none;">
     {{ prompt_html | safe }}
   </div>
 {% endif %}
+</div>

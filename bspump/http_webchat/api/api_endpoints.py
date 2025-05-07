@@ -67,7 +67,6 @@ async def get_response_12(request):
             input_html="I need more information",
             prompt_html=prompt_form
         ),
-        WebChatResponse(input_html="Total valuation is 155555."),
         WebChatResponseWithPrompt(input_html="Please pick another fund for calculation.", prompt_html=prompt)
     ])
 
