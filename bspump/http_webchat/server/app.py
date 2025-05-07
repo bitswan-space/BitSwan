@@ -93,7 +93,7 @@ class WebChatResponseWithPrompt(WebChatResponse):
 
     def get_html(self, template_env):
         rendered_html = super().get_html(template_env)
-        response_with_prompt_html = f'<div id="response-with-prompt">{rendered_html}</div>'
+        response_with_prompt_html = rendered_html.replace('id="webchat_response"', 'id="response-with-prompt"', 1)
         return response_with_prompt_html
 
 class WebChatResponseSequence:
