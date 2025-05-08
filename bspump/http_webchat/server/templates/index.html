@@ -68,16 +68,6 @@
     <img src="/static/Bitswan logo.svg" class="dark:hidden fixed top-4 right-4 w-44 h-auto">
     <img src="/static/Bitswan logo white.svg" class="hidden dark:block fixed top-4 right-4 w-44 h-auto">
 
-    <button
-      onclick="
-        document.documentElement.classList.toggle('dark');
-        localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
-      "
-      class="fixed bottom-4 right-4  text-primary dark:text-primary-dark px-3 py-1 text-xl"
-    >
-      <img src="/static/brightness_2.svg" class="dark:hidden">
-        <img src="/static/wb_sunny.svg" class="hidden dark:block">
-    </button>
     {% include "components/side-bar.html" %}
     <div class="p-8 w-[50%] max-w-screen-lg h-[90%] flex flex-col relative">
         <div class="flex-grow overflow-y-auto flex flex-col items-end pr-2">
@@ -86,6 +76,17 @@
             {% include "components/prompt-box.html" %}
         </div>
     </div>
+
+     <button
+          onclick="
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+          "
+          class="fixed bottom-4 right-4  text-primary dark:text-primary-dark px-3 py-1 text-xl"
+        >
+          <img src="/static/brightness_2.svg" class="dark:hidden">
+            <img src="/static/wb_sunny.svg" class="hidden dark:block">
+     </button>
 
 </body>
 </html>
