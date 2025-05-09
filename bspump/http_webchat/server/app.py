@@ -113,6 +113,7 @@ class WebChatResponseSequence:
         context = {
             'responses': js_safe_responses,
         }
+        print(js_safe_responses)
         template = template_env.get_template('components/web-chat-sequence-response.html')
         return template.render(context)
 

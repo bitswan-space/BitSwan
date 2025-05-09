@@ -8,45 +8,24 @@
   function showNext() {
     if (current < responses.length) {
       const container = document.getElementById('webchat_sequence_response');
-      container.insertAdjacentHTML('beforeend', responses[current]);
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = responses[current];
 
-      const newResponse = container.lastElementChild;
-
-      const event = new CustomEvent('htmx:afterSwap', { detail: { target: newResponse } });
-      document.body.dispatchEvent(event);
-
-      current++;
-
-      // Check if the new response has a form and needs to wait for submission
-      if (newResponse.id === 'response-with-prompt') {
-        const form = newResponse.querySelector('form');
-        if (form) {
-          waitForFormSubmission(form);
-        }
-      } else {
-        // Continue showing the next response after a delay
-        setTimeout(showNext, 1000);
+      // Extract and move prompt-input if it exists
+      const prompt = tempDiv.querySelector('#prompt-input');
+      if (prompt) {
+        const promptContainer = document.getElementById('prompt-input');
+        promptContainer.innerHTML = prompt.innerHTML;
+        prompt.remove(); // remove from sequence response
       }
+
+      container.insertAdjacentHTML('beforeend', tempDiv.innerHTML);
+      current++;
+      setTimeout(showNext, 1000);
     }
   }
 
-  function waitForFormSubmission(form) {
-    const listener = function(event) {
-      // Check if the form submission has completed successfully
-      if (event.target === form) {
-        // Proceed with showing the next response
-        showNext();
-      }
-    };
-
-    // Listen for HTMX request completion
-    document.body.addEventListener('htmx:afterRequest', listener, { once: true });
-
-    // Submit the form via HTMX (assuming it has an hx-post or similar HTMX attribute)
-    form.querySelector('button[type="submit"]').click();
-  }
-
-  // Start the response sequence
   showNext();
 })();
 </script>
+
