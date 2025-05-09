@@ -153,7 +153,7 @@ class MQTTService(Service):
                 )
 
         self.Connection.publish_to_topic(
-            f"/topology",
+            "/topology",
             json.dumps(get_pipelines(svc.Pipelines)),
             retain=True,
         )
