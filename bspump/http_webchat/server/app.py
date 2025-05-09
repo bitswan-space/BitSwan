@@ -92,8 +92,8 @@ class WebChatResponse:
             'response_text': self.input_html,
             'prompt_html': self.prompt_form.get_html(self.template_env) if self.prompt_form else "",
             'api_endpoint': self.api_endpoint if self.api_endpoint else "",
+            'has_prompt': bool(self.prompt_form),
         }
-
 
     def get_html(self):
         if self.api_endpoint:
