@@ -6,26 +6,56 @@
   let current = 0;
 
   function showNext() {
-    if (current < responses.length) {
-      const container = document.getElementById('webchat_sequence_response');
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = responses[current];
+    if (current >= responses.length) return;
 
-      // Extract and move prompt-input if it exists
-      const prompt = tempDiv.querySelector('#prompt-input');
-      if (prompt) {
-        const promptContainer = document.getElementById('prompt-input');
+    const container = document.getElementById('webchat_sequence_response');
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = responses[current];
+
+    // Extract and move prompt-input if it exists
+    const prompt = tempDiv.querySelector('#prompt-input');
+    if (prompt) {
+      const promptContainer = document.getElementById('prompt-input');
+      if (promptContainer) {
         promptContainer.innerHTML = prompt.innerHTML;
-        prompt.remove(); // remove from sequence response
+        prompt.remove();
       }
+    }
 
-      container.insertAdjacentHTML('beforeend', tempDiv.innerHTML);
-      current++;
+    // Append DOM nodes properly
+    while (tempDiv.firstChild) {
+      const node = tempDiv.firstChild;
+      container.appendChild(node);
+    }
+
+    current++;
+    const newResponse = container.lastElementChild;
+
+    // Check if we need to wait for form submission
+    if (newResponse && newResponse.id?.startsWith('webchat-response-with-prompt')) {
+      const form = newResponse.querySelector('form');
+      if (form) {
+        waitForFormSubmission(form);
+      }
+    } else {
       setTimeout(showNext, 1000);
     }
   }
 
+  function waitForFormSubmission(form) {
+    form.addEventListener('submit', function(event) {
+      event.preventDefault();  // Prevent full reload
+      htmx.submit(form);       // Submit using HTMX
+    });
+
+    document.body.addEventListener('htmx:afterRequest', function(event) {
+      if (event.target === form) {
+        showNext(); // Continue only after HTMX finishes
+      }
+    }, { once: true }); // Prevent multiple bindings
+  }
+
+  // Start the sequence
   showNext();
 })();
 </script>
-
