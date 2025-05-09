@@ -1,5 +1,4 @@
 import aiohttp.web
-import aiohttp_jinja2
 import os
 
 from bspump.http_webchat.api.template_env import template_env
@@ -22,21 +21,6 @@ async def get_welcome_message(request):
     )
     welcome_message = WebChatWelcomeWindow(welcome_text="Hello, welcome to the odkupy calculation assistant. Please select the fond you would like to calculate odkupy for.", prompt_form=formfund, template_env=template_env)
     return aiohttp.web.Response(text=welcome_message.get_html(), content_type='text/html')
-
-# /api/prompt_input -> for the initial endpoint
-# this is called automatically on load
-async def get_prompt_input(request):
-    fund_input = FormInput(
-        label="Fond",
-        name="fund_id",
-        input_type="text",
-        required=True
-    )
-    form = WebChatPromptForm(
-        form_inputs=[fund_input],
-        submit_api_call="/api/response_box"
-    )
-    return aiohttp.web.Response(text=form.get_html(template_env), content_type='text/html')
 
 # /api/response_box
 # what can I get as input?
@@ -73,7 +57,7 @@ async def get_web_chat_response(request):
             return aiohttp.web.Response(text=webchat.get_html(), content_type='text/html')
 
     elif validation_date:
-        webchat = WebChatResponse(input_html="Total valuation is 15000")
+        webchat = WebChatResponse(input_html="Total valuation is 15000", template_env=template_env)
         return aiohttp.web.Response(text=webchat.get_html(), content_type='text/html')
 
     return aiohttp.web.json_response({"error": "Missing fund_id or validation_date"}, status=400)
@@ -82,7 +66,7 @@ async def get_web_chat_response(request):
 async def get_response_123():
     response_sequence = WebChatResponseSequence([
         WebChatResponse(input_html="Calculating odkupy for Fund 123", template_env=template_env),
-        WebChatResponse(input_html="Total valuation is", api_endpoint="https://run.mocky.io/v3/1e17cf34-ab78-40b9-8512-136e290a43c2"),
+        WebChatResponse(input_html="Total valuation is", api_endpoint="https://run.mocky.io/v3/1e17cf34-ab78-40b9-8512-136e290a43c2", template_env=template_env),
         WebChatResponse(input_html="Please pick another fund for calculation.", template_env=template_env),
     ])
 
@@ -116,7 +100,7 @@ async def get_response_12(request):
     )
 
     response_sequence = WebChatResponseSequence([
-        WebChatResponse(input_html="Calculating odkupy for Fund 123"),
+        WebChatResponse(input_html="Calculating odkupy for Fund 123", template_env=template_env),
         WebChatResponse(
             input_html="I need more information",
             prompt_form=form,
