@@ -32,71 +32,6 @@ def create_template_env(extra_template_dir=None):
 
     return template_env
 
-# WebchatWelcomeWindow and PromptInput returns just the input html
-# WebChatResponse returns whole rendered html because user can create how many responses they want but welcome window and
-# prompt is just one and is rendered on loading
-# Welcome window and prompt templates use api calls in templates to get the html they should render
-# There are no api calls in response templates because they are in the button in prompt template
-class WebChatWelcomeWindow:
-    def __init__(self, input_html=None):
-        self.input_html = input_html or ""
-
-    def get_context(self):
-        return {
-            'welcome_text': self.input_html,
-        }
-
-    def get_html(self):
-        return self.input_html
-
-class WebChatResponse:
-    def __init__(self, input_html=None, api_endpoint=None):
-        self.input_html = input_html or ""
-        self.api_endpoint = api_endpoint
-
-    def get_context(self):
-        context = {
-            'response_text': self.input_html,
-        }
-        if self.api_endpoint:
-            context['api_endpoint'] = self.api_endpoint
-        return context
-
-    def get_html(self, template_env):
-        if self.api_endpoint:
-            template = template_env.get_template('components/web-chat-response-with-request.html')
-        else:
-            template = template_env.get_template('components/web-chat-response.html')
-        return template.render(self.get_context())
-
-class WebChatResponseWithPrompt(WebChatResponse):
-    def __init__(self, input_html=None, prompt_html=None, api_endpoint=None):
-        super().__init__(input_html, api_endpoint)
-        self.prompt_html = prompt_html
-
-    def get_context(self):
-        context = super().get_context()
-        context['prompt_html'] = self.prompt_html
-        return context
-
-    def get_html(self, template_env):
-        rendered_html = super().get_html(template_env)
-        response_with_prompt_html = rendered_html.replace('id="webchat_response"', 'id="response-with-prompt"', 1)
-        return response_with_prompt_html
-
-class WebChatResponseSequence:
-    def __init__(self, responses: List[Union[WebChatResponse, WebChatResponseWithPrompt]]):
-        self.responses = responses
-
-    def get_html(self, template_env):
-        rendered_responses = [response.get_html(template_env) for response in self.responses]
-        js_safe_responses = json.dumps(rendered_responses)
-        context = {
-            'responses': js_safe_responses,
-        }
-        template = template_env.get_template('components/web-chat-sequence-response.html')
-        return template.render(context)
-
 class FormInput:
     def __init__(self, label, name, input_type, step=None, required=False):
         self.label = label
@@ -122,6 +57,68 @@ class WebChatPromptForm:
         template = template_env.get_template('components/prompt-box.html')
         return template.render(self.get_context())
 
+# WebchatWelcomeWindow and PromptInput returns just the input html
+# WebChatResponse returns whole rendered html because user can create how many responses they want but welcome window and
+# prompt is just one and is rendered on loading
+# Welcome window and prompt templates use api calls in templates to get the html they should render
+# There are no api calls in response templates because they are in the button in prompt template
+class WebChatWelcomeWindow:
+    def __init__(self, welcome_text, prompt_form: WebChatPromptForm, template_env):
+        self.welcome_text = welcome_text or ""
+        self.prompt_form = prompt_form
+        self.template_env = template_env
+
+    def get_context(self):
+        context = {
+            'welcome_text': self.welcome_text,
+        }
+        if self.prompt_form:
+            context['prompt_html'] = self.prompt_form.get_html(self.template_env)
+        return context
+
+    def get_html(self):
+        template = self.template_env.get_template('components/welcome-message-box.html')
+        return template.render(self.get_context())
+
+class WebChatResponse:
+    def __init__(self, input_html, template_env, prompt_form=None, api_endpoint=None):
+        self.input_html = input_html or ""
+        self.prompt_form = prompt_form
+        self.template_env = template_env
+        self.api_endpoint = api_endpoint
+
+    def get_context(self):
+        return {
+            'response_text': self.input_html,
+            'prompt_html': self.prompt_form.get_html(self.template_env) if self.prompt_form else "",
+            'api_endpoint': self.api_endpoint if self.api_endpoint else "",
+        }
+
+
+    def get_html(self):
+        if self.api_endpoint:
+            template = self.template_env.get_template('components/web-chat-response-with-request.html')
+        else:
+            template = self.template_env.get_template('components/web-chat-response.html')
+        return template.render(self.get_context())
+
+
+class WebChatResponseSequence:
+    def __init__(self, responses: List[Union[WebChatResponse]]):
+        self.responses = responses
+
+    def get_html(self, template_env):
+        rendered_responses = [response.get_html() for response in self.responses]
+        js_safe_responses = json.dumps(rendered_responses)
+        context = {
+            'responses': js_safe_responses,
+        }
+        template = template_env.get_template('components/web-chat-sequence-response.html')
+        return template.render(context)
+
+async def mock_endpoint(request):
+    return aiohttp.web.Response(text="")  # or JSON if needed
+
 
 # webchat creates the server and add the endpoints
 class WebChat:
@@ -133,8 +130,9 @@ class WebChat:
         app.add_routes([
             aiohttp.web.get(welcome_message_api[0], welcome_message_api[1]),
             aiohttp.web.get(prompt_input_api[0],prompt_input_api[1]),
-            aiohttp.web.get(prompt_response_api[0],prompt_response_api[1])
+            aiohttp.web.route('*', prompt_response_api[0], prompt_response_api[1]),
         ])
+        app.router.add_post('/api/mock', mock_endpoint)
         aiohttp.web.run_app(app, host="127.0.0.1", port=8080)
 
     async def serve_index(self, request):
@@ -153,4 +151,6 @@ class WebChat:
         ])
 
 # Chat Response by mohol zmenit prompt, prompt bude disabled pokym mu nepride
-# Force people that prompt can be only form?
+# Force people that prompt can be only form
+
+# initially make button disabled and prompt empty, only with first response user would be able to set the prompt

@@ -43,20 +43,6 @@
       }
     </script>
     <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.js" crossorigin="anonymous"></script>
-   <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        document.body.addEventListener('htmx:afterSwap', function(evt) {
-          const promptHtml = document.getElementById('new-prompt-html');
-          const promptInput = document.getElementById('prompt-input');
-
-          if (promptHtml && promptInput) {
-            promptInput.innerHTML = promptHtml.innerHTML;
-            promptHtml.remove();
-          }
-        });
-      });
-    </script>
-
 
     <style>
       body, .dark\:bg-neutral-dark {
@@ -71,16 +57,18 @@
     {% include "components/side-bar.html" %}
     <div class="p-8 w-[50%] max-w-screen-lg h-[90%] flex flex-col relative">
         <div class="flex-grow overflow-y-auto flex flex-col items-end pr-2">
-            {% include "components/welcome-message-box.html" %}
-            {% include "components/response-box.html" %}
-
             <div
-                class="shadow-md rounded-xl w-[90%] px-8 py-6 border border-secondary"
-                hx-get="{{ prompt_input_api }}"
+                hx-get="/api/welcome_message"
                 hx-trigger="load"
-                hx-target="#prompt-input"
-            >
-            <div id="prompt-input" class="flex items-center justify-between gap-4"></div>
+                hx-target="#welcome-message"
+                hx-swap="innerHTML">
+            </div>
+            <div id="welcome-message" class="w-[90%] px-8 pb-8 flex items-center text-primary dark:text-primary-dark border-b border-secondary"></div>
+            <!-- in this response box the responses will be gradually rendered -->
+            <div id="response-box" class="h-[90%] w-full overflow-y-auto flex flex-col items-end"></div>
+
+            <div id="prompt-input"
+                class="shadow-md rounded-xl w-[90%] px-8 py-6 border border-secondary">
             </div>
         </div>
     </div>
