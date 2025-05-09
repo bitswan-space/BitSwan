@@ -3,8 +3,8 @@ import aiohttp_jinja2
 import os
 
 from bspump.http_webchat.api.template_env import template_env
-from bspump.http_webchat.server.app import WebChatResponse, WebChatWelcomeWindow, WebchatPrompt, \
-    WebChatResponseSequence, WebChatResponseWithPrompt
+from bspump.http_webchat.server.app import WebChatResponse, WebChatWelcomeWindow, WebChatPromptForm, \
+    WebChatResponseSequence, WebChatResponseWithPrompt, FormInput
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -15,15 +15,17 @@ async def get_welcome_message(request):
 
 # /api/prompt_input -> change this endpoint if you want to change the input
 async def get_prompt_input(request):
-    context = {
-        'prompt_input_api': '/api/prompt_input',
-        'response_box_api': '/api/response_box'
-    }
-
-    rendered_html = aiohttp_jinja2.render_string('prompt-input.html', request, context)
-    prompt = WebchatPrompt(input_html=rendered_html)
-
-    return aiohttp.web.Response(text=prompt.get_html(), content_type='text/html')
+    fund_input = FormInput(
+        label="Fond",
+        name="fund_id",
+        input_type="text",
+        required=True
+    )
+    form = WebChatPromptForm(
+        form_inputs=[fund_input],
+        submit_api_call="/api/response_box"
+    )
+    return aiohttp.web.Response(text=form.get_html(template_env), content_type='text/html')
 
 # /api/response_box
 # what can I get as input?
@@ -42,7 +44,7 @@ async def get_web_chat_response(request):
             return aiohttp.web.Response(text=webchat.get_html(template_env), content_type='text/html')
 
     elif validation_date:
-        webchat = WebChatResponse(input_html="Total valuation is 155555.")
+        webchat = WebChatResponse(input_html="No id given.")
         return aiohttp.web.Response(text=webchat.get_html(template_env), content_type='text/html')
 
     return aiohttp.web.json_response({"error": "Missing fund_id or validation_date"}, status=400)
@@ -57,7 +59,9 @@ async def get_response_123():
     rendered_html = response_sequence.get_html(template_env)
     return aiohttp.web.Response(text=rendered_html, content_type='text/html')
 
-
+# submit in form calls again response endpoint
+# I should change it so it makes request to api and continues with sequence
+# maybe create two prompts htmls?
 async def get_response_12(request):
     prompt_form = aiohttp_jinja2.render_string('prompt-form.html', request, {})
     prompt = aiohttp_jinja2.render_string('prompt-input.html', request, {})
