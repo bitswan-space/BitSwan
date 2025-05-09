@@ -127,7 +127,7 @@ class MQTTService(Service):
 
         for pipeline in svc.Pipelines.values():
             self.Connection.publish_to_topic(
-                f"/c/{self.App.DeploymentId}/c/{pipeline.Id}/topology",
+                f"/c/{pipeline.Id}/topology",
                 json.dumps(get_pipeline_topology(svc, pipeline.Id)),
                 retain=True,
             )
@@ -136,24 +136,24 @@ class MQTTService(Service):
                 for component in depth:
                     pipeline.PublishingProcessors[component.Id] = 0
                     self.Connection.subscribe_topic(
-                        f"/c/{self.App.DeploymentId}/c/{pipeline.Id}/c/{component.Id}/events/subscribe"
+                        f"/c/{pipeline.Id}/c/{component.Id}/events/subscribe"
                     )
                     self.Connection.register_handler(
-                        f"/c/{self.App.DeploymentId}/c/{pipeline.Id}/c/{component.Id}/events/subscribe",
+                        f"/c/{pipeline.Id}/c/{component.Id}/events/subscribe",
                         self.on_message,
                     )
 
             for source in pipeline.Sources:
                 self.Connection.subscribe_topic(
-                    f"/c/{self.App.DeploymentId}/c/{pipeline.Id}/c/{source.Id}/events/subscribe"
+                    f"/c/{pipeline.Id}/c/{source.Id}/events/subscribe"
                 )
                 self.Connection.register_handler(
-                    f"/c/{self.App.DeploymentId}/c/{pipeline.Id}/c/{source.Id}/events/subscribe",
+                    f"/c/{pipeline.Id}/c/{source.Id}/events/subscribe",
                     self.on_message,
                 )
 
         self.Connection.publish_to_topic(
-            f"/c/{self.App.DeploymentId}/topology",
+            f"/topology",
             json.dumps(get_pipelines(svc.Pipelines)),
             retain=True,
         )
@@ -164,7 +164,7 @@ class MQTTService(Service):
         topic = message.topic
 
         # Regex patterns
-        events_pattern = r"^/c/(?P<deployment_identifier>[^/]+)/c/(?P<pipeline_identifier>[^/]+)/c/(?P<component_identifier>[^/]+)/events/subscribe$"
+        events_pattern = r"^/c/(?P<pipeline_identifier>[^/]+)/c/(?P<component_identifier>[^/]+)/events/subscribe$"
 
         # Matching
         events = re.match(events_pattern, topic)
@@ -216,6 +216,6 @@ class MQTTService(Service):
         data["count"] = component.EventCount
         data["remaining_subscription_count"] = count_remaining
         self.Connection.publish_to_topic(
-            f"/c/{self.App.DeploymentId}/c/{pipeline}/c/{component.Id}/events",
+            f"/c/{pipeline}/c/{component.Id}/events",
             json.dumps(data, default=lambda x: x.__class__.__name__),
         )
