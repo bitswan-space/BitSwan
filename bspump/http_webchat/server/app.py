@@ -122,14 +122,12 @@ async def mock_endpoint(request):
 
 # webchat creates the server and add the endpoints
 class WebChat:
-    def __init__(self, welcome_message_api: tuple[str, Callable], prompt_input_api: tuple[str, Callable], prompt_response_api: tuple[str, Callable]):
+    def __init__(self, welcome_message_api: tuple[str, Callable], prompt_response_api: tuple[str, Callable]):
         self.welcome_message_api = welcome_message_api
-        self.prompt_input_api = prompt_input_api
         self.prompt_response_api = prompt_response_api
         self.set_app()
         app.add_routes([
             aiohttp.web.get(welcome_message_api[0], welcome_message_api[1]),
-            aiohttp.web.get(prompt_input_api[0],prompt_input_api[1]),
             aiohttp.web.route('*', prompt_response_api[0], prompt_response_api[1]),
         ])
         app.router.add_post('/api/mock', mock_endpoint)
@@ -139,7 +137,6 @@ class WebChat:
         # these api endpoints are set in api code
         context = {
             'welcome_message_api': self.welcome_message_api[0],
-            'prompt_input_api': self.prompt_input_api[0],
             'response_box_api': self.prompt_response_api[0],
         }
         return aiohttp_jinja2.render_template('index.html', request, context)
