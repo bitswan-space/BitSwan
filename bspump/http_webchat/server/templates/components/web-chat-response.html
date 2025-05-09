@@ -15,9 +15,14 @@
         }
       }
     </style>
-    {% if prompt_html %}
-  <div id="new-prompt-html" style="display: none;">
-    {{ prompt_html | safe }}
-  </div>
-{% endif %}
 </div>
+
+{% if prompt_html %}
+<div
+  id="prompt-input"
+  hx-swap-oob="true"
+  class="shadow-md rounded-xl w-[90%] px-8 py-6 border border-secondary"
+>
+  {{ prompt_html | safe }}
+</div>
+{% endif %}
