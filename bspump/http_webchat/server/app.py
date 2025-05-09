@@ -34,7 +34,7 @@ def create_template_env(extra_template_dir=None):
 
 # WebchatWelcomeWindow and PromptInput returns just the input html
 # WebChatResponse returns whole rendered html because user can create how many responses they want but welcome window and
-# prompt iw just one and is rendered on loading
+# prompt is just one and is rendered on loading
 # Welcome window and prompt templates use api calls in templates to get the html they should render
 # There are no api calls in response templates because they are in the button in prompt template
 class WebChatWelcomeWindow:
@@ -44,18 +44,6 @@ class WebChatWelcomeWindow:
     def get_context(self):
         return {
             'welcome_text': self.input_html,
-        }
-
-    def get_html(self):
-        return self.input_html
-
-class WebchatPrompt:
-    def __init__(self, input_html=None):
-        self.input_html = input_html or ""
-
-    def get_context(self):
-        return {
-            'prompt_html': self.input_html,
         }
 
     def get_html(self):
@@ -109,6 +97,33 @@ class WebChatResponseSequence:
         template = template_env.get_template('components/web-chat-sequence-response.html')
         return template.render(context)
 
+class FormInput:
+    def __init__(self, label, name, input_type, step=None, required=False):
+        self.label = label
+        self.name = name
+        self.input_type = input_type
+        self.step = step
+        self.required = required
+
+# you are able to change the endpoint
+class WebChatPromptForm:
+    def __init__(self, form_inputs: List[FormInput], submit_api_call):
+        self.form_inputs = form_inputs
+        self.submit_api_call = submit_api_call
+
+    def get_context(self):
+        context = {
+            'response_box_api': self.submit_api_call,
+            'form_inputs': self.form_inputs
+        }
+        return context
+
+    def get_html(self, template_env):
+        template = template_env.get_template('components/prompt-box.html')
+        return template.render(self.get_context())
+
+
+# webchat creates the server and add the endpoints
 class WebChat:
     def __init__(self, welcome_message_api: tuple[str, Callable], prompt_input_api: tuple[str, Callable], prompt_response_api: tuple[str, Callable]):
         self.welcome_message_api = welcome_message_api
@@ -138,3 +153,4 @@ class WebChat:
         ])
 
 # Chat Response by mohol zmenit prompt, prompt bude disabled pokym mu nepride
+# Force people that prompt can be only form?

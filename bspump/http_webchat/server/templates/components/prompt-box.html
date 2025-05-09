@@ -1,36 +1,30 @@
-<div
-    class="shadow-md rounded-xl w-[90%] px-8 py-6 border border-secondary"
-    hx-get="{{ prompt_input_api }}"
-    hx-trigger="load"
-    hx-target="#prompt-input"
->
-    <script>
-        document.addEventListener("keydown", function (event) {
-            const input = document.querySelector('#prompt-input input');
-            const button = document.querySelector('#fund_button');
-            if (event.key === "Enter" && input === document.activeElement) {
-                event.preventDefault();
-                button.click();
-            }
-        });
-    </script>
-
-    <div class="flex items-center justify-between gap-4">
-        <div id="prompt-input" class="flex-1 pr-2">
-            Loading...
+<form
+      hx-get="{{ response_box_api }}"
+      hx-target="#response-box"
+      hx-swap="beforeend"
+      class="flex items-end gap-2 w-full max-w-md text-sm text-primary dark:text-primary-dark"
+    >
+      <div class="flex-grow flex flex-col gap-2">
+      {% for input in form_inputs %}
+        <div class="flex items-center gap-2">
+          <label for="{{ input.name }}" class="text-primary dark:text-primary-dark text-sm font-semibold">{{ input.label }}</label>
+          <input
+            type="{{ input.input_type }}"
+            id="{{ input.name }}"
+            name="{{ input.name }}"
+            class="text-primary border border-secondary  text-sm px-4 py-1 rounded-md font-mono w-full max-w-[150px] mx-2"
+            {% if input.step is not none %} step="{{ input.step }}" {% endif %}
+            {% if input.required %} required {% endif %}
+          />
         </div>
-
-        <button
-            id="fund_button"
-            type="button"
-            class="bg-primary dark:bg-primary-dark hover:bg-secondary hover:dark:bg-secondary-dark hover:text-primary hover:dark:text-primary-dark text-secondary dark:text-secondary-dark px-3 pb-1 rounded-full transition text-2xl"
-            hx-get="{{ response_box_api }}"
-            hx-target="#response-box"
-            hx-trigger="click"
-            hx-include="previous form"
-            hx-swap="beforeend"
-        >
-            ↑
-        </button>
+      {% endfor %}
     </div>
-</div>
+
+    <button
+      id="fund_button"
+      type="submit"
+      class="bg-primary dark:bg-primary-dark hover:bg-secondary hover:dark:bg-secondary-dark hover:text-primary hover:dark:text-primary-dark text-secondary dark:text-secondary-dark px-3 pb-1 rounded-full transition text-2xl"
+    >
+      ↑
+    </button>
+</form>
