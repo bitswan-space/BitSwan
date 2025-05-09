@@ -73,7 +73,15 @@
         <div class="flex-grow overflow-y-auto flex flex-col items-end pr-2">
             {% include "components/welcome-message-box.html" %}
             {% include "components/response-box.html" %}
-            {% include "components/prompt-box.html" %}
+
+            <div
+                class="shadow-md rounded-xl w-[90%] px-8 py-6 border border-secondary"
+                hx-get="{{ prompt_input_api }}"
+                hx-trigger="load"
+                hx-target="#prompt-input"
+            >
+            <div id="prompt-input" class="flex items-center justify-between gap-4"></div>
+            </div>
         </div>
     </div>
 
