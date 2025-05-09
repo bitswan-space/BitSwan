@@ -1,12 +1,12 @@
-<div
-    hx-get="{{ welcome_message_api }}"
-    hx-trigger="load"
-    hx-target="#welcome-message"
-    hx-swap="innerHTML">
-</div>
+{{ welcome_text }}
 
-<div id="welcome-message-container" class="w-[90%] px-8 pb-8 flex items-center text-primary dark:text-primary-dark border-b border-secondary">
-    <div id="welcome-message">
-        Loading...
-    </div>
+{% if prompt_html %}
+<div
+  id="prompt-input"
+  hx-swap-oob="true"
+  hx-trigger="load"
+  class="shadow-md rounded-xl w-[90%] px-8 py-6 border border-secondary"
+>
+  {{ prompt_html | safe }}
 </div>
+{% endif %}
