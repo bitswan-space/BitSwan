@@ -2,12 +2,12 @@
       hx-post="{{ response_box_api }}"
       hx-target="#response-box"
       hx-swap="beforeend"
-      class="flex items-end w-full text-sm text-primary dark:text-primary-dark"
+      class="flex items-center w-full text-sm text-primary dark:text-primary-dark gap-4 pl-8"
     >
-      <div class="flex-grow flex flex-col gap-2">
+      <div class="flex-grow flex flex-col gap-4">
       {% for input in form_inputs %}
-        <div class="flex items-center gap-2">
-          <label for="{{ input.name }}" class="text-primary dark:text-primary-dark text-sm font-semibold">{{ input.label }}</label>
+        <div class="flex items-center">
+          <label for="{{ input.name }}" class="text-primary dark:text-primary-dark text-sm font-semibold w-[120px]">{{ input.label }}</label>
           <input
             type="{{ input.input_type }}"
             id="{{ input.name }}"
