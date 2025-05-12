@@ -26,7 +26,6 @@
             if (swapTarget) {
               swapTarget.innerHTML = '';
               swapTarget.appendChild(form);
-              console.log(form);
               waitForFormSubmission(form);
               htmx.process(formWrapper);
             }
@@ -40,8 +39,7 @@
   }
 
    function waitForFormSubmission(form) {
-    form.addEventListener('submit', function(event) {
-        console.log("submit pushed");
+      form.addEventListener('submit', function(event) {
       event.preventDefault();
       htmx.process(form);
       showNext();
