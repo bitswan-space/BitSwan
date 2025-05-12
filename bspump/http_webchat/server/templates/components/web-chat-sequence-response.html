@@ -19,20 +19,18 @@
 
     if (response.id === 'webchat-response-with-prompt') {
         const formWrapper = tempDiv.querySelector('#prompt-input');
-        console.log(formWrapper);
          if (formWrapper) {
-        // Manually trigger the swap using htmx
-        const swapTarget = document.querySelector('#prompt-input'); // The element where the form will be swapped
+        const swapTarget = document.querySelector('#prompt-input');
         if (swapTarget) {
-          swapTarget.innerHTML = '';  // Clear the existing content in the target
-          swapTarget.appendChild(formWrapper);  // Append the form to the target
-
-          // Optionally, process the form so that htmx functionality is triggered
-          htmx.process(formWrapper);
+          const form = formWrapper.querySelector('form');
+            if (swapTarget) {
+              swapTarget.innerHTML = '';
+              swapTarget.appendChild(form);
+              console.log(form);
+              waitForFormSubmission(form);
+              htmx.process(formWrapper);
+            }
         }
-
-        // Ensure the form submission is handled correctly
-        waitForFormSubmission(formWrapper.querySelector('form'));
       }
     } else {
       setTimeout(showNext, 1000);
@@ -43,15 +41,11 @@
 
    function waitForFormSubmission(form) {
     form.addEventListener('submit', function(event) {
+        console.log("submit pushed");
       event.preventDefault();
-      htmx.process(form);  // Manually trigger htmx processing on form submission
+      htmx.process(form);
+      showNext();
     });
-
-    document.body.addEventListener('htmx:afterRequest', function(event) {
-      if (event.target === form) {
-        showNext();
-      }
-    }, { once: true });
   }
 
   showNext();
