@@ -16,9 +16,16 @@ class MQTTConnection(Connection):
 
     def __init__(self, app, id=None, config=None):
         super().__init__(app, id=id, config=config)
-        self._client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+        self._client = mqtt.Client(transport="websockets")
         broker = self.Config["broker"]
         self._host, self._port = broker.split(":")
+
+        if self._port == "443":
+            # communication between public broker
+            self._client.tls_set(cert_reqs=mqtt.ssl.CERT_REQUIRED)
+        else:
+            # internal communication between broker
+            self._client.tls_set(cert_reqs=mqtt.ssl.CERT_NONE)
 
         if self.Config["username"] != "" and self.Config["password"] != "":
             self._client.username_pw_set(
