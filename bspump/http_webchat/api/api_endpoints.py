@@ -58,6 +58,7 @@ async def get_web_chat_response(request):
 
     elif validation_date:
         webchat = WebChatResponse(input_html="Total valuation is 15000", template_env=template_env)
+        print('aaaaaaaaaa')
         return aiohttp.web.Response(text=webchat.get_html(), content_type='text/html')
 
     return aiohttp.web.json_response({"error": "Missing fund_id or validation_date"}, status=400)
