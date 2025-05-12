@@ -2,7 +2,7 @@
       hx-post="{{ response_box_api }}"
       hx-target="#response-box"
       hx-swap="beforeend"
-      class="flex items-end gap-2 w-full max-w-md text-sm text-primary dark:text-primary-dark"
+      class="flex items-end w-full text-sm text-primary dark:text-primary-dark"
     >
       <div class="flex-grow flex flex-col gap-2">
       {% for input in form_inputs %}
@@ -23,7 +23,7 @@
     <button
       id="fund_button"
       type="submit"
-      class="bg-primary dark:bg-primary-dark hover:bg-secondary hover:dark:bg-secondary-dark hover:text-primary hover:dark:text-primary-dark text-secondary dark:text-secondary-dark px-3 pb-1 rounded-full transition text-2xl"
+      class="bg-primary dark:bg-primary-dark hover:bg-secondary hover:dark:bg-secondary-dark hover:text-primary hover:dark:text-primary-dark text-secondary dark:text-secondary-dark px-3 pb-1 rounded-full transition text-2xl ml-auto"
     >
       ↑
     </button>
