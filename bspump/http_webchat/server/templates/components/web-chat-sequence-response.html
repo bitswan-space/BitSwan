@@ -8,54 +8,52 @@
   function showNext() {
     if (current >= responses.length) return;
 
+    const responseHTML = responses[current];
     const container = document.getElementById('webchat_sequence_response');
     const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = responses[current];
-
-    // Extract and move prompt-input if it exists
-    const prompt = tempDiv.querySelector('#prompt-input');
-    if (prompt) {
-      const promptContainer = document.getElementById('prompt-input');
-      if (promptContainer) {
-        promptContainer.innerHTML = prompt.innerHTML;
-        prompt.remove();
-      }
+    tempDiv.innerHTML = responseHTML;
+    const response = tempDiv.querySelector('.webchat_response');
+      if (response) {
+      container.appendChild(response);
     }
 
-    // Append DOM nodes properly
-    while (tempDiv.firstChild) {
-      const node = tempDiv.firstChild;
-      container.appendChild(node);
-    }
+    if (response.id === 'webchat-response-with-prompt') {
+        const formWrapper = tempDiv.querySelector('#prompt-input');
+        console.log(formWrapper);
+         if (formWrapper) {
+        // Manually trigger the swap using htmx
+        const swapTarget = document.querySelector('#prompt-input'); // The element where the form will be swapped
+        if (swapTarget) {
+          swapTarget.innerHTML = '';  // Clear the existing content in the target
+          swapTarget.appendChild(formWrapper);  // Append the form to the target
 
-    current++;
-    const newResponse = container.lastElementChild;
+          // Optionally, process the form so that htmx functionality is triggered
+          htmx.process(formWrapper);
+        }
 
-    // Check if we need to wait for form submission
-    if (newResponse && newResponse.id?.startsWith('webchat-response-with-prompt')) {
-      const form = newResponse.querySelector('form');
-      if (form) {
-        waitForFormSubmission(form);
+        // Ensure the form submission is handled correctly
+        waitForFormSubmission(formWrapper.querySelector('form'));
       }
     } else {
       setTimeout(showNext, 1000);
     }
+
+    current++;
   }
 
-  function waitForFormSubmission(form) {
+   function waitForFormSubmission(form) {
     form.addEventListener('submit', function(event) {
-      event.preventDefault();  // Prevent full reload
-      htmx.submit(form);       // Submit using HTMX
+      event.preventDefault();
+      htmx.process(form);  // Manually trigger htmx processing on form submission
     });
 
     document.body.addEventListener('htmx:afterRequest', function(event) {
       if (event.target === form) {
-        showNext(); // Continue only after HTMX finishes
+        showNext();
       }
-    }, { once: true }); // Prevent multiple bindings
+    }, { once: true });
   }
 
-  // Start the sequence
   showNext();
 })();
 </script>
