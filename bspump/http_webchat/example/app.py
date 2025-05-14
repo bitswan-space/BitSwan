@@ -7,10 +7,11 @@ from bspump.http_webchat.server.app import WebChatResponse, WebChatWelcomeWindow
     WebChatResponseSequence, FormInput
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
-api_dir = os.path.abspath(os.path.join(base_dir, 'templates'))
+
+# First we must create the template env
 template_env = WebChatTemplateEnv(os.path.abspath(os.path.join(base_dir, 'templates'))).get_jinja_env()
-if not os.path.isdir(api_dir):
-    raise ValueError(f"Template directory '{api_dir}' does not exist")
+
+# Then we define the endpoints
 
 # /api/welcome_message
 async def get_welcome_message(request):
@@ -20,14 +21,14 @@ async def get_welcome_message(request):
         input_type="text",
         required=True
     )
-    formfund = WebChatPromptForm(
+    fund_form = WebChatPromptForm(
         form_inputs=[fund_input],
         submit_api_call="/api/response_box"
     )
-    welcome_message = WebChatWelcomeWindow(welcome_text="Hello, welcome to the odkupy calculation assistant. Please select the fond you would like to calculate odkupy for.", prompt_form=formfund)
+    welcome_message = WebChatWelcomeWindow(welcome_text="Hello, welcome to the odkupy calculation assistant. Please select the fond you would like to calculate odkupy for.", prompt_form=fund_form)
     return aiohttp.web.Response(text=welcome_message.get_html(template_env), content_type='text/html')
 
-# /api/response_box
+# /api/response_box -> routing endpoint
 async def get_web_chat_response(request):
     if request.method == 'POST':
         data = await request.post()
@@ -38,46 +39,30 @@ async def get_web_chat_response(request):
     validation_date = data.get('validation_date')
 
     if fund_id:
+        # example with endpoint request
         if fund_id == "123":
-            return await get_response_123()
+            return aiohttp.web.Response(
+                text=WebChatResponse(input_html="Total valuation is",
+                            api_endpoint="https://run.mocky.io/v3/1e17cf34-ab78-40b9-8512-136e290a43c2").get_html(template_env),
+                content_type='text/html'
+            )
+        # sequence example
         elif fund_id == "12":
             return await get_response_12(request)
         else:
-            fund_inputs = [
-                FormInput(label="Validation Date", name="validation_date", input_type="date", required=True),
-                FormInput(label="Closing Date", name="closing_date", input_type="date"),
-                FormInput(label="Return Rate (%)", name="return_rate", input_type="number", step=0.01),
-                FormInput(label="Closing Value", name="closing_value", input_type="number", step=0.01)
-            ]
-            form = WebChatPromptForm(
-                form_inputs=fund_inputs,
-                submit_api_call="/api/response_box"
+            return aiohttp.web.Response(
+                text=WebChatResponse(input_html="Total valuation is 15000").get_html(template_env),
+                content_type='text/html'
             )
-            webchat = WebChatResponse(
-                input_html="I need more information",
-                prompt_form=form,
-            )
-            return aiohttp.web.Response(text=webchat.get_html(template_env), content_type='text/html')
 
+    # additional form
     elif validation_date:
-        webchat = WebChatResponse(input_html="Total valuation is 15000")
-        return aiohttp.web.Response(text=webchat.get_html(template_env), content_type='text/html')
+        webchat_response = WebChatResponse(input_html="Total valuation is 15000")
+        return aiohttp.web.Response(text=webchat_response.get_html(template_env), content_type='text/html')
 
     return aiohttp.web.json_response({"error": "Missing fund_id or validation_date"}, status=400)
 
 
-async def get_response_123():
-    response_sequence = WebChatResponseSequence([
-        WebChatResponse(input_html="Calculating odkupy for Fund 123"),
-        WebChatResponse(input_html="Total valuation is", api_endpoint="https://run.mocky.io/v3/1e17cf34-ab78-40b9-8512-136e290a43c2"),
-        WebChatResponse(input_html="Please pick another fund for calculation."),
-    ])
-
-    rendered_html = response_sequence.get_html(template_env)
-    return aiohttp.web.Response(text=rendered_html, content_type='text/html')
-
-# submit in form calls again response endpoint
-# I should change it so it makes request to api and continues with sequence
 async def get_response_12(request):
     fund_input = FormInput(
         label="Fond",
@@ -85,7 +70,7 @@ async def get_response_12(request):
         input_type="text",
         required=True
     )
-    formfund = WebChatPromptForm(
+    first_fund_form = WebChatPromptForm(
         form_inputs=[fund_input],
         submit_api_call="/api/response_box"
     )
@@ -96,7 +81,7 @@ async def get_response_12(request):
         FormInput(label="Return Rate (%)", name="return_rate", input_type="number", step=0.01),
         FormInput(label="Closing Value", name="closing_value", input_type="number", step=0.01)
     ]
-    form = WebChatPromptForm(
+    second_fund_form = WebChatPromptForm(
         form_inputs=fund_inputs,
         submit_api_call="/api/mock"
     )
@@ -105,9 +90,9 @@ async def get_response_12(request):
         WebChatResponse(input_html="Calculating odkupy for Fund 123"),
         WebChatResponse(
             input_html="I need more information",
-            prompt_form=form,
+            prompt_form=second_fund_form,
         ),
-        WebChatResponse(input_html="Please pick another fund for calculation.", prompt_form=formfund)
+        WebChatResponse(input_html="Please pick another fund for calculation.", prompt_form=first_fund_form)
     ])
 
     rendered_html = response_sequence.get_html(template_env)
