@@ -11,8 +11,9 @@ from jinja2 import Environment
 
 app = aiohttp.web.Application()
 
+
 class WebChatTemplateEnv:
-    def __init__(self, extra_template_dir:str=None):
+    def __init__(self, extra_template_dir: str = None):
         """
         Creates template environment on user side that will be then used for creating other components
         :param extra_template_dir: path to template directory, could be none, because use can specify the templates as strings
@@ -22,7 +23,7 @@ class WebChatTemplateEnv:
         self.template_env = self.create_template_env()
 
     def create_template_env(self) -> Environment:
-        main_template_dir = os.path.join(self.base_dir, 'templates')
+        main_template_dir = os.path.join(self.base_dir, "templates")
         loader_paths = []
 
         if not os.path.isdir(main_template_dir):
@@ -36,7 +37,7 @@ class WebChatTemplateEnv:
 
         template_env = jinja2.Environment(
             loader=jinja2.FileSystemLoader(loader_paths),
-            autoescape=jinja2.select_autoescape(['html', 'xml'])
+            autoescape=jinja2.select_autoescape(["html", "xml"]),
         )
 
         return template_env
@@ -47,8 +48,16 @@ class WebChatTemplateEnv:
         """
         return self.template_env
 
+
 class FormInput:
-    def __init__(self, label:str, name:str, input_type:str, step:float | int =None, required=False):
+    def __init__(
+        self,
+        label: str,
+        name: str,
+        input_type: str,
+        step: float | int = None,
+        required=False,
+    ):
         """
         Class for defining one input field
         :param label: Text next to input window
@@ -63,6 +72,7 @@ class FormInput:
         self.step = step
         self.required = required
 
+
 class WebChatPromptForm:
     def __init__(self, form_inputs: List[FormInput], submit_api_call: str):
         """
@@ -75,17 +85,18 @@ class WebChatPromptForm:
 
     def get_context(self) -> dict:
         context = {
-            'response_box_api': self.submit_api_call,
-            'form_inputs': self.form_inputs
+            "response_box_api": self.submit_api_call,
+            "form_inputs": self.form_inputs,
         }
         return context
 
     def get_html(self, template_env: Environment) -> str:
-        template = template_env.get_template('components/prompt-box.html')
+        template = template_env.get_template("components/prompt-box.html")
         return template.render(self.get_context())
 
+
 class WebChatWelcomeWindow:
-    def __init__(self, welcome_text: str, prompt_form:WebChatPromptForm):
+    def __init__(self, welcome_text: str, prompt_form: WebChatPromptForm):
         """
         Class for defining of the first window that is rendered and is visible all the time
         :param welcome_text: text or html string that should be rendered
@@ -96,18 +107,24 @@ class WebChatWelcomeWindow:
 
     def get_context(self, template_env: Environment) -> dict:
         context = {
-            'welcome_text': self.welcome_text,
+            "welcome_text": self.welcome_text,
         }
         if self.prompt_form:
-            context['prompt_html'] = self.prompt_form.get_html(template_env)
+            context["prompt_html"] = self.prompt_form.get_html(template_env)
         return context
 
     def get_html(self, template_env: Environment) -> str:
-        template = template_env.get_template('components/welcome-message-box.html')
+        template = template_env.get_template("components/welcome-message-box.html")
         return template.render(self.get_context(template_env))
 
+
 class WebChatResponse:
-    def __init__(self, input_html: str, prompt_form:WebChatPromptForm=None, api_endpoint:str=None):
+    def __init__(
+        self,
+        input_html: str,
+        prompt_form: WebChatPromptForm = None,
+        api_endpoint: str = None,
+    ):
         """
         Class for creating one response
         :param input_html: could be just string or html string
@@ -120,17 +137,21 @@ class WebChatResponse:
 
     def get_context(self, template_env: Environment) -> dict:
         return {
-            'response_text': self.input_html,
-            'prompt_html': self.prompt_form.get_html(template_env) if self.prompt_form else "",
-            'api_endpoint': self.api_endpoint if self.api_endpoint else "",
-            'has_prompt': bool(self.prompt_form),
+            "response_text": self.input_html,
+            "prompt_html": self.prompt_form.get_html(template_env)
+            if self.prompt_form
+            else "",
+            "api_endpoint": self.api_endpoint if self.api_endpoint else "",
+            "has_prompt": bool(self.prompt_form),
         }
 
     def get_html(self, template_env: Environment) -> str:
         if self.api_endpoint:
-            template = template_env.get_template('components/web-chat-response-with-request.html')
+            template = template_env.get_template(
+                "components/web-chat-response-with-request.html"
+            )
         else:
-            template = template_env.get_template('components/web-chat-response.html')
+            template = template_env.get_template("components/web-chat-response.html")
         return template.render(self.get_context(template_env))
 
 
@@ -143,12 +164,16 @@ class WebChatResponseSequence:
         self.responses = responses
 
     def get_html(self, template_env: Environment) -> str:
-        rendered_responses = [response.get_html(template_env) for response in self.responses]
+        rendered_responses = [
+            response.get_html(template_env) for response in self.responses
+        ]
         js_safe_responses = json.dumps(rendered_responses)
         context = {
-            'responses': js_safe_responses,
+            "responses": js_safe_responses,
         }
-        template = template_env.get_template('components/web-chat-sequence-response.html')
+        template = template_env.get_template(
+            "components/web-chat-sequence-response.html"
+        )
         return template.render(context)
 
 
@@ -157,18 +182,25 @@ async def general_proxy(request):
     if not target_url or not re.match(r"^https?://", target_url):
         return aiohttp.web.Response(status=400, text="Invalid or missing URL")
     if "127.0.0.1" in target_url or "localhost" in target_url:
-        return aiohttp.web.Response(status=403, text="Access to internal resources is forbidden")
+        return aiohttp.web.Response(
+            status=403, text="Access to internal resources is forbidden"
+        )
 
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(target_url) as resp:
                 body = await resp.text()
-                return aiohttp.web.Response(text=body, content_type='text/html')
+                return aiohttp.web.Response(text=body, content_type="text/html")
     except Exception as e:
         return aiohttp.web.Response(status=500, text=f"Proxy error: {str(e)}")
 
+
 class WebChat:
-    def __init__(self, welcome_message_api: tuple[str, Callable], prompt_response_api: tuple[str, Callable]):
+    def __init__(
+        self,
+        welcome_message_api: tuple[str, Callable],
+        prompt_response_api: tuple[str, Callable],
+    ):
         """
         The most important class that sets the server with webchat, defines all endpoints and serves the templates
         :param welcome_message_api: path to the api that serves the welcome message html
@@ -178,22 +210,24 @@ class WebChat:
         self.prompt_response_api = prompt_response_api
         self.base_dir = os.path.dirname(os.path.abspath(__file__))
         self.set_app()
-        app.add_routes([
-            aiohttp.web.get(welcome_message_api[0], welcome_message_api[1]),
-            aiohttp.web.route('*', prompt_response_api[0], prompt_response_api[1]),
-        ])
+        app.add_routes(
+            [
+                aiohttp.web.get(welcome_message_api[0], welcome_message_api[1]),
+                aiohttp.web.route("*", prompt_response_api[0], prompt_response_api[1]),
+            ]
+        )
         app.router.add_get("/api/proxy", general_proxy)
         aiohttp.web.run_app(app, host="127.0.0.1", port=8082)
 
     async def serve_index(self, request: aiohttp.web.Request) -> aiohttp.web.Response:
         context = {
-            'welcome_message_api': self.welcome_message_api[0],
-            'response_box_api': self.prompt_response_api[0],
+            "welcome_message_api": self.welcome_message_api[0],
+            "response_box_api": self.prompt_response_api[0],
         }
-        return aiohttp_jinja2.render_template('index.html', request, context)
+        return aiohttp_jinja2.render_template("index.html", request, context)
 
     def set_app(self):
-        app.add_routes([aiohttp.web.static("/static", os.path.join(self.base_dir, './static'))])
-        app.add_routes([
-            aiohttp.web.get("/", self.serve_index)
-        ])
+        app.add_routes(
+            [aiohttp.web.static("/static", os.path.join(self.base_dir, "./static"))]
+        )
+        app.add_routes([aiohttp.web.get("/", self.serve_index)])
