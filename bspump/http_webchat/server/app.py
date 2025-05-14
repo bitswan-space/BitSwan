@@ -1,27 +1,26 @@
 import json
-from typing import Callable, List, Union
+from typing import Callable, List
 
 import aiohttp.web
 import aiohttp_jinja2
 import jinja2
 import os
 
+from jinja2 import Environment
+
 app = aiohttp.web.Application()
 
 class WebChatTemplateEnv:
-    def __init__(self, extra_template_dir=None):
+    def __init__(self, extra_template_dir:str=None):
         """
+        Creates template environment on user side that will be then used for creating other components
         :param extra_template_dir: path to template directory, could be none, because use can specify the templates as strings
-        This class will create template environment on user side that will be then used for creating other components
         """
         self.extra_template_dir = extra_template_dir
         self.base_dir = os.path.dirname(os.path.abspath(__file__))
         self.template_env = self.create_template_env()
 
-    def create_template_env(self):
-        """
-        :return: template_env file for jinja2 templates
-        """
+    def create_template_env(self) -> Environment:
         main_template_dir = os.path.join(self.base_dir, 'templates')
         loader_paths = []
 
@@ -41,11 +40,22 @@ class WebChatTemplateEnv:
 
         return template_env
 
-    def get_jinja_env(self):
+    def get_jinja_env(self) -> Environment:
+        """
+        :return: Environment variable
+        """
         return self.template_env
 
 class FormInput:
-    def __init__(self, label, name, input_type, step=None, required=False):
+    def __init__(self, label:str, name:str, input_type:str, step:float | int =None, required=False):
+        """
+        Class for defining one input field
+        :param label: Text next to input window
+        :param name: Identifier of input
+        :param input_type: html input type
+        :param step: can be floating point number or integer
+        :param required: html input required parameter
+        """
         self.label = label
         self.name = name
         self.input_type = input_type
@@ -53,32 +63,37 @@ class FormInput:
         self.required = required
 
 class WebChatPromptForm:
-    def __init__(self, form_inputs: List[FormInput], submit_api_call):
+    def __init__(self, form_inputs: List[FormInput], submit_api_call: str):
+        """
+        Class for defining of form
+        :param form_inputs: list of individual input fields
+        :param submit_api_call: where the data should be submitted
+        """
         self.form_inputs = form_inputs
         self.submit_api_call = submit_api_call
 
-    def get_context(self):
+    def get_context(self) -> dict:
         context = {
             'response_box_api': self.submit_api_call,
             'form_inputs': self.form_inputs
         }
         return context
 
-    def get_html(self, template_env):
+    def get_html(self, template_env: Environment) -> str:
         template = template_env.get_template('components/prompt-box.html')
         return template.render(self.get_context())
 
-# WebchatWelcomeWindow and PromptInput returns just the input html
-# WebChatResponse returns whole rendered html because user can create how many responses they want but welcome window and
-# prompt is just one and is rendered on loading
-# Welcome window and prompt templates use api calls in templates to get the html they should render
-# There are no api calls in response templates because they are in the button in prompt template
 class WebChatWelcomeWindow:
-    def __init__(self, welcome_text, prompt_form: WebChatPromptForm):
+    def __init__(self, welcome_text: str, prompt_form:WebChatPromptForm):
+        """
+        Class for defining of the first window that is rendered and is visible all the time
+        :param welcome_text: text or html string that should be rendered
+        :param prompt_form: html of the prompt that is rendered with the window
+        """
         self.welcome_text = welcome_text or ""
         self.prompt_form = prompt_form
 
-    def get_context(self, template_env):
+    def get_context(self, template_env: Environment) -> dict:
         context = {
             'welcome_text': self.welcome_text,
         }
@@ -86,17 +101,23 @@ class WebChatWelcomeWindow:
             context['prompt_html'] = self.prompt_form.get_html(template_env)
         return context
 
-    def get_html(self, template_env):
+    def get_html(self, template_env: Environment) -> str:
         template = template_env.get_template('components/welcome-message-box.html')
         return template.render(self.get_context(template_env))
 
 class WebChatResponse:
-    def __init__(self, input_html, prompt_form=None, api_endpoint=None):
+    def __init__(self, input_html: str, prompt_form:WebChatPromptForm=None, api_endpoint:str=None):
+        """
+
+        :param input_html:
+        :param prompt_form:
+        :param api_endpoint:
+        """
         self.input_html = input_html or ""
         self.prompt_form = prompt_form
         self.api_endpoint = api_endpoint
 
-    def get_context(self, template_env):
+    def get_context(self, template_env: Environment) -> dict:
         return {
             'response_text': self.input_html,
             'prompt_html': self.prompt_form.get_html(template_env) if self.prompt_form else "",
@@ -104,7 +125,7 @@ class WebChatResponse:
             'has_prompt': bool(self.prompt_form),
         }
 
-    def get_html(self, template_env):
+    def get_html(self, template_env: Environment) -> str:
         if self.api_endpoint:
             template = template_env.get_template('components/web-chat-response-with-request.html')
         else:
@@ -113,10 +134,10 @@ class WebChatResponse:
 
 
 class WebChatResponseSequence:
-    def __init__(self, responses: List[Union[WebChatResponse]]):
+    def __init__(self, responses: List[WebChatResponse]):
         self.responses = responses
 
-    def get_html(self, template_env):
+    def get_html(self, template_env: Environment) -> str:
         rendered_responses = [response.get_html(template_env) for response in self.responses]
         js_safe_responses = json.dumps(rendered_responses)
         context = {
@@ -143,7 +164,7 @@ class WebChat:
         app.router.add_post('/api/mock', mock_endpoint)
         aiohttp.web.run_app(app, host="127.0.0.1", port=8082)
 
-    async def serve_index(self, request):
+    async def serve_index(self, request: aiohttp.web.Request) -> aiohttp.web.Response:
         # these api endpoints are set in api code
         context = {
             'welcome_message_api': self.welcome_message_api[0],
