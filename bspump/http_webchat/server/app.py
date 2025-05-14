@@ -108,10 +108,10 @@ class WebChatWelcomeWindow:
 class WebChatResponse:
     def __init__(self, input_html: str, prompt_form:WebChatPromptForm=None, api_endpoint:str=None):
         """
-
-        :param input_html:
-        :param prompt_form:
-        :param api_endpoint:
+        Class for creating one response
+        :param input_html: could be just string or html string
+        :param prompt_form: html of the prompt that is rendered with the window
+        :param api_endpoint: endpoint string if the response should make a api request
         """
         self.input_html = input_html or ""
         self.prompt_form = prompt_form
@@ -135,6 +135,10 @@ class WebChatResponse:
 
 class WebChatResponseSequence:
     def __init__(self, responses: List[WebChatResponse]):
+        """
+        Class that defines and renders sequence of responses
+        :param responses: list of instances of class WebChatResponse
+        """
         self.responses = responses
 
     def get_html(self, template_env: Environment) -> str:
@@ -149,10 +153,13 @@ class WebChatResponseSequence:
 async def mock_endpoint(request):
     return aiohttp.web.Response(text="")  # or JSON if needed
 
-
-# webchat creates the server and add the endpoints
 class WebChat:
     def __init__(self, welcome_message_api: tuple[str, Callable], prompt_response_api: tuple[str, Callable]):
+        """
+        The most important class that sets the server with webchat, defines all endpoints and serves the templates
+        :param welcome_message_api: path to the api that serves the welcome message html
+        :param prompt_response_api: path to the api that routes the responses
+        """
         self.welcome_message_api = welcome_message_api
         self.prompt_response_api = prompt_response_api
         self.base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -165,7 +172,6 @@ class WebChat:
         aiohttp.web.run_app(app, host="127.0.0.1", port=8082)
 
     async def serve_index(self, request: aiohttp.web.Request) -> aiohttp.web.Response:
-        # these api endpoints are set in api code
         context = {
             'welcome_message_api': self.welcome_message_api[0],
             'response_box_api': self.prompt_response_api[0],
