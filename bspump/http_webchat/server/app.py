@@ -151,18 +151,11 @@ class WebChatResponseSequence:
         template = template_env.get_template('components/web-chat-sequence-response.html')
         return template.render(context)
 
-async def mock_endpoint(request):
-    return aiohttp.web.Response(text="")  # or JSON if needed
 
 async def general_proxy(request):
-    # Get the target URL from the query parameter
     target_url = request.query.get("url")
-
-    # Basic validation: only allow http/https and block localhost/internal IPs
     if not target_url or not re.match(r"^https?://", target_url):
         return aiohttp.web.Response(status=400, text="Invalid or missing URL")
-
-    # Optional: reject known internal IPs
     if "127.0.0.1" in target_url or "localhost" in target_url:
         return aiohttp.web.Response(status=403, text="Access to internal resources is forbidden")
 
@@ -170,7 +163,6 @@ async def general_proxy(request):
         async with aiohttp.ClientSession() as session:
             async with session.get(target_url) as resp:
                 body = await resp.text()
-                # You might also want to restrict content types
                 return aiohttp.web.Response(text=body, content_type='text/html')
     except Exception as e:
         return aiohttp.web.Response(status=500, text=f"Proxy error: {str(e)}")
@@ -191,7 +183,6 @@ class WebChat:
             aiohttp.web.route('*', prompt_response_api[0], prompt_response_api[1]),
         ])
         app.router.add_get("/api/proxy", general_proxy)
-        app.router.add_post('/api/mock', mock_endpoint)
         aiohttp.web.run_app(app, host="127.0.0.1", port=8082)
 
     async def serve_index(self, request: aiohttp.web.Request) -> aiohttp.web.Response:
@@ -206,6 +197,3 @@ class WebChat:
         app.add_routes([
             aiohttp.web.get("/", self.serve_index)
         ])
-
-# Chat Response by mohol zmenit prompt, prompt bude disabled pokym mu nepride
-# Force people that prompt can be only form
