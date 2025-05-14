@@ -58,7 +58,6 @@ async def get_web_chat_response(request):
 
     elif validation_date:
         webchat = WebChatResponse(input_html="Total valuation is 15000", template_env=template_env)
-        print('aaaaaaaaaa')
         return aiohttp.web.Response(text=webchat.get_html(), content_type='text/html')
 
     return aiohttp.web.json_response({"error": "Missing fund_id or validation_date"}, status=400)
@@ -76,7 +75,6 @@ async def get_response_123():
 
 # submit in form calls again response endpoint
 # I should change it so it makes request to api and continues with sequence
-# maybe create two prompts htmls?
 async def get_response_12(request):
     fund_input = FormInput(
         label="Fond",
