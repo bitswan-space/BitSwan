@@ -1,5 +1,5 @@
 <div
-    id="webchat_response"
+    id="webchat_response_with_request"
     class="webchat_response fade-in px-8 py-8 flex gap-4 items-center text-primary dark:text-primary-dark border-b border-secondary w-[90%]"
     ><style>
       .fade-in {
@@ -19,9 +19,8 @@
         {{ response_text | safe }}
     </div>
 
-    <div
-        id="chained_result"
-        hx-get="{{ api_endpoint }}"
+    <div id="api_request"
+        hx-get="/api/proxy?url=https://run.mocky.io/v3/1e17cf34-ab78-40b9-8512-136e290a43c2"
         hx-trigger="load"
         hx-swap="innerHTML"
         class="text-secondary"
