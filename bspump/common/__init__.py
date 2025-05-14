@@ -33,7 +33,11 @@ from .tee import TeeSource
 from .time import TimeZoneNormalizer
 from .transfr import MappingTransformator
 from .jsonbytes import DictToJsonBytesParser
-from .jq import JQProcessor
+
+try:
+    from .jq import JQProcessor
+except ImportError:
+    pass
 
 __all__ = (
     "BytesToStringParser",
