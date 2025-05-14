@@ -1,4 +1,5 @@
 import os
+
 import aiohttp.web
 
 from bspump.http_webchat.server.app import WebChat, WebChatTemplateEnv
@@ -27,7 +28,6 @@ async def get_welcome_message(request):
     return aiohttp.web.Response(text=welcome_message.get_html(template_env), content_type='text/html')
 
 # /api/response_box
-# what can I get as input?
 async def get_web_chat_response(request):
     if request.method == 'POST':
         data = await request.post()
