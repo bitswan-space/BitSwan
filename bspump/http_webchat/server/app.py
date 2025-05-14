@@ -7,30 +7,42 @@ import jinja2
 import os
 
 app = aiohttp.web.Application()
-base_dir = os.path.dirname(os.path.abspath(__file__))
 
-def create_template_env(extra_template_dir=None):
-    main_template_dir = os.path.join(base_dir, 'templates')
-    loader_paths = []
+class WebChatTemplateEnv:
+    def __init__(self, extra_template_dir=None):
+        """
+        :param extra_template_dir: path to template directory, could be none, because use can specify the templates as strings
+        This class will create template environment on user side that will be then used for creating other components
+        """
+        self.extra_template_dir = extra_template_dir
+        self.base_dir = os.path.dirname(os.path.abspath(__file__))
+        self.template_env = self.create_template_env()
 
-    if not os.path.isdir(main_template_dir):
-        raise ValueError(f"Template directory '{main_template_dir}' does not exist")
-    loader_paths.append(main_template_dir)
+    def create_template_env(self):
+        """
+        :return: template_env file for jinja2 templates
+        """
+        main_template_dir = os.path.join(self.base_dir, 'templates')
+        loader_paths = []
 
-    if extra_template_dir:
-        if os.path.isdir(extra_template_dir):
-            loader_paths.append(extra_template_dir)
-        else:
-            raise ValueError(f"Extra template directory '{extra_template_dir}' does not exist")
+        if not os.path.isdir(main_template_dir):
+            raise ValueError(f"Template directory '{main_template_dir}' does not exist")
+        loader_paths.append(main_template_dir)
 
-    aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(loader_paths))
+        if self.extra_template_dir:
+            loader_paths.append(self.extra_template_dir)
 
-    template_env = jinja2.Environment(
-        loader=jinja2.FileSystemLoader(loader_paths),
-        autoescape=jinja2.select_autoescape(['html', 'xml'])
-    )
+        aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(loader_paths))
 
-    return template_env
+        template_env = jinja2.Environment(
+            loader=jinja2.FileSystemLoader(loader_paths),
+            autoescape=jinja2.select_autoescape(['html', 'xml'])
+        )
+
+        return template_env
+
+    def get_jinja_env(self):
+        return self.template_env
 
 class FormInput:
     def __init__(self, label, name, input_type, step=None, required=False):
@@ -40,7 +52,6 @@ class FormInput:
         self.step = step
         self.required = required
 
-# you are able to change the endpoint
 class WebChatPromptForm:
     def __init__(self, form_inputs: List[FormInput], submit_api_call):
         self.form_inputs = form_inputs
@@ -63,44 +74,42 @@ class WebChatPromptForm:
 # Welcome window and prompt templates use api calls in templates to get the html they should render
 # There are no api calls in response templates because they are in the button in prompt template
 class WebChatWelcomeWindow:
-    def __init__(self, welcome_text, prompt_form: WebChatPromptForm, template_env):
+    def __init__(self, welcome_text, prompt_form: WebChatPromptForm):
         self.welcome_text = welcome_text or ""
         self.prompt_form = prompt_form
-        self.template_env = template_env
 
-    def get_context(self):
+    def get_context(self, template_env):
         context = {
             'welcome_text': self.welcome_text,
         }
         if self.prompt_form:
-            context['prompt_html'] = self.prompt_form.get_html(self.template_env)
+            context['prompt_html'] = self.prompt_form.get_html(template_env)
         return context
 
-    def get_html(self):
-        template = self.template_env.get_template('components/welcome-message-box.html')
-        return template.render(self.get_context())
+    def get_html(self, template_env):
+        template = template_env.get_template('components/welcome-message-box.html')
+        return template.render(self.get_context(template_env))
 
 class WebChatResponse:
-    def __init__(self, input_html, template_env, prompt_form=None, api_endpoint=None):
+    def __init__(self, input_html, prompt_form=None, api_endpoint=None):
         self.input_html = input_html or ""
         self.prompt_form = prompt_form
-        self.template_env = template_env
         self.api_endpoint = api_endpoint
 
-    def get_context(self):
+    def get_context(self, template_env):
         return {
             'response_text': self.input_html,
-            'prompt_html': self.prompt_form.get_html(self.template_env) if self.prompt_form else "",
+            'prompt_html': self.prompt_form.get_html(template_env) if self.prompt_form else "",
             'api_endpoint': self.api_endpoint if self.api_endpoint else "",
             'has_prompt': bool(self.prompt_form),
         }
 
-    def get_html(self):
+    def get_html(self, template_env):
         if self.api_endpoint:
-            template = self.template_env.get_template('components/web-chat-response-with-request.html')
+            template = template_env.get_template('components/web-chat-response-with-request.html')
         else:
-            template = self.template_env.get_template('components/web-chat-response.html')
-        return template.render(self.get_context())
+            template = template_env.get_template('components/web-chat-response.html')
+        return template.render(self.get_context(template_env))
 
 
 class WebChatResponseSequence:
@@ -108,12 +117,11 @@ class WebChatResponseSequence:
         self.responses = responses
 
     def get_html(self, template_env):
-        rendered_responses = [response.get_html() for response in self.responses]
+        rendered_responses = [response.get_html(template_env) for response in self.responses]
         js_safe_responses = json.dumps(rendered_responses)
         context = {
             'responses': js_safe_responses,
         }
-        print(js_safe_responses)
         template = template_env.get_template('components/web-chat-sequence-response.html')
         return template.render(context)
 
@@ -126,6 +134,7 @@ class WebChat:
     def __init__(self, welcome_message_api: tuple[str, Callable], prompt_response_api: tuple[str, Callable]):
         self.welcome_message_api = welcome_message_api
         self.prompt_response_api = prompt_response_api
+        self.base_dir = os.path.dirname(os.path.abspath(__file__))
         self.set_app()
         app.add_routes([
             aiohttp.web.get(welcome_message_api[0], welcome_message_api[1]),
@@ -143,7 +152,7 @@ class WebChat:
         return aiohttp_jinja2.render_template('index.html', request, context)
 
     def set_app(self):
-        app.add_routes([aiohttp.web.static("/static", os.path.join(base_dir, './static'))])
+        app.add_routes([aiohttp.web.static("/static", os.path.join(self.base_dir, './static'))])
         app.add_routes([
             aiohttp.web.get("/", self.serve_index)
         ])
