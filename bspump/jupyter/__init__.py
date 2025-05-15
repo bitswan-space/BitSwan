@@ -1,19 +1,23 @@
 def vscode_secrets_fixme():
     from IPython import get_ipython
+
     ipy = get_ipython()
     if not ipy:
         return
     import re
     import os
+
     if "IPKernelApp" in ipy.config or "VSCODE_PID" in os.environ:
-        uri = ipy.get_parent()['metadata']['cellId']
+        uri = ipy.get_parent()["metadata"]["cellId"]
         match_ = re.match(r"vscode-notebook-cell://[^/]+(/.*?)/[^/]+\.ipynb", uri)
         if match_:
-            cleaned_path = match_.group(1) + '/'
+            cleaned_path = match_.group(1) + "/"
             os.chdir(cleaned_path)
+
+
 try:
     vscode_secrets_fixme()
-except:
+except Exception:
     pass
 
 from .jupyter import (
