@@ -2,7 +2,7 @@ import os
 
 import aiohttp.web
 
-from bspump.http_webchat.server.app import WebChat, WebChatTemplateEnv
+from bspump.http_webchat.server.app import WebChat, WebChatTemplateEnv, register_endpoint, _registered_endpoints
 from bspump.http_webchat.server.app import (
     WebChatResponse,
     WebChatWelcomeWindow,
@@ -32,6 +32,7 @@ async def get_welcome_message(request):
     welcome_message = WebChatWelcomeWindow(
         welcome_text="Hello, welcome to the odkupy calculation assistant. Please select the fond you would like to calculate odkupy for.",
         prompt_form=fund_form,
+        endpoint_route="/api/welcome_message",
     )
     return aiohttp.web.Response(
         text=welcome_message.get_html(template_env), content_type="text/html"
@@ -127,7 +128,7 @@ async def get_response_12(request):
 
 
 if __name__ == "__main__":
-    webchat = WebChat(
-        welcome_message_api=("/api/welcome_message", get_welcome_message),
-        prompt_response_api=("/api/response_box", get_web_chat_response),
-    )
+    register_endpoint("/api/welcome_message", get_welcome_message)
+    register_endpoint("/api/response_box", get_web_chat_response)
+    print(_registered_endpoints)
+    webchat = WebChat(welcome_message_api="/api/welcome_message", prompt_response_api="/api/response_box")
