@@ -96,18 +96,21 @@ class WebChatPromptForm:
 
 
 class WebChatWelcomeWindow:
-    def __init__(self, welcome_text: str, prompt_form: WebChatPromptForm):
+    def __init__(self, welcome_text: str, prompt_form: WebChatPromptForm, endpoint_route: str):
         """
-        Class for defining of the first window that is rendered and is visible all the time
+        Class for defining the first window that is rendered and is visible all the time
         :param welcome_text: text or html string that should be rendered
         :param prompt_form: html of the prompt that is rendered with the window
+        :param endpoint_route: API endpoint route that will serve the welcome message HTML
         """
         self.welcome_text = welcome_text or ""
         self.prompt_form = prompt_form
+        self.endpoint_route = endpoint_route or ""
 
     def get_context(self, template_env: Environment) -> dict:
         context = {
             "welcome_text": self.welcome_text,
+            "welcome_endpoint": self.get_endpoint_route(),
         }
         if self.prompt_form:
             context["prompt_html"] = self.prompt_form.get_html(template_env)
@@ -116,6 +119,9 @@ class WebChatWelcomeWindow:
     def get_html(self, template_env: Environment) -> str:
         template = template_env.get_template("components/welcome-message-box.html")
         return template.render(self.get_context(template_env))
+
+    def get_endpoint_route(self) -> str:
+        return self.endpoint_route
 
 
 class WebChatResponse:
@@ -194,12 +200,19 @@ async def general_proxy(request):
     except Exception as e:
         return aiohttp.web.Response(status=500, text=f"Proxy error: {str(e)}")
 
+_registered_endpoints: list[tuple[str, Callable]] = []
+
+def register_endpoint(route: str, handler: Callable):
+    """
+    Register a chat flow that will later be added when WebChat is initialized.
+    """
+    _registered_endpoints.append((route, handler))
 
 class WebChat:
     def __init__(
         self,
-        welcome_message_api: tuple[str, Callable],
-        prompt_response_api: tuple[str, Callable],
+        welcome_message_api: str,
+        prompt_response_api: str,
     ):
         """
         The most important class that sets the server with webchat, defines all endpoints and serves the templates
@@ -210,19 +223,19 @@ class WebChat:
         self.prompt_response_api = prompt_response_api
         self.base_dir = os.path.dirname(os.path.abspath(__file__))
         self.set_app()
-        app.add_routes(
-            [
-                aiohttp.web.get(welcome_message_api[0], welcome_message_api[1]),
-                aiohttp.web.route("*", prompt_response_api[0], prompt_response_api[1]),
-            ]
-        )
+        if _registered_endpoints:
+            for route, handler in _registered_endpoints:
+                app.add_routes([
+                    aiohttp.web.route("*", f"{route}", handler),
+                ])
+
         app.router.add_get("/api/proxy", general_proxy)
         aiohttp.web.run_app(app, host="127.0.0.1", port=8082)
 
     async def serve_index(self, request: aiohttp.web.Request) -> aiohttp.web.Response:
         context = {
-            "welcome_message_api": self.welcome_message_api[0],
-            "response_box_api": self.prompt_response_api[0],
+            "welcome_message_api": self.welcome_message_api,
+            "response_box_api": self.prompt_response_api,
         }
         return aiohttp_jinja2.render_template("index.html", request, context)
 
