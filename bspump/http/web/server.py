@@ -242,8 +242,7 @@ class WebFormSource(WebRouteSource):
         if self.generate_fields:
             self.fields = self.generate_fields(request)
         if request.content_type == "application/json":
-            defaults = self.extract_defaults(request)
-            field_info = {f.name: f.get_params(defaults) for f in self.fields}
+            field_info = {f.name: f.get_params() for f in self.fields}
             return aiohttp.web.json_response(field_info)
         return aiohttp.web.Response(
             text=self.render_form(request),
