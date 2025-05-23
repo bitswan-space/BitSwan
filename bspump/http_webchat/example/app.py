@@ -130,5 +130,9 @@ async def get_response_12(request):
 if __name__ == "__main__":
     register_endpoint("/api/welcome_message", get_welcome_message)
     register_endpoint("/api/response_box", get_web_chat_response)
-    print(_registered_endpoints)
-    webchat = WebChat(welcome_message_api="/api/welcome_message", prompt_response_api="/api/response_box")
+
+    webchat = WebChat(
+        welcome_message_api="/api/welcome_message",
+        prompt_response_api="/api/response_box"
+    )
+    webchat.run(host="127.0.0.1", port=8085)
