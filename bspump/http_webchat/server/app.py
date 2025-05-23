@@ -1,3 +1,4 @@
+import asyncio
 import json
 import re
 from typing import Callable, List
@@ -208,29 +209,37 @@ def register_endpoint(route: str, handler: Callable):
     """
     _registered_endpoints.append((route, handler))
 
+
 class WebChat:
     def __init__(
         self,
         welcome_message_api: str,
         prompt_response_api: str,
     ):
-        """
-        The most important class that sets the server with webchat, defines all endpoints and serves the templates
-        :param welcome_message_api: path to the api that serves the welcome message html
-        :param prompt_response_api: path to the api that routes the responses
-        """
         self.welcome_message_api = welcome_message_api
         self.prompt_response_api = prompt_response_api
         self.base_dir = os.path.dirname(os.path.abspath(__file__))
+        self.app = aiohttp.web.Application()
+        aiohttp_jinja2.setup(
+            self.app,
+            loader=jinja2.FileSystemLoader(os.path.join(self.base_dir, "templates"))
+        )
         self.set_app()
-        if _registered_endpoints:
-            for route, handler in _registered_endpoints:
-                app.add_routes([
-                    aiohttp.web.route("*", f"{route}", handler),
-                ])
+        self.register_routes()
 
-        app.router.add_get("/api/proxy", general_proxy)
-        aiohttp.web.run_app(app, host="127.0.0.1", port=8082)
+        # Attributes to hold runner and background task
+        self._runner = None
+        self._site = None
+        self._server_task = None
+
+    def set_app(self):
+        self.app.router.add_static("/static", os.path.join(self.base_dir, "static"))
+        self.app.router.add_get("/", self.serve_index)
+
+    def register_routes(self):
+        for route, handler in _registered_endpoints:
+            self.app.router.add_route("*", route, handler)
+        self.app.router.add_get("/api/proxy", general_proxy)
 
     async def serve_index(self, request: aiohttp.web.Request) -> aiohttp.web.Response:
         context = {
@@ -239,8 +248,42 @@ class WebChat:
         }
         return aiohttp_jinja2.render_template("index.html", request, context)
 
-    def set_app(self):
-        app.add_routes(
-            [aiohttp.web.static("/static", os.path.join(self.base_dir, "./static"))]
-        )
-        app.add_routes([aiohttp.web.get("/", self.serve_index)])
+    def run(self, host="127.0.0.1", port=8082):
+        aiohttp.web.run_app(self.app, host=host, port=port)
+
+    async def _start_runner(self, host="127.0.0.1", port=8082):
+        self._runner = aiohttp.web.AppRunner(self.app)
+        await self._runner.setup()
+        self._site = aiohttp.web.TCPSite(self._runner, host=host, port=port)
+        await self._site.start()
+        print(f"Server started at http://{host}:{port}")
+        try:
+            while True:
+                await asyncio.sleep(3600)
+        except asyncio.CancelledError:
+            print("Server is shutting down...")
+            await self._runner.cleanup()
+
+    def start_webchat(self, host="127.0.0.1", port=8082):
+        """
+        Start the aiohttp server as a background task.
+        Use this in Jupyter or async environment.
+        """
+        if self._server_task is None or self._server_task.done():
+            self._server_task = asyncio.create_task(self._start_runner(host, port))
+        else:
+            print("Server is already running.")
+
+    async def stop_webchat(self):
+        """
+        Stop the aiohttp server and cleanup.
+        Use `await` to stop the server cleanly.
+        """
+        if self._server_task and not self._server_task.done():
+            self._server_task.cancel()
+            try:
+                await self._server_task
+            except asyncio.CancelledError:
+                print("Server task cancelled and cleaned up.")
+        else:
+            print("Server is not running or already stopped.")
