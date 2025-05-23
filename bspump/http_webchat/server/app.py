@@ -1,12 +1,18 @@
 import asyncio
+import importlib.util
 import json
 import re
-from typing import Callable, List
+from pathlib import Path
+from typing import Callable, List, Optional
 
 import aiohttp.web
 import aiohttp_jinja2
 import jinja2
 import os
+
+from nbformat import read
+from nbconvert.preprocessors import ExecutePreprocessor
+import aiohttp.web
 
 from jinja2 import Environment
 
@@ -201,13 +207,87 @@ async def general_proxy(request):
     except Exception as e:
         return aiohttp.web.Response(status=500, text=f"Proxy error: {str(e)}")
 
-_registered_endpoints: list[tuple[str, Callable]] = []
+_registered_endpoints_notebooks: dict[str, str] = {}
+_registered_endpoints: dict[str, Callable] = {}
 
-def register_endpoint(route: str, handler: Callable):
-    """
-    Register a chat flow that will later be added when WebChat is initialized.
-    """
-    _registered_endpoints.append((route, handler))
+def find_module_path(module_name):
+    spec = importlib.util.find_spec(module_name)
+    if spec and spec.origin:
+        return spec.origin
+    else:
+        return f"Module '{module_name}' not found or built-in."
+
+base_path = str(
+    Path(os.path.split(find_module_path("bspump"))[:-1][0])
+    / "http_webchat"
+    / "server"
+)
+
+ENDPOINTS_FILE = os.path.join(base_path, "endpoints.json")
+def load_registered_endpoints():
+    global _registered_endpoints_notebooks
+    if os.path.exists(ENDPOINTS_FILE):
+        if os.path.getsize(ENDPOINTS_FILE) > 0:
+            with open(ENDPOINTS_FILE, "r") as f:
+                _registered_endpoints_notebooks = json.load(f)
+        else:
+            _registered_endpoints_notebooks = {}
+    else:
+        _registered_endpoints_notebooks = {}
+
+
+def save_registered_endpoints():
+    with open(ENDPOINTS_FILE, "w") as f:
+        json.dump(_registered_endpoints_notebooks, f, indent=2)
+
+def register_endpoint(
+    route: str,
+    handler: Optional[Callable] = None,
+    notebook_name: Optional[str] = None
+):
+    if not notebook_name and handler:
+        _registered_endpoints[route] = handler
+    else:
+        cwd = os.getcwd()
+        notebook_path = os.path.join(cwd, notebook_name)
+        load_registered_endpoints()
+        for existing_route, _ in _registered_endpoints_notebooks.items():
+            if existing_route == route:
+                print(f"[WebChat] Skipping duplicate route: {route}")
+                return
+        _registered_endpoints_notebooks[route] = notebook_path
+        save_registered_endpoints()
+        print(f"[WebChat] Registered: {route} -> {notebook_path}")
+
+async def notebook_handler(request, notebook_path: str):
+    nb = read(open(notebook_path), as_version=4)
+    ep = ExecutePreprocessor(timeout=60, kernel_name='python3')
+
+    try:
+        ep.preprocess(nb, {'metadata': {'path': os.path.dirname(notebook_path)}})
+    except Exception as e:
+        return aiohttp.web.Response(status=500, text=f"Notebook error: {str(e)}")
+
+    # Shared execution context
+    exec_context = {}
+
+    try:
+        for cell in nb.cells:
+            if cell.cell_type == "code":
+                exec(cell.source, exec_context)
+    except Exception as e:
+        return aiohttp.web.Response(status=500, text=f"Error in exec: {e}")
+
+    html_output = exec_context.get("html_output", "")
+
+    return aiohttp.web.Response(text=html_output, content_type="text/html")
+
+
+def make_dynamic_handler(notebook_path):
+    async def dynamic_handler(request):
+        return await notebook_handler(request, notebook_path)
+
+    return dynamic_handler
 
 
 class WebChat:
@@ -237,8 +317,12 @@ class WebChat:
         self.app.router.add_get("/", self.serve_index)
 
     def register_routes(self):
-        for route, handler in _registered_endpoints:
-            self.app.router.add_route("*", route, handler)
+        if _registered_endpoints:
+            for route, handler in _registered_endpoints.items():
+                self.app.router.add_route("*", route, handler)
+        else:
+            for route, notebook_path in _registered_endpoints_notebooks.items():
+                self.app.router.add_route("*", route, make_dynamic_handler(notebook_path))
         self.app.router.add_get("/api/proxy", general_proxy)
 
     async def serve_index(self, request: aiohttp.web.Request) -> aiohttp.web.Response:

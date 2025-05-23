@@ -2,7 +2,7 @@ import os
 
 import aiohttp.web
 
-from bspump.http_webchat.server.app import WebChat, WebChatTemplateEnv, register_endpoint, _registered_endpoints
+from bspump.http_webchat.server.app import WebChat, WebChatTemplateEnv, register_endpoint, _registered_endpoints_notebooks
 from bspump.http_webchat.server.app import (
     WebChatResponse,
     WebChatWelcomeWindow,
