@@ -322,7 +322,7 @@ class WebChat:
         if _registered_endpoints:
             for route, handler in _registered_endpoints.items():
                 self.app.router.add_route("*", route, handler)
-        elif _registered_endpoints_notebooks:
+        if _registered_endpoints_notebooks:
             for route, notebook_path in _registered_endpoints_notebooks.items():
                 self.app.router.add_route("*", route, make_dynamic_handler(notebook_path))
         self.app.router.add_get("/api/proxy", general_proxy)
