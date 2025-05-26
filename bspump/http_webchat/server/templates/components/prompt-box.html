@@ -1,30 +1,48 @@
-<form
+<form id="prompt-form"
       hx-post="{{ response_box_api }}"
       hx-target="#response-box"
       hx-swap="beforeend"
       class="flex items-center w-full text-sm text-primary dark:text-primary-dark gap-4 pl-8"
-    >
-      <div class="flex-grow flex flex-col gap-4">
-      {% for input in form_inputs %}
-        <div class="flex items-center">
-          <label for="{{ input.name }}" class="text-primary dark:text-primary-dark text-sm font-semibold w-[120px]">{{ input.label }}</label>
-          <input
-            type="{{ input.input_type }}"
-            id="{{ input.name }}"
-            name="{{ input.name }}"
-            class="text-primary border border-secondary  text-sm px-4 py-1 rounded-md font-mono w-full max-w-[150px] mx-2"
-            {% if input.step is not none %} step="{{ input.step }}" {% endif %}
-            {% if input.required %} required {% endif %}
-          />
-        </div>
-      {% endfor %}
-    </div>
+>
+  <div class="flex-grow flex flex-col gap-4">
+    {% for input in form_inputs %}
+      <div class="flex items-center">
+        <label for="{{ input.name }}" class="text-primary dark:text-primary-dark text-sm font-semibold w-[120px]">{{ input.label }}</label>
+        <input
+          type="{{ input.input_type }}"
+          id="{{ input.name }}"
+          name="{{ input.name }}"
+          class="text-primary border border-secondary text-sm px-4 py-1 rounded-md font-mono w-full max-w-[150px] mx-2"
+          {% if input.step is not none %} step="{{ input.step }}" {% endif %}
+          {% if input.required %} required {% endif %}
+        />
+      </div>
+    {% endfor %}
+  </div>
 
-    <button
-      id="fund_button"
-      type="submit"
-      class="bg-primary dark:bg-primary-dark hover:bg-secondary hover:dark:bg-secondary-dark hover:text-primary hover:dark:text-primary-dark text-secondary dark:text-secondary-dark px-3 pb-1 rounded-full transition text-2xl ml-auto"
-    >
-      ↑
-    </button>
+  <button
+    type="submit"
+    class="bg-primary dark:bg-primary-dark hover:bg-secondary hover:dark:bg-secondary-dark hover:text-primary hover:dark:text-primary-dark text-secondary dark:text-secondary-dark px-3 pb-1 rounded-full transition text-2xl ml-auto"
+  >
+    ↑
+  </button>
 </form>
+
+<script>
+    document.addEventListener("htmx:configRequest", function(event) {
+  if (!event.target || !event.target.closest) return;
+
+  const form = document.getElementById("prompt-form");
+  if (!form) return;
+
+  if (!event.target.closest("#prompt-form")) return;
+
+  console.log("htmx:configRequest fired by form:", event.target);
+
+  const inputs = form.querySelectorAll("input[name]");
+  const pathSegments = Array.from(inputs)
+    .map(input => `${encodeURIComponent(input.name)}=${encodeURIComponent(input.value)}`);
+
+  event.detail.path = "/" + pathSegments.join("/");
+});
+</script>
