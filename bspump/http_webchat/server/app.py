@@ -242,12 +242,11 @@ def save_registered_endpoints():
 
 def register_endpoint(
     route: str,
+    *,
     handler: Optional[Callable] = None,
     notebook_name: Optional[str] = None
 ):
-    if not notebook_name and handler:
-        _registered_endpoints[route] = handler
-    else:
+    if notebook_name:
         cwd = os.getcwd()
         notebook_path = os.path.join(cwd, notebook_name)
         load_registered_endpoints()
@@ -258,6 +257,9 @@ def register_endpoint(
         _registered_endpoints_notebooks[route] = notebook_path
         save_registered_endpoints()
         print(f"[WebChat] Registered: {route} -> {notebook_path}")
+
+    else:
+        _registered_endpoints[route] = handler
 
 async def notebook_handler(request, notebook_path: str):
     nb = read(open(notebook_path), as_version=4)
@@ -320,7 +322,7 @@ class WebChat:
         if _registered_endpoints:
             for route, handler in _registered_endpoints.items():
                 self.app.router.add_route("*", route, handler)
-        else:
+        elif _registered_endpoints_notebooks:
             for route, notebook_path in _registered_endpoints_notebooks.items():
                 self.app.router.add_route("*", route, make_dynamic_handler(notebook_path))
         self.app.router.add_get("/api/proxy", general_proxy)
@@ -332,10 +334,10 @@ class WebChat:
         }
         return aiohttp_jinja2.render_template("index.html", request, context)
 
-    def run(self, host="127.0.0.1", port=8082):
+    def run(self, host="127.0.0.1", port=8080):
         aiohttp.web.run_app(self.app, host=host, port=port)
 
-    async def _start_runner(self, host="127.0.0.1", port=8082):
+    async def _start_runner(self, host="127.0.0.1", port=8080):
         self._runner = aiohttp.web.AppRunner(self.app)
         await self._runner.setup()
         self._site = aiohttp.web.TCPSite(self._runner, host=host, port=port)
@@ -348,7 +350,7 @@ class WebChat:
             print("Server is shutting down...")
             await self._runner.cleanup()
 
-    def start_webchat(self, host="127.0.0.1", port=8082):
+    def start_webchat(self, host="127.0.0.1", port=8080):
         """
         Start the aiohttp server as a background task.
         Use this in Jupyter or async environment.
