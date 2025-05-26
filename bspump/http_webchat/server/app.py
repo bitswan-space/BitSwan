@@ -2,6 +2,7 @@ import asyncio
 import importlib.util
 import json
 import re
+import time
 from pathlib import Path
 from typing import Callable, List, Optional
 
@@ -94,6 +95,7 @@ class WebChatPromptForm:
         context = {
             "response_box_api": self.submit_api_call,
             "form_inputs": self.form_inputs,
+            "form_id": f"prompt-form-{int(time.time() * 1000)}"
         }
         return context
 
