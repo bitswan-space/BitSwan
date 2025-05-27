@@ -38,11 +38,10 @@
   if (!event.target.closest("#prompt-form")) return;
 
   console.log("htmx:configRequest fired by form:", event.target);
-
   const inputs = form.querySelectorAll("input[name]");
   const pathSegments = Array.from(inputs)
     .map(input => `${encodeURIComponent(input.name)}=${encodeURIComponent(input.value)}`);
-
+    console.log(pathSegments);
   event.detail.path = "/" + pathSegments.join("/");
 });
 </script>
