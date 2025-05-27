@@ -43,6 +43,18 @@
       }
     </script>
     <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.js" crossorigin="anonymous"></script>
+    <script>
+      document.addEventListener("htmx:configRequest", function(event) {
+          const form = event.target.closest("#prompt-form");
+          if (!form) return;
+
+          const inputs = form.querySelectorAll("input[name]");
+          const pathSegments = Array.from(inputs)
+            .map(input => `${encodeURIComponent(input.name)}=${encodeURIComponent(input.value)}`);
+
+          event.detail.path = "/" + pathSegments.join("/");
+        });
+    </script>
 
     <style>
       body, .dark\:bg-neutral-dark {

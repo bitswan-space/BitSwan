@@ -24,29 +24,28 @@
             const swapTarget = document.querySelector('#prompt-input');
             if (swapTarget) {
               const form = formWrapper.querySelector('form');
-              if (swapTarget) {
+              if (form) {
                 swapTarget.innerHTML = '';
                 swapTarget.appendChild(form);
+                htmx.process(form);
                 waitForFormSubmission(form);
-                htmx.process(formWrapper);
               }
             }
           }
-        } else if (response.id === 'webchat_response_with_request') {
-          htmx.process(response);
-        } else {
-          setTimeout(showNext, 1000);
         }
+         else if (response.id === 'webchat_response_with_request') {
+                  htmx.process(response);
+                } else {
+                  setTimeout(showNext, 1000);
+                }
 
-        current++;
-      }
+                current++;
+              }
 
       function waitForFormSubmission(form) {
-        form.addEventListener('submit', function(event) {
-          event.preventDefault();
-          htmx.process(form);
-          showNext();
-        });
+         form.addEventListener('htmx:afterRequest', function () {
+            showNext();
+          });
       }
       showNext();
     })();
