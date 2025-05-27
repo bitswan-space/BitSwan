@@ -38,8 +38,6 @@ async def get_welcome_message(request):
         text=welcome_message.get_html(template_env), content_type="text/html"
     )
 
-# TODO get rid of get_response_function
-
 async def get_response_123(request):
     return aiohttp.web.Response(
         text=WebChatResponse(
