@@ -38,7 +38,7 @@ async def get_welcome_message(request):
         text=welcome_message.get_html(template_env), content_type="text/html"
     )
 
-
+# TODO get rid of get_response_function
 # /api/response_box -> routing endpoint
 async def get_web_chat_response(request):
     if request.method == "POST":

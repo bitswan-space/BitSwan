@@ -1,4 +1,4 @@
-<div id="webchat_sequence_response" class="w-full flex flex-col items-end"></div>
+<div id="webchat-response-sequence" class="w-full flex flex-col items-end"></div>
 
 <script>
 (function() {
@@ -9,7 +9,7 @@
         if (current >= responses.length) return;
 
         const responseHTML = responses[current];
-        const container = document.getElementById('webchat_sequence_response');
+        const container = document.getElementById('webchat-response-sequence');
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = responseHTML;
         const response = tempDiv.querySelector('.webchat_response');
