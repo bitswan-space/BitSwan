@@ -2,7 +2,11 @@ import os
 
 import aiohttp.web
 
-from bspump.http_webchat.server.app import WebChat, WebChatTemplateEnv, register_endpoint, _registered_endpoints_notebooks
+from bspump.http_webchat.server.app import (
+    WebChat,
+    WebChatTemplateEnv,
+    register_endpoint,
+)
 from bspump.http_webchat.server.app import (
     WebChatResponse,
     WebChatWelcomeWindow,
@@ -38,6 +42,7 @@ async def get_welcome_message(request):
         text=welcome_message.get_html(template_env), content_type="text/html"
     )
 
+
 async def get_response_123(request):
     return aiohttp.web.Response(
         text=WebChatResponse(
@@ -47,11 +52,13 @@ async def get_response_123(request):
         content_type="text/html",
     )
 
+
 async def get_additional_response(request):
     webchat_response = WebChatResponse(input_html="Total valuation is 15000")
     return aiohttp.web.Response(
         text=webchat_response.get_html(template_env), content_type="text/html"
     )
+
 
 async def get_response_12(request):
     fund_input = FormInput(
@@ -102,10 +109,13 @@ if __name__ == "__main__":
     register_endpoint("/api/welcome_message", handler=get_welcome_message)
     register_endpoint("/fund_id=12", handler=get_response_12)
     register_endpoint("/fund_id=123", handler=get_response_123)
-    register_endpoint("/validation_date=2025-05-01/closing_date=/return_rate=/closing_value=", handler=get_additional_response)
+    register_endpoint(
+        "/validation_date=2025-05-01/closing_date=/return_rate=/closing_value=",
+        handler=get_additional_response,
+    )
 
     webchat = WebChat(
         welcome_message_api="/api/welcome_message",
-        prompt_response_api="/api/response_box"
+        prompt_response_api="/api/response_box",
     )
     webchat.run(host="127.0.0.1", port=8081)

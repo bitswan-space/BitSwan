@@ -13,7 +13,6 @@ import os
 
 from nbformat import read
 from nbconvert.preprocessors import ExecutePreprocessor
-import aiohttp.web
 
 from jinja2 import Environment
 
@@ -95,7 +94,7 @@ class WebChatPromptForm:
         context = {
             "response_box_api": self.submit_api_call,
             "form_inputs": self.form_inputs,
-            "form_id": f"prompt-form-{int(time.time() * 1000)}"
+            "form_id": f"prompt-form-{int(time.time() * 1000)}",
         }
         return context
 
@@ -105,7 +104,9 @@ class WebChatPromptForm:
 
 
 class WebChatWelcomeWindow:
-    def __init__(self, welcome_text: str, prompt_form: WebChatPromptForm, endpoint_route: str):
+    def __init__(
+        self, welcome_text: str, prompt_form: WebChatPromptForm, endpoint_route: str
+    ):
         """
         Class for defining the first window that is rendered and is visible all the time
         :param welcome_text: text or html string that should be rendered
@@ -209,8 +210,10 @@ async def general_proxy(request):
     except Exception as e:
         return aiohttp.web.Response(status=500, text=f"Proxy error: {str(e)}")
 
+
 _registered_endpoints_notebooks: dict[str, str] = {}
 _registered_endpoints: dict[str, Callable] = {}
+
 
 def find_module_path(module_name):
     spec = importlib.util.find_spec(module_name)
@@ -219,13 +222,14 @@ def find_module_path(module_name):
     else:
         return f"Module '{module_name}' not found or built-in."
 
+
 base_path = str(
-    Path(os.path.split(find_module_path("bspump"))[:-1][0])
-    / "http_webchat"
-    / "server"
+    Path(os.path.split(find_module_path("bspump"))[:-1][0]) / "http_webchat" / "server"
 )
 
 ENDPOINTS_FILE = os.path.join(base_path, "endpoints.json")
+
+
 def load_registered_endpoints():
     global _registered_endpoints_notebooks
     if os.path.exists(ENDPOINTS_FILE):
@@ -242,11 +246,12 @@ def save_registered_endpoints():
     with open(ENDPOINTS_FILE, "w") as f:
         json.dump(_registered_endpoints_notebooks, f, indent=2)
 
+
 def register_endpoint(
     route: str,
     *,
     handler: Optional[Callable] = None,
-    notebook_name: Optional[str] = None
+    notebook_name: Optional[str] = None,
 ):
     if notebook_name:
         cwd = os.getcwd()
@@ -263,12 +268,13 @@ def register_endpoint(
     else:
         _registered_endpoints[route] = handler
 
+
 async def notebook_handler(request, notebook_path: str):
     nb = read(open(notebook_path), as_version=4)
-    ep = ExecutePreprocessor(timeout=60, kernel_name='python3')
+    ep = ExecutePreprocessor(timeout=60, kernel_name="python3")
 
     try:
-        ep.preprocess(nb, {'metadata': {'path': os.path.dirname(notebook_path)}})
+        ep.preprocess(nb, {"metadata": {"path": os.path.dirname(notebook_path)}})
     except Exception as e:
         return aiohttp.web.Response(status=500, text=f"Notebook error: {str(e)}")
 
@@ -306,7 +312,7 @@ class WebChat:
         self.app = aiohttp.web.Application()
         aiohttp_jinja2.setup(
             self.app,
-            loader=jinja2.FileSystemLoader(os.path.join(self.base_dir, "templates"))
+            loader=jinja2.FileSystemLoader(os.path.join(self.base_dir, "templates")),
         )
         self.set_app()
         self.register_routes()
@@ -326,7 +332,9 @@ class WebChat:
                 self.app.router.add_route("*", route, handler)
         if _registered_endpoints_notebooks:
             for route, notebook_path in _registered_endpoints_notebooks.items():
-                self.app.router.add_route("*", route, make_dynamic_handler(notebook_path))
+                self.app.router.add_route(
+                    "*", route, make_dynamic_handler(notebook_path)
+                )
         self.app.router.add_get("/api/proxy", general_proxy)
 
     async def serve_index(self, request: aiohttp.web.Request) -> aiohttp.web.Response:
