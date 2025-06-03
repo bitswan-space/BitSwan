@@ -4,6 +4,7 @@ import ast
 import sys
 import tempfile
 import re
+import textwrap
 
 from bspump.jupyter import *  # noqa: F403
 import bspump.jupyter
@@ -43,11 +44,19 @@ def indent_code(lines: list[str]) -> list[str]:
         lines_out.append(_indent + lines[i])
     return lines_out
 
+def sanitize_flow_name(flow_name: str) -> str:
+    sanitized = flow_name.lstrip('/')
+    sanitized = re.sub(r'\W+', '_', sanitized)
+    if not sanitized[0].isalpha() and sanitized[0] != '_':
+        sanitized = f"_{sanitized}"
+    return f"flow_{sanitized}"
 
 class NotebookCompiler:
     _in_autopipeline = False
     _cell_number: int = 0
     _cell_processor_contents: dict[int, str] = {}
+    _webchat_flows: dict[str, list[str]] = {}
+    _current_flow_name: str | None = None
 
     def parse_cell(self, cell, fout):
         if cell["cell_type"] == "code":
@@ -73,14 +82,43 @@ class NotebookCompiler:
 
                 if not clean_code.strip():
                     return
-                if not self._in_autopipeline:
-                    fout.write(clean_code + "\n\n")
-                else:
+
+                parsed_ast = ast.parse(clean_code)
+                if contains_function_call(parsed_ast, "create_webchat_flow"):
+                    for node in ast.walk(parsed_ast):
+                        if isinstance(node, ast.Await):
+                            call = node.value
+                            if (
+                                    isinstance(call, ast.Call)
+                                    and isinstance(call.func, ast.Name)
+                                    and call.func.id == "create_webchat_flow"
+                            ):
+                                arg0 = call.args[0]
+                                if isinstance(arg0, ast.Constant):
+                                    flow_name = arg0.value
+                                elif isinstance(arg0, ast.Name):
+                                    flow_name = arg0.id
+                                else:
+                                    flow_name = self._cell_number
+                                sanitized_flow_name = sanitize_flow_name(flow_name)
+                                self._current_flow_name = sanitized_flow_name
+                                self._webchat_flows[sanitized_flow_name] = []
+                                return
+
+                if self._current_flow_name is not None:
+                    # print(clean_code)
+                    self._webchat_flows[self._current_flow_name].append(clean_code)
+                    return
+
+                elif self._in_autopipeline:
                     self._cell_processor_contents[self._cell_number] = (
-                        "\n".join(indent_code(clean_code.split("\n"))) + "\n\n"
+                            "\n".join(indent_code(clean_code.split("\n"))) + "\n\n"
                     )
+                else:
+                    fout.write(clean_code + "\n\n")
+
                 if not self._in_autopipeline and contains_function_call(
-                    ast.parse(clean_code), "auto_pipeline"
+                    parsed_ast, "auto_pipeline"
                 ):
                     self._in_autopipeline = True
 
@@ -88,15 +126,25 @@ class NotebookCompiler:
         self._cell_number = 0
         self._in_autopipeline = False
         self._cell_processor_contents = {}
-        with open(out_path, "w") as f:
+        with (open(out_path, "w") as f):
             for cell in ntb["cells"]:
                 self._cell_number += 1
                 self.parse_cell(cell, f)
-            step_func_code = f"""@async_step
-async def processor_internal(inject, event):
-{''.join(list(self._cell_processor_contents.values()))}    await inject(event)
-"""
-            f.write(step_func_code)
+            if self._cell_processor_contents:
+                step_func_code = f"""@async_step
+            async def processor_internal(inject, event):
+            {''.join(list(self._cell_processor_contents.values()))}    await inject(event)
+            """
+                f.write(step_func_code)
+
+            for flow_name, steps in self._webchat_flows.items():
+                indented_code = textwrap.indent(steps[0].rstrip(), '    ')
+                flow_func_code = (
+                    f"async def {flow_name.replace('-', '_')}(inject, event):\n"
+                    f"{indented_code}\n"
+                    "    return await inject(event)\n"
+                )
+                f.write(flow_func_code)
 
 
 def main():
