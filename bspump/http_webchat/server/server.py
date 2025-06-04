@@ -221,13 +221,20 @@ def find_module_path(module_name):
 
 def parse_response_strings(response_strings):
     responses = []
-    safe_globals = {"WebChatResponse": WebChatResponse}
+    safe_globals = {
+        "WebChatResponse": WebChatResponse,
+        "WebChatWelcomeWindow": WebChatWelcomeWindow,
+        "WebChatPromptForm": WebChatPromptForm,
+        "FormInput": FormInput,
+    }
 
     for response_str in response_strings:
-        # Evaluate string to actual WebChatResponse instance
-        response_obj = eval(response_str, safe_globals)
-        if isinstance(response_obj, WebChatResponse):
-            responses.append(response_obj)
+        try:
+            response_obj = eval(response_str, safe_globals)
+            if isinstance(response_obj, (WebChatResponse, WebChatWelcomeWindow)):
+                responses.append(response_obj)
+        except Exception as e:
+            print(f"Failed to parse response string: {response_str}\nError: {e}")
 
     return responses
 
@@ -239,7 +246,12 @@ def create_webchat_flow(route: str):
                 response_code_list = await func(request)
                 responses = parse_response_strings(response_code_list)
                 template_env = WebChatTemplateEnv().get_jinja_env()
-                html = WebChatResponseSequence(responses).get_html(template_env)
+
+                if len(responses) == 1 and isinstance(responses[0], WebChatWelcomeWindow):
+                    html = responses[0].get_html(template_env)
+                else:
+                    html = WebChatResponseSequence(responses).get_html(template_env)
+
                 return aiohttp.web.Response(text=html, content_type="text/html")
 
             except Exception as e:
