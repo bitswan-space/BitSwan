@@ -5,7 +5,7 @@ import aiohttp.web
 from bspump.http_webchat.server.app import (
     WebChat,
     WebChatTemplateEnv,
-    register_endpoint,
+    create_webchat_flow,
 )
 from bspump.http_webchat.server.app import (
     WebChatResponse,
@@ -106,10 +106,10 @@ async def get_response_12(request):
 
 
 if __name__ == "__main__":
-    register_endpoint("/api/welcome_message", handler=get_welcome_message)
-    register_endpoint("/fund_id=12", handler=get_response_12)
-    register_endpoint("/fund_id=123", handler=get_response_123)
-    register_endpoint(
+    create_webchat_flow("/api/welcome_message", handler=get_welcome_message)
+    create_webchat_flow("/fund_id=12", handler=get_response_12)
+    create_webchat_flow("/fund_id=123", handler=get_response_123)
+    create_webchat_flow(
         "/validation_date=2025-05-01/closing_date=/return_rate=/closing_value=",
         handler=get_additional_response,
     )
