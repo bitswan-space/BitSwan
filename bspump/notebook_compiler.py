@@ -120,6 +120,6 @@ class NotebookCompiler:
             for flow_name, steps in self._webchat_flows.items():
                 cleaned_steps = [step.strip() for step in steps if step.strip()]
                 cleaned_steps = [s.replace(" ", "").replace("\n", "") for s in cleaned_steps]
-                flow_func_code = "from bspump.http_webchat.server.app import create_webchat_flow\n" + f"@create_webchat_flow('/{flow_name.replace('-', '_')}')\n" + f"async def {flow_name.replace('-', '_')}(request):\n" + f"    return {cleaned_steps}\n"
+                flow_func_code = f"@create_webchat_flow('/{flow_name.replace('-', '_')}')\n" + f"async def {flow_name.replace('-', '_')}(request):\n" + f"    return {cleaned_steps}\n"
 
                 f.write(flow_func_code)
