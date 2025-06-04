@@ -2,12 +2,12 @@ import os
 
 import aiohttp.web
 
-from bspump.http_webchat.server.app import (
+from bspump.http_webchat.server.server import (
     WebChat,
     WebChatTemplateEnv,
     create_webchat_flow,
 )
-from bspump.http_webchat.server.app import (
+from bspump.http_webchat.server.server import (
     WebChatResponse,
     WebChatWelcomeWindow,
     WebChatPromptForm,
@@ -106,13 +106,11 @@ async def get_response_12(request):
 
 
 if __name__ == "__main__":
-    create_webchat_flow("/api/welcome_message", handler=get_welcome_message)
-    create_webchat_flow("/fund_id=12", handler=get_response_12)
-    create_webchat_flow("/fund_id=123", handler=get_response_123)
+    create_webchat_flow("/api/welcome_message")
+    create_webchat_flow("/fund_id=12")
+    create_webchat_flow("/fund_id=123")
     create_webchat_flow(
-        "/validation_date=2025-05-01/closing_date=/return_rate=/closing_value=",
-        handler=get_additional_response,
-    )
+        "/validation_date=2025-05-01/closing_date=/return_rate=/closing_value=")
 
     webchat = WebChat(
         welcome_message_api="/api/welcome_message",
