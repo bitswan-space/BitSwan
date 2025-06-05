@@ -5,16 +5,14 @@ from bspump.http_webchat.server.server import WebChat
 
 
 class WebChatSource(bspump.Source):
-    def __init__(self, app, pipeline, welcome_message_api, prompt_response_api, id=None, config=None):
+    def __init__(self, app, pipeline, welcome_message_api, id=None, config=None):
         super().__init__(app, pipeline, id=id, config=config)
         self.Site = None
         self.Runner = None
         self.WelcomeAPI = welcome_message_api
-        self.ResponseAPI = prompt_response_api
 
         self.WebChat = WebChat(
-            welcome_message_api=self.WelcomeAPI,
-            prompt_response_api=self.ResponseAPI,
+            welcome_message_api=self.WelcomeAPI
         )
 
         # Add custom route to handle chat input

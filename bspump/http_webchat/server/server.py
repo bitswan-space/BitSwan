@@ -269,10 +269,8 @@ class WebChat:
     def __init__(
         self,
         welcome_message_api: str,
-        prompt_response_api: str,
     ):
         self.welcome_message_api = welcome_message_api
-        self.prompt_response_api = prompt_response_api
         self.base_dir = os.path.dirname(os.path.abspath(__file__))
         self.app = aiohttp.web.Application()
         aiohttp_jinja2.setup(
@@ -294,8 +292,7 @@ class WebChat:
 
     async def serve_index(self, request: aiohttp.web.Request) -> aiohttp.web.Response:
         context = {
-            "welcome_message_api": self.welcome_message_api,
-            "response_box_api": self.prompt_response_api,
+            "welcome_message_api": self.welcome_message_api
         }
         return aiohttp_jinja2.render_template("index.html", request, context)
 
