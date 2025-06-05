@@ -100,22 +100,19 @@ class WebChatPromptForm:
 
 class WebChatWelcomeWindow:
     def __init__(
-        self, welcome_text: str, prompt_form: WebChatPromptForm, endpoint_route: str
+        self, welcome_text: str, prompt_form: WebChatPromptForm
     ):
         """
         Class for defining the first window that is rendered and is visible all the time
         :param welcome_text: text or html string that should be rendered
         :param prompt_form: html of the prompt that is rendered with the window
-        :param endpoint_route: API endpoint route that will serve the welcome message HTML
         """
         self.welcome_text = welcome_text or ""
         self.prompt_form = prompt_form
-        self.endpoint_route = endpoint_route or ""
 
     def get_context(self, template_env: Environment) -> dict:
         context = {
             "welcome_text": self.welcome_text,
-            "welcome_endpoint": self.get_endpoint_route(),
         }
         if self.prompt_form:
             context["prompt_html"] = self.prompt_form.get_html(template_env)
@@ -124,9 +121,6 @@ class WebChatWelcomeWindow:
     def get_html(self, template_env: Environment) -> str:
         template = template_env.get_template("components/welcome-message-box.html")
         return template.render(self.get_context(template_env))
-
-    def get_endpoint_route(self) -> str:
-        return self.endpoint_route
 
 
 class WebChatResponse:
@@ -268,9 +262,9 @@ def create_webchat_flow(route: str):
 class WebChat:
     def __init__(
         self,
-        welcome_message_api: str,
+        welcome_window: WebChatWelcomeWindow,
     ):
-        self.welcome_message_api = welcome_message_api
+        self.welcome_window = welcome_window
         self.base_dir = os.path.dirname(os.path.abspath(__file__))
         self.app = aiohttp.web.Application()
         aiohttp_jinja2.setup(
@@ -291,8 +285,13 @@ class WebChat:
         self.app.router.add_get("/api/proxy", general_proxy)
 
     async def serve_index(self, request: aiohttp.web.Request) -> aiohttp.web.Response:
+        template_env = WebChatTemplateEnv().get_jinja_env()
+        welcome_html = self.welcome_window.get_html(template_env)
+
         context = {
-            "welcome_message_api": self.welcome_message_api
+            "welcome_html": welcome_html,
+            "prompt_input_html": self.welcome_window.prompt_form.get_html(template_env)
         }
+
         return aiohttp_jinja2.render_template("index.html", request, context)
 
