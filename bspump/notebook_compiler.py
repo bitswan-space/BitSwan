@@ -108,6 +108,17 @@ class NotebookCompiler:
                 ):
                     self._in_autopipeline = True
 
+        elif cell["cell_type"] == "markdown":
+            if self._current_flow_name is not None:
+                markdown_content = cell["source"]
+                if isinstance(markdown_content, list):
+                    markdown_content = "".join(markdown_content)
+                markdown_content = markdown_content.strip()
+                if markdown_content:
+                    response_code = f"WebChatResponse(input_html={markdown_content!r})"
+                    if self._current_flow_name is not None:
+                        self._webchat_flows[self._current_flow_name].append(response_code)
+
     def compile_notebook(self, ntb, out_path="tmp.py"):
         self._cell_number = 0
         self._in_autopipeline = False
