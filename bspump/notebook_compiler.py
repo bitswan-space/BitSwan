@@ -1,6 +1,8 @@
 import ast
 import re
 import textwrap
+from typing import Any
+
 
 def contains_function_call(ast_tree, function_name):
     for node in ast.walk(ast_tree):
@@ -38,6 +40,11 @@ def sanitize_flow_name(flow_name: str) -> str:
     if not sanitized[0].isalpha() and sanitized[0] != '_':
         sanitized = f"_{sanitized}"
     return f"flow_{sanitized}"
+
+
+def clean_webchat_flow_code(steps) -> list[str]:
+    return [step.strip() for step in (s.replace("\n", "") for s in steps) if step.strip()]
+
 
 class NotebookCompiler:
     _in_autopipeline = False
@@ -86,7 +93,6 @@ class NotebookCompiler:
                                 return
 
                 if self._current_flow_name is not None:
-                    # print(clean_code)
                     self._webchat_flows[self._current_flow_name].append(clean_code)
                     return
 
@@ -118,8 +124,7 @@ class NotebookCompiler:
                 f.write(step_func_code)
 
             for flow_name, steps in self._webchat_flows.items():
-                cleaned_steps = [step.strip() for step in steps if step.strip()]
-                cleaned_steps = [s.replace(" ", "").replace("\n", "") for s in cleaned_steps]
+                cleaned_steps = clean_webchat_flow_code(steps)
                 flow_func_code = f"@create_webchat_flow('/{flow_name.replace('-', '_')}')\n" + f"async def {flow_name.replace('-', '_')}(request):\n" + f"    return {cleaned_steps}\n"
                 print(flow_func_code)
                 f.write(flow_func_code)
