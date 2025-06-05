@@ -1,4 +1,4 @@
-name: Python 3.10 Test
+name: Python 3.13 Test
 
 on: [push, pull_request]
 
@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: python:3.10
+      image: python:3.13
 
     steps:
     - uses: actions/checkout@v2
