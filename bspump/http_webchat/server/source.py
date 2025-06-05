@@ -5,14 +5,14 @@ from bspump.http_webchat.server.server import WebChat
 
 
 class WebChatSource(bspump.Source):
-    def __init__(self, app, pipeline, welcome_message_api, id=None, config=None):
+    def __init__(self, app, pipeline, welcome_message, id=None, config=None):
         super().__init__(app, pipeline, id=id, config=config)
         self.Site = None
         self.Runner = None
-        self.WelcomeAPI = welcome_message_api
+        self.WelcomeMessage = welcome_message
 
         self.WebChat = WebChat(
-            welcome_message_api=self.WelcomeAPI
+            welcome_window=self.WelcomeMessage
         )
 
         # Add custom route to handle chat input
@@ -34,7 +34,7 @@ class WebChatSource(bspump.Source):
         self.Site = aiohttp.web.TCPSite(self.Runner, "0.0.0.0", 8080)
         await self.Site.start()
 
-        await self.stopped()  # keep the server running until shutdown
+        await self.stopped()
 
     async def stop(self):
         if hasattr(self, 'Site'):
