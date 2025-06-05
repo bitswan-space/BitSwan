@@ -1,18 +1,13 @@
-import asyncio
 import importlib.util
 import json
 import re
 import time
-from pathlib import Path
 from typing import Callable, List, Optional
 
 import aiohttp.web
 import aiohttp_jinja2
 import jinja2
 import os
-
-from nbformat import read
-from nbconvert.preprocessors import ExecutePreprocessor
 
 from jinja2 import Environment
 
@@ -219,9 +214,10 @@ def find_module_path(module_name):
     else:
         return f"Module '{module_name}' not found or built-in."
 
+# What if the expression is like variable=WebchatResponse?
 def parse_response_strings(response_strings):
     responses = []
-    safe_globals = {
+    context = {
         "WebChatResponse": WebChatResponse,
         "WebChatWelcomeWindow": WebChatWelcomeWindow,
         "WebChatPromptForm": WebChatPromptForm,
@@ -230,13 +226,21 @@ def parse_response_strings(response_strings):
 
     for response_str in response_strings:
         try:
-            response_obj = eval(response_str, safe_globals)
-            if isinstance(response_obj, (WebChatResponse, WebChatWelcomeWindow)):
-                responses.append(response_obj)
+            # Try eval first (if it's an expression)
+            result = eval(response_str, context)
+            if isinstance(result, (WebChatResponse, WebChatWelcomeWindow)):
+                responses.append(result)
+        except SyntaxError:
+            # It's likely an assignment or statement -> exec it
+            try:
+                exec(response_str, context)
+            except Exception as e:
+                print(f"Failed to exec response string: {response_str}\nError: {e}")
         except Exception as e:
-            print(f"Failed to parse response string: {response_str}\nError: {e}")
+            print(f"Failed to eval response string: {response_str}\nError: {e}")
 
     return responses
+
 
 def create_webchat_flow(route: str):
     print(f"Decorator called for route: {route}")
