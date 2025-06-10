@@ -128,7 +128,7 @@ class NotebookCompiler:
                     markdown_content = "".join(markdown_content)
                 markdown_content = markdown_content.strip()
                 if markdown_content:
-                    response_code = f"WebChatResponse(input_html={markdown_content!r})"
+                    response_code = f"WebChatResponse(input_html=f'''{markdown_content}''')"
                     if self._current_flow_name is not None:
                         self._webchat_flows[self._current_flow_name].append(
                             response_code
