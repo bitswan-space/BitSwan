@@ -36,16 +36,19 @@ def indent_code(lines: list[str]) -> list[str]:
         lines_out.append(_indent + lines[i])
     return lines_out
 
+
 def sanitize_flow_name(flow_name: str) -> str:
-    sanitized = flow_name.lstrip('/')
-    sanitized = re.sub(r'\W+', '_', sanitized)
-    if not sanitized[0].isalpha() and sanitized[0] != '_':
+    sanitized = flow_name.lstrip("/")
+    sanitized = re.sub(r"\W+", "_", sanitized)
+    if not sanitized[0].isalpha() and sanitized[0] != "_":
         sanitized = f"_{sanitized}"
     return f"flow_{sanitized}"
 
 
 def clean_webchat_flow_code(steps) -> list[str]:
-    return [step.strip() for step in (s.replace("\n", "") for s in steps) if step.strip()]
+    return [
+        step.strip() for step in (s.replace("\n", "") for s in steps) if step.strip()
+    ]
 
 
 class NotebookCompiler:
@@ -82,12 +85,14 @@ class NotebookCompiler:
                 parsed_ast = ast.parse(clean_code)
                 if contains_function_call(parsed_ast, "create_webchat_flow"):
                     for node in ast.walk(parsed_ast):
-                        if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call):
+                        if isinstance(node, ast.Expr) and isinstance(
+                            node.value, ast.Call
+                        ):
                             call = node.value
                             if (
-                                    isinstance(call, ast.Call)
-                                    and isinstance(call.func, ast.Name)
-                                    and call.func.id == "create_webchat_flow"
+                                isinstance(call, ast.Call)
+                                and isinstance(call.func, ast.Name)
+                                and call.func.id == "create_webchat_flow"
                             ):
                                 arg0 = call.args[0]
                                 if isinstance(arg0, ast.Constant):
@@ -100,7 +105,6 @@ class NotebookCompiler:
                                 self._current_flow_name = sanitized_flow_name
                                 self._webchat_flows[sanitized_flow_name] = []
                                 return
-
 
                 if self._current_flow_name is not None:
                     self._webchat_flows[self._current_flow_name].append(clean_code)
@@ -126,7 +130,9 @@ class NotebookCompiler:
                 if markdown_content:
                     response_code = f"WebChatResponse(input_html={markdown_content!r})"
                     if self._current_flow_name is not None:
-                        self._webchat_flows[self._current_flow_name].append(response_code)
+                        self._webchat_flows[self._current_flow_name].append(
+                            response_code
+                        )
 
     def compile_notebook(self, ntb, out_path="tmp.py"):
         self._cell_number = 0
@@ -143,5 +149,9 @@ async def processor_internal(inject, event):
             f.write(step_func_code)
             for flow_name, steps in self._webchat_flows.items():
                 cleaned_steps = clean_webchat_flow_code(steps)
-                flow_func_code = f"@create_webchat_flow('/{flow_name.replace('-', '_')}')\n" + f"async def {flow_name.replace('-', '_')}(request):\n" + f"    return {cleaned_steps}\n"
+                flow_func_code = (
+                    f"@create_webchat_flow('/{flow_name.replace('-', '_')}')\n"
+                    + f"async def {flow_name.replace('-', '_')}(request):\n"
+                    + f"    return {cleaned_steps}\n"
+                )
                 f.write(flow_func_code)
