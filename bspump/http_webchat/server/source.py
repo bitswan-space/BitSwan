@@ -11,9 +11,7 @@ class WebChatSource(bspump.Source):
         self.Runner = None
         self.WelcomeMessage = welcome_message
 
-        self.WebChat = WebChat(
-            welcome_window=self.WelcomeMessage
-        )
+        self.WebChat = WebChat(welcome_window=self.WelcomeMessage)
 
         # Add custom route to handle chat input
         self.WebChat.app.router.add_post("/api/chat", self.handle_chat)
@@ -37,8 +35,8 @@ class WebChatSource(bspump.Source):
         await self.stopped()
 
     async def stop(self):
-        if hasattr(self, 'Site'):
+        if hasattr(self, "Site"):
             await self.Site.stop()
-        if hasattr(self, 'Runner'):
+        if hasattr(self, "Runner"):
             await self.Runner.cleanup()
         await super().stop()
