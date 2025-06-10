@@ -2,7 +2,7 @@ import importlib.util
 import json
 import re
 import time
-from typing import Callable, List, Optional
+from typing import Callable, List
 
 import aiohttp.web
 import aiohttp_jinja2
@@ -99,9 +99,7 @@ class WebChatPromptForm:
 
 
 class WebChatWelcomeWindow:
-    def __init__(
-        self, welcome_text: str, prompt_form: WebChatPromptForm
-    ):
+    def __init__(self, welcome_text: str, prompt_form: WebChatPromptForm):
         """
         Class for defining the first window that is rendered and is visible all the time
         :param welcome_text: text or html string that should be rendered
@@ -199,7 +197,9 @@ async def general_proxy(request):
     except Exception as e:
         return aiohttp.web.Response(status=500, text=f"Proxy error: {str(e)}")
 
+
 _registered_endpoints = {}
+
 
 def find_module_path(module_name):
     spec = importlib.util.find_spec(module_name)
@@ -207,6 +207,7 @@ def find_module_path(module_name):
         return spec.origin
     else:
         return f"Module '{module_name}' not found or built-in."
+
 
 # What if the expression is like variable=WebchatResponse?
 def parse_response_strings(response_strings):
@@ -238,6 +239,7 @@ def parse_response_strings(response_strings):
 
 def create_webchat_flow(route: str):
     print(f"Decorator called for route: {route}")
+
     def decorator(func: Callable):
         async def wrapped(request):
             try:
@@ -245,7 +247,9 @@ def create_webchat_flow(route: str):
                 responses = parse_response_strings(response_code_list)
                 template_env = WebChatTemplateEnv().get_jinja_env()
 
-                if len(responses) == 1 and isinstance(responses[0], WebChatWelcomeWindow):
+                if len(responses) == 1 and isinstance(
+                    responses[0], WebChatWelcomeWindow
+                ):
                     html = responses[0].get_html(template_env)
                 else:
                     html = WebChatResponseSequence(responses).get_html(template_env)
@@ -257,7 +261,9 @@ def create_webchat_flow(route: str):
 
         _registered_endpoints[route] = wrapped
         return wrapped
+
     return decorator
+
 
 class WebChat:
     def __init__(
@@ -290,8 +296,7 @@ class WebChat:
 
         context = {
             "welcome_html": welcome_html,
-            "prompt_input_html": self.welcome_window.prompt_form.get_html(template_env)
+            "prompt_input_html": self.welcome_window.prompt_form.get_html(template_env),
         }
 
         return aiohttp_jinja2.render_template("index.html", request, context)
-

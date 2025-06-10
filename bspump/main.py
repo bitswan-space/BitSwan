@@ -11,6 +11,7 @@ config = None
 __bitswan_dev = False
 __bs_step_locals = {}
 
+
 def main():
     app = App()  # noqa: F405
     compiler = NotebookCompiler()
