@@ -1,7 +1,9 @@
 import ast
 import re
-import textwrap
-from typing import Any
+
+config = None
+__bitswan_dev = False
+__bs_step_locals = {}
 
 
 def contains_function_call(ast_tree, function_name):
@@ -62,18 +64,25 @@ class NotebookCompiler:
                     if isinstance(cell["source"], list)
                     else cell["source"]
                 )
-                clean_code = ""
-                for line in list(filter(None, code.split("\n"))):
-                    if line.startswith("!"):
-                        continue
-                    clean_code += re.sub(r"^\t+(?=\S)", "", line) + "\n"
-                if not clean_code:
-                    return
 
+                clean_code = (
+                    "\n".join(
+                        [
+                            re.sub(r"^\t+(?=\S)", "", line)
+                            if not line.startswith("!")
+                            else ""
+                            for line in code.split("\n")
+                        ]
+                    ).strip("\n")
+                    + "\n"
+                )
+
+                if not clean_code.strip():
+                    return
                 parsed_ast = ast.parse(clean_code)
                 if contains_function_call(parsed_ast, "create_webchat_flow"):
                     for node in ast.walk(parsed_ast):
-                        if isinstance(node, ast.Await):
+                        if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call):
                             call = node.value
                             if (
                                     isinstance(call, ast.Call)
@@ -92,19 +101,19 @@ class NotebookCompiler:
                                 self._webchat_flows[sanitized_flow_name] = []
                                 return
 
+
                 if self._current_flow_name is not None:
                     self._webchat_flows[self._current_flow_name].append(clean_code)
                     return
 
-                elif self._in_autopipeline:
-                    self._cell_processor_contents[self._cell_number] = (
-                            "\n".join(indent_code(clean_code.split("\n"))) + "\n\n"
-                    )
-                else:
+                if not self._in_autopipeline:
                     fout.write(clean_code + "\n\n")
-
+                else:
+                    self._cell_processor_contents[self._cell_number] = (
+                        "\n".join(indent_code(clean_code.split("\n"))) + "\n\n"
+                    )
                 if not self._in_autopipeline and contains_function_call(
-                    parsed_ast, "auto_pipeline"
+                    ast.parse(clean_code), "auto_pipeline"
                 ):
                     self._in_autopipeline = True
 
@@ -123,19 +132,16 @@ class NotebookCompiler:
         self._cell_number = 0
         self._in_autopipeline = False
         self._cell_processor_contents = {}
-        with (open(out_path, "w") as f):
+        with open(out_path, "w") as f:
             for cell in ntb["cells"]:
                 self._cell_number += 1
                 self.parse_cell(cell, f)
-            if self._cell_processor_contents:
-                step_func_code = f"""@async_step
-            async def processor_internal(inject, event):
-            {''.join(list(self._cell_processor_contents.values()))}    await inject(event)
-            """
-                f.write(step_func_code)
-
+            step_func_code = f"""@async_step
+async def processor_internal(inject, event):
+{''.join(list(self._cell_processor_contents.values()))}    await inject(event)
+"""
+            f.write(step_func_code)
             for flow_name, steps in self._webchat_flows.items():
                 cleaned_steps = clean_webchat_flow_code(steps)
                 flow_func_code = f"@create_webchat_flow('/{flow_name.replace('-', '_')}')\n" + f"async def {flow_name.replace('-', '_')}(request):\n" + f"    return {cleaned_steps}\n"
-                print(flow_func_code)
                 f.write(flow_func_code)

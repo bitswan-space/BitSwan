@@ -225,7 +225,7 @@ def parse_response_strings(response_strings):
             if isinstance(result, (WebChatResponse, WebChatWelcomeWindow)):
                 responses.append(result)
         except SyntaxError:
-            # It's likely an assignment or statement -> exec it
+            # It's an assignment or statement -> exec it
             try:
                 exec(response_str, context)
             except Exception as e:
