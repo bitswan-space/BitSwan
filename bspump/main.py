@@ -116,7 +116,7 @@ def main():
                 sys.path.insert(0, tmpdirname)
                 tmp_module = __import__("autopipeline_tmp")  # noqa: F841
         else:
-            print(f"Notebook {app.Notebook} not found")
+            exit(f"Notebook {app.Notebook} not found")
 
         if bspump.jupyter.bitswan_auto_pipeline.get("sink") is not None:
             register_sink(  # noqa: F405
