@@ -1,8 +1,0 @@
-- topic: fine_topic
-  num_partitions: 10
-  replication_factor: 1
-  config:
-    retention.ms: 60000
-- topic: great_topic
-  num_partitions: 1
-  replication_factor: 1
