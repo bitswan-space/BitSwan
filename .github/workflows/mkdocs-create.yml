@@ -38,7 +38,7 @@ jobs:
     - name: Checkout target repository
       uses: actions/checkout@v4
       with:
-        repository: YOUR_USERNAME/TARGET_REPOSITORY_NAME  # Replace with target repo
+        repository: YOUR_USERNAME/https://github.com/bitswan-space/bitswan-space.github.io#  # Replace with target repo
         token: ${{ secrets.TARGET_REPO_TOKEN }}  # Personal Access Token with repo permissions
         path: target-repo
         fetch-depth: 0
