@@ -1,4 +1,26 @@
-name: mkdocs-create.yml
+name: Create mkdocs files and commit changes
+
 on:
+  push:
+    branches:
+      - main
+      - mkdocs
 
 jobs:
+  build-and-commit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create mkdocs
+        run: echo "This file was generated at $(date)" > generated-file.txt # TODO
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add .
+          git commit -m "Automated commit of generated file" || echo "No changes to commit"
+          git push
