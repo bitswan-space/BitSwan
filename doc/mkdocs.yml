@@ -1,0 +1,51 @@
+site_name: BitSwan Documentation
+docs_dir: mkdocs/
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true  # Show source code links
+            show_root_heading: true
+            show_root_toc_entry: true
+            show_object_full_path: true
+            show_category_heading: true
+            show_signature: true
+            show_signature_annotations: true
+            show_bases: true
+            group_by_category: true
+            show_if_no_docstring: true
+            annotations_path: brief
+            show_inheritance: true
+            show_submodules: true
+            extra:
+              cross_reference: true
+              external: true
+              follow_imports: true
+              show_type_annotations: true
+
+markdown_extensions:
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - pymdownx.details
+  - pymdownx.snippets
+  - codehilite
+  - admonition
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.indexes
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+nav:
+  - Overview: index.md
