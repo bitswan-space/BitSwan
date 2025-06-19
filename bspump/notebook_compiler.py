@@ -155,3 +155,8 @@ async def processor_internal(inject, event):
                     + f"    return {cleaned_steps}\n"
                 )
                 f.write(flow_func_code)
+
+        # Print the contents of the written file
+        with open(out_path, "r") as f:
+            print(f"\n--- Contents of {out_path} ---\n")
+            print(f.read())
