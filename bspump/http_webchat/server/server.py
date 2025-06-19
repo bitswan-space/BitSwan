@@ -1,8 +1,9 @@
+import asyncio
 import importlib.util
 import json
 import re
 import time
-from typing import Callable, List
+from typing import Callable, List, Any, AsyncGenerator, Coroutine
 
 import aiohttp.web
 import aiohttp_jinja2
@@ -74,7 +75,7 @@ class FormInput:
         self.step = step
         self.required = required
 
-
+# this returns the final html for the prompt, and then I want to render this instead of prompt
 class WebChatPromptForm:
     def __init__(self, form_inputs: List[FormInput], submit_api_call: str):
         """
@@ -94,26 +95,23 @@ class WebChatPromptForm:
         return context
 
     def get_html(self, template_env: Environment) -> str:
-        template = template_env.get_template("components/prompt-box.html")
+        template = template_env.get_template("components/prompt-form.html")
         return template.render(self.get_context())
 
 
 class WebChatWelcomeWindow:
-    def __init__(self, welcome_text: str, prompt_form: WebChatPromptForm):
+    def __init__(self, welcome_text: str):
         """
         Class for defining the first window that is rendered and is visible all the time
         :param welcome_text: text or html string that should be rendered
         :param prompt_form: html of the prompt that is rendered with the window
         """
         self.welcome_text = welcome_text or ""
-        self.prompt_form = prompt_form
 
     def get_context(self, template_env: Environment) -> dict:
         context = {
             "welcome_text": self.welcome_text,
         }
-        if self.prompt_form:
-            context["prompt_html"] = self.prompt_form.get_html(template_env)
         return context
 
     def get_html(self, template_env: Environment) -> str:
@@ -199,7 +197,6 @@ async def general_proxy(request):
 
 
 _registered_endpoints = {}
-
 
 def find_module_path(module_name):
     spec = importlib.util.find_spec(module_name)
@@ -288,6 +285,9 @@ class WebChat:
         if _registered_endpoints:
             for route, handler in _registered_endpoints.items():
                 self.app.router.add_route("*", route, handler)
+       # self.app.router.add_post("/api/response_box", response_box)
+       # self.app.router.add_get("/prompt", serve_prompt)
+        self.app.router.add_get("/ws", websocket_handler)
         self.app.router.add_get("/api/proxy", general_proxy)
 
     async def serve_index(self, request: aiohttp.web.Request) -> aiohttp.web.Response:
@@ -296,7 +296,96 @@ class WebChat:
 
         context = {
             "welcome_html": welcome_html,
-            "prompt_input_html": self.welcome_window.prompt_form.get_html(template_env),
         }
 
         return aiohttp_jinja2.render_template("index.html", request, context)
+
+current_prompt_html = "<p>Initial prompt</p>"
+ws_connections = set()
+
+async def set_prompt(form_inputs: list[FormInput],
+    submit_api_call: str = "/api/response_box"):
+    prompt_form = WebChatPromptForm(form_inputs, submit_api_call).get_html(template_env=WebChatTemplateEnv().get_jinja_env())
+    global current_prompt_html
+    current_prompt_html = prompt_form
+    for ws in ws_connections:
+        try:
+            ws.send_str(prompt_form)
+        except:
+            pass
+
+async def websocket_handler(request):
+    ws = aiohttp.web.WebSocketResponse()
+    await ws.prepare(request)
+
+    # Add connection
+    ws_connections.add(ws)
+
+    # Send current prompt on connect
+    await ws.send_str(current_prompt_html)
+
+    try:
+        async for msg in ws:
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                pass  # you can process client messages if needed
+    finally:
+        ws_connections.remove(ws)
+
+    return ws
+
+'''
+def set_prompt(
+    form_inputs: list[FormInput],
+    submit_api_call: str = "/api/response_box",
+) -> tuple[WebChatResponse, asyncio.Future]:
+    global _current_prompt_html
+
+    prompt_form = WebChatPromptForm(form_inputs, submit_api_call)
+    form_id = prompt_form.get_context()["form_id"]
+
+    fut: asyncio.Future = asyncio.get_event_loop().create_future()
+    _pending_prompts[form_id] = fut
+
+    response = WebChatResponse("", prompt_form=prompt_form)
+
+    # Render the prompt form HTML once and store it globally
+    template_env = WebChatTemplateEnv().get_jinja_env()
+    _current_prompt_html = prompt_form.get_html(template_env)
+
+    return response, fut
+
+# Add aiohttp handler for /prompt that returns current prompt form HTML
+async def serve_prompt(request: aiohttp.web.Request) -> aiohttp.web.Response:
+    global _current_prompt_html
+
+    if not _current_prompt_html:
+        return aiohttp.web.Response(
+            text="No prompt form set yet.",
+            content_type="text/plain",
+            status=404,
+        )
+    return aiohttp.web.Response(
+        text=_current_prompt_html,
+        content_type="text/html",
+    )
+
+async def response_box(request: aiohttp.web.Request) -> aiohttp.web.Response:
+    """
+    POST endpoint for form submission.
+    Resolves the matching Future so awaiting code continues.
+    """
+    try:
+        data = await request.post()
+        form_id = data.get("form_id")
+        if not form_id:
+            raise ValueError("Missing form_id")
+
+        fut = _pending_prompts.pop(form_id, None)
+        if fut is None:
+            raise ValueError("Unknown or expired form_id")
+
+        fut.set_result({k: v for k, v in data.items() if k != "form_id"})
+        return aiohttp.web.json_response({"status": "ok"})
+    except Exception as e:
+        return aiohttp.web.json_response({"error": str(e)}, status=400)
+'''
