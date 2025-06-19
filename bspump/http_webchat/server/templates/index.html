@@ -39,6 +39,16 @@
       }
     </script>
     <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.js" crossorigin="anonymous"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+      const promptEl = document.getElementById("prompt");
+      const ws = new WebSocket("ws://" + window.location.host + "/ws");
+
+      ws.onmessage = (event) => {
+        promptEl.innerHTML = event.data;
+      };
+    });
+    </script>
 
     <style>
       body, .dark\:bg-neutral-dark {
@@ -69,9 +79,7 @@
                 {{ welcome_html | safe }}
             </div>
             <div id="response-box" class="h-[90%] w-full overflow-y-auto flex flex-col items-end mb-12"></div>
-            <div id="prompt-input" class="shadow-md rounded-xl w-[90%] px-8 py-6 border border-secondary">
-                {{ prompt_input_html | safe }}
-            </div>
+            <div id="prompt" class="shadow-md rounded-xl w-[90%] px-8 py-6 border border-secondary"></div>
         </div>
     </div>
 
