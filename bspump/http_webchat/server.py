@@ -287,6 +287,7 @@ class WebChatServerConnection(Connection):
         if _registered_endpoints:
             for route, handler in _registered_endpoints.items():
                 router.add_route("*", route, handler)
+        router.add_post("/api/prompt_input_result", handle_prompt_input_result)
         router.add_get("/ws", websocket_handler)
         router.add_get("/api/proxy", general_proxy)
         self.aiohttp_app.router.add_static("/static", os.path.join(self.base_dir, "static"))
@@ -407,17 +408,42 @@ class WebChatSource(WebChatRouteSource):
 
 current_prompt_html = "<p>Initial prompt</p>"
 ws_connections = set()
+pending_prompt_future: asyncio.Future | None = None
 
-async def set_prompt(form_inputs: list[FormInput],
-    submit_api_call: str = "/api/response_box"):
-    prompt_form = WebChatPromptForm(form_inputs, submit_api_call).get_html(template_env=WebChatTemplateEnv().get_jinja_env())
-    global current_prompt_html
+async def set_prompt(
+    form_inputs: list,
+    submit_api_call: str = "/api/prompt_input_result"
+) -> dict:
+    global current_prompt_html, pending_prompt_future
+
+    pending_prompt_future = asyncio.get_event_loop().create_future()
+
+    prompt_form = WebChatPromptForm(
+        form_inputs, submit_api_call
+    ).get_html(template_env=WebChatTemplateEnv().get_jinja_env())
+
     current_prompt_html = prompt_form
-    for ws in ws_connections:
+
+    for ws in ws_connections.copy():
         try:
             await ws.send_str(prompt_form)
-        except:
-            pass
+        except Exception:
+            ws_connections.discard(ws)
+
+    submitted_data = await pending_prompt_future
+    pending_prompt_future = None
+    return submitted_data
+
+async def handle_prompt_input_result(request: aiohttp.web.Request):
+    data = await request.post()
+    print("Received form input data:", dict(data))
+
+    global pending_prompt_future
+    if pending_prompt_future is not None and not pending_prompt_future.done():
+        pending_prompt_future.set_result(dict(data))
+
+    return aiohttp.web.Response(text="<p class='text-sm'>Data received. Thank you.</p>")
+
 
 async def websocket_handler(request):
     ws = aiohttp.web.WebSocketResponse()
