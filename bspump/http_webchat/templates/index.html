@@ -46,6 +46,8 @@
 
       ws.onmessage = (event) => {
         promptEl.innerHTML = event.data;
+
+        htmx.process(promptEl);
       };
     });
     </script>
