@@ -4,6 +4,7 @@ import json
 import re
 import time
 from typing import Callable, List, Any, AsyncGenerator, Coroutine
+import logging
 
 import aiohttp.web
 import aiohttp_jinja2
@@ -12,7 +13,11 @@ import os
 
 from jinja2 import Environment
 
+import bspump
+from bspump import Source, Connection, Sink
+
 app = aiohttp.web.Application()
+L = logging.getLogger(__name__)
 
 
 class WebChatTemplateEnv:
@@ -235,7 +240,6 @@ def parse_response_strings(response_strings):
 
 
 def create_webchat_flow(route: str):
-    print(f"Decorator called for route: {route}")
 
     def decorator(func: Callable):
         async def wrapped(request):
@@ -261,44 +265,145 @@ def create_webchat_flow(route: str):
 
     return decorator
 
+class WebChatServerConnection(Connection):
 
-class WebChat:
-    def __init__(
-        self,
-        welcome_window: WebChatWelcomeWindow,
-    ):
-        self.welcome_window = welcome_window
+    ConfigDefaults = {
+        "port": 8080,
+        "max_body_size_bytes": 1024 * 1024 * 1000,
+    }
+
+    def __init__(self, app, id=None, config=None):
+        super().__init__(app, id=id, config=config)
+
+        self.aiohttp_app = aiohttp.web.Application(
+            client_max_size=int(self.Config["max_body_size_bytes"])
+        )
         self.base_dir = os.path.dirname(os.path.abspath(__file__))
-        self.app = aiohttp.web.Application()
         aiohttp_jinja2.setup(
-            self.app,
+            self.aiohttp_app,
             loader=jinja2.FileSystemLoader(os.path.join(self.base_dir, "templates")),
         )
-        self.set_app()
-        self.register_routes()
-
-    def set_app(self):
-        self.app.router.add_static("/static", os.path.join(self.base_dir, "static"))
-        self.app.router.add_get("/", self.serve_index)
-
-    def register_routes(self):
+        router = self.aiohttp_app.router
         if _registered_endpoints:
             for route, handler in _registered_endpoints.items():
-                self.app.router.add_route("*", route, handler)
-       # self.app.router.add_post("/api/response_box", response_box)
-       # self.app.router.add_get("/prompt", serve_prompt)
-        self.app.router.add_get("/ws", websocket_handler)
-        self.app.router.add_get("/api/proxy", general_proxy)
+                router.add_route("*", route, handler)
+        router.add_get("/ws", websocket_handler)
+        router.add_get("/api/proxy", general_proxy)
+        self.aiohttp_app.router.add_static("/static", os.path.join(self.base_dir, "static"))
+        # static_dir = str(files("bspump").joinpath("styles")) add once the tailwind from cdn is removed
+        # self.aiohttp_app.router.add_static("/styles/", static_dir, show_index=True)
+        self.start_server()
+
+    def start_server(self):
+        print("Starting webchat server")
+        try:
+            self.App.Loop.create_task(
+                aiohttp.web._run_app(
+                    self.aiohttp_app,
+                    port=int(self.Config["port"]),
+                )
+            )
+        except Exception as e:
+            print("Exception: {}".format(e))
+            import traceback
+
+            traceback.print_exc()
+
+
+class WebChatRouteSource(Source):
+    """
+    WebSource is a source that listens on a specified port and serves HTTP requests.
+    """
+
+    def __init__(
+        self,
+        app,
+        pipeline,
+        connection="DefaultWebServerConnection",
+        method="GET",
+        route="/",
+        id=None,
+        config=None,
+    ):
+        super().__init__(app, pipeline, id=id, config=config)
+        pipeline.StopOnErrors = False
+
+        try:
+            self.Connection = pipeline.locate_connection(app, connection)
+        except KeyError:
+            if connection == "DefaultWebServerConnection":
+                try:
+                    default_port = int(
+                        os.environ.get("DEFAULT_WEB_SERVER_CONNECTION_PORT") or "8080"
+                    )
+                except ValueError:
+                    default_port = 8080
+                    L.warning(
+                        "DEFAULT_WEB_SERVER_CONNECTION_PORT is not a valid integer. Using default value {}.".format(
+                            default_port
+                        )
+                    )
+
+                self.Connection = WebChatServerConnection(
+                    app,
+                    "DefaultWebServerConnection",
+                    {"port": default_port},
+                )
+                app.PumpService.add_connection(self.Connection)
+        self.aiohttp_app = self.Connection.aiohttp_app
+        self.aiohttp_app.router.add_route(method, route, self.handle_request)
+
+    async def main(self):
+        pass
+
+    async def handle_request(self, request):
+        try:
+            response_future = asyncio.Future()
+            await self.process(
+                {
+                    "request": request,
+                    "response_future": response_future,
+                    "status": 200,
+                }
+            )
+            return await response_future
+        except Exception:
+            L.exception("Exception in WebSource")
+            return aiohttp.web.Response(status=500)
+
+class WebChatSource(WebChatRouteSource):
+
+    def __init__(self, app, pipeline, welcome_text, connection="DefaultWebServerConnection",
+        route="/", id=None, config=None):
+        super().__init__(
+            app,
+            pipeline,
+            connection=connection,
+            route=route,
+            method="GET",
+            id=id,
+            config=config,
+        )
+
+        self.pipeline = pipeline
+        self.welcome_window = welcome_text
+
+    async def trigger_start_event(self):
+        fake_event = {}
+        await self.pipeline.process(fake_event)
 
     async def serve_index(self, request: aiohttp.web.Request) -> aiohttp.web.Response:
         template_env = WebChatTemplateEnv().get_jinja_env()
         welcome_html = self.welcome_window.get_html(template_env)
-
-        context = {
-            "welcome_html": welcome_html,
-        }
-
+        context = {"welcome_html": welcome_html}
+        await self.trigger_start_event()
         return aiohttp_jinja2.render_template("index.html", request, context)
+
+    async def handle_request(self, request: aiohttp.web.Request) -> aiohttp.web.Response:
+        if request.method == "GET":
+            return await self.serve_index(request)
+        return aiohttp.web.Response(status=405)
+
 
 current_prompt_html = "<p>Initial prompt</p>"
 ws_connections = set()
@@ -310,7 +415,7 @@ async def set_prompt(form_inputs: list[FormInput],
     current_prompt_html = prompt_form
     for ws in ws_connections:
         try:
-            ws.send_str(prompt_form)
+            await ws.send_str(prompt_form)
         except:
             pass
 
@@ -318,20 +423,30 @@ async def websocket_handler(request):
     ws = aiohttp.web.WebSocketResponse()
     await ws.prepare(request)
 
-    # Add connection
     ws_connections.add(ws)
 
-    # Send current prompt on connect
-    await ws.send_str(current_prompt_html)
-
     try:
+        await ws.send_str(current_prompt_html)
+
         async for msg in ws:
             if msg.type == aiohttp.WSMsgType.TEXT:
-                pass  # you can process client messages if needed
+                pass
+            elif msg.type == aiohttp.WSMsgType.ERROR:
+                print(f"WebSocket connection closed with exception: {ws.exception()}")
+
     finally:
         ws_connections.remove(ws)
+        await ws.close()
 
     return ws
+
+
+class WebchatSink(Sink):
+    def process(self, context, item):
+        response_future = item.get("response_future")
+        if response_future and not response_future.done():
+            response_future.set_result(aiohttp.web.Response(status=204))
+
 
 '''
 def set_prompt(
