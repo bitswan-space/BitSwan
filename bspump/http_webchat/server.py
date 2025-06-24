@@ -222,7 +222,6 @@ async def parse_response_strings(response_strings: list[str], template_env: Envi
     local_vars = {}
 
     for response_str in response_strings:
-        # print("Processing:", response_str)
         try:
             if "\n" in response_str or "await" in response_str or "return" in response_str:
                 if "await" in response_str or "return" in response_str:
