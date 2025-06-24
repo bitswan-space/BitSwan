@@ -46,9 +46,7 @@ def sanitize_flow_name(flow_name: str) -> str:
 
 
 def clean_webchat_flow_code(steps) -> list[str]:
-    return [
-        step.strip() for step in (s.replace("\n", "") for s in steps) if step.strip()
-    ]
+    return [step.strip() for step in steps if step.strip()]
 
 
 class NotebookCompiler:
