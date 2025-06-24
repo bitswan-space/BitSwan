@@ -210,7 +210,101 @@ def find_module_path(module_name):
     else:
         return f"Module '{module_name}' not found or built-in."
 
-async def parse_response_strings(response_strings: list[str], template_env: Environment) -> AsyncGenerator[str, None]:
+
+current_prompt_html = "<p>Initial prompt</p>"
+ws_connections = set()
+pending_prompt_future: asyncio.Future | None = None
+
+async def prompt_input_result(request):
+    global pending_prompt_future
+
+    if pending_prompt_future is None:
+        return aiohttp.web.Response(status=400, text="No prompt is currently active")
+
+    try:
+        data = await request.post()
+        result_dict = dict(data)
+
+        rendered_html = None
+
+        async with aiohttp.ClientSession() as session:
+            for i, (key, value) in enumerate(result_dict.items()):
+                flow_url = str(request.url.with_path(f"/flow_{key}_{value}").with_query(""))
+
+                # add here params
+                async with session.get(flow_url) as resp:
+                    text = await resp.text()
+                    if resp.status not in (200, 204):
+                        return aiohttp.web.Response(
+                            status=resp.status,
+                            text=f"Failed to forward data to {flow_url}: {text}"
+                        )
+
+                    if rendered_html is None and resp.content_type == "text/html":
+                        rendered_html = text
+
+        if not pending_prompt_future.done():
+            pending_prompt_future.set_result(result_dict)
+
+        if rendered_html:
+            return aiohttp.web.Response(text=rendered_html, content_type='text/html')
+        else:
+            return aiohttp.web.Response(status=204)
+
+    except Exception as e:
+        return aiohttp.web.Response(status=500, text=f"Failed to submit prompt data: {str(e)}")
+
+async def set_prompt(
+    form_inputs: list,
+    submit_api_call: str = "/api/prompt_input_result"
+) -> dict:
+    global current_prompt_html, pending_prompt_future
+
+    pending_prompt_future = asyncio.get_event_loop().create_future()
+
+    # creates a new prompt html
+    prompt_form = WebChatPromptForm(
+        form_inputs, submit_api_call
+    ).get_html(template_env=WebChatTemplateEnv().get_jinja_env())
+
+    current_prompt_html = prompt_form
+
+    # sends the new prompt to connected websocket clients
+    for ws in ws_connections.copy():
+        try:
+            await ws.send_str(prompt_form)
+        except Exception:
+            ws_connections.discard(ws)
+
+    # waits and returns the submitted data
+    submitted_data = await pending_prompt_future
+    print("submitted_data:", submitted_data)
+    pending_prompt_future = None
+    return submitted_data
+
+# everytime I make a request to ws endpoint a new connection is added
+async def websocket_handler(request):
+    ws = aiohttp.web.WebSocketResponse()
+    await ws.prepare(request)
+    # Adds WebSocket connection to ws_connections
+    ws_connections.add(ws)
+
+    try:
+        await ws.send_str(current_prompt_html)
+
+        async for msg in ws:
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                pass
+            elif msg.type == aiohttp.WSMsgType.ERROR:
+                print(f"WebSocket connection closed with exception: {ws.exception()}")
+
+    finally:
+        ws_connections.remove(ws)
+        await ws.close()
+
+    return ws
+
+async def parse_response_strings(flow_steps: list[str], template_env: Environment) -> AsyncGenerator[str, None]:
     context = {
         "WebChatResponse": WebChatResponse,
         "WebChatWelcomeWindow": WebChatWelcomeWindow,
@@ -221,32 +315,38 @@ async def parse_response_strings(response_strings: list[str], template_env: Envi
 
     local_vars = {}
 
-    for response_str in response_strings:
+    for step in flow_steps:
+        # print(step)
         try:
-            if "\n" in response_str or "await" in response_str or "return" in response_str:
-                if "await" in response_str or "return" in response_str:
+            if "\n" in step or "await" in step or "return" in step:
+                if "await" in step or "return" in step:
                     exec_code = 'async def __temp_func():\n'
-                    for line in response_str.splitlines():
+                    for line in step.splitlines():
                         exec_code += f'    {line}\n'
-
                     exec(exec_code, context, local_vars)
-                    result = await local_vars['__temp_func']()
-
-                    if isinstance(result, (WebChatResponse, WebChatWelcomeWindow)):
-                        yield result.get_html(template_env)
+                    await local_vars["__temp_func"]()
                 else:
-                    exec(response_str, context, local_vars)
+                    exec(step, context, local_vars)
 
             else:
                 try:
-                    result = eval(response_str, context, local_vars)
+                    result = eval(step, context, local_vars)
                     if isinstance(result, (WebChatResponse, WebChatWelcomeWindow)):
                         yield result.get_html(template_env)
                 except SyntaxError:
-                    exec(response_str, context, local_vars)
+                    exec(step, context, local_vars)
 
         except Exception as e:
-            print(f"Failed to process response string: {response_str}\nError: {e}")
+            print(f"Failed to process response string: {step}\nError: {e}")
+
+# sends a string message to all active WebSocket connections
+async def websocket_broadcast(message: str):
+    for ws in ws_connections.copy():
+        try:
+            await ws.send_str(message)
+        except Exception:
+            ws_connections.discard(ws)
+
 
 def create_webchat_flow(route: str):
 
@@ -260,7 +360,9 @@ def create_webchat_flow(route: str):
                 await resp.prepare(request)
 
                 async for fragment in parse_response_strings(response_code_list, template_env):
+                    await websocket_broadcast(fragment)
                     await resp.write(fragment.encode('utf-8'))
+
 
                 await resp.write_eof()
                 return resp
@@ -272,6 +374,7 @@ def create_webchat_flow(route: str):
         return wrapped
 
     return decorator
+
 
 
 class WebChatServerConnection(Connection):
@@ -296,7 +399,7 @@ class WebChatServerConnection(Connection):
         if _registered_endpoints:
             for route, handler in _registered_endpoints.items():
                 router.add_route("*", route, handler)
-        router.add_post("/api/prompt_input_result", handle_prompt_input_result)
+        router.add_post("/api/prompt_input_result", prompt_input_result)
         router.add_get("/ws", websocket_handler)
         router.add_get("/api/proxy", general_proxy)
         self.aiohttp_app.router.add_static("/static", os.path.join(self.base_dir, "static"))
@@ -413,67 +516,6 @@ class WebChatSource(WebChatRouteSource):
         if request.method == "GET":
             return await self.serve_index(request)
         return aiohttp.web.Response(status=405)
-
-
-current_prompt_html = "<p>Initial prompt</p>"
-ws_connections = set()
-pending_prompt_future: asyncio.Future | None = None
-
-async def set_prompt(
-    form_inputs: list,
-    submit_api_call: str = "/api/prompt_input_result"
-) -> dict:
-    global current_prompt_html, pending_prompt_future
-
-    pending_prompt_future = asyncio.get_event_loop().create_future()
-
-    prompt_form = WebChatPromptForm(
-        form_inputs, submit_api_call
-    ).get_html(template_env=WebChatTemplateEnv().get_jinja_env())
-
-    current_prompt_html = prompt_form
-
-    for ws in ws_connections.copy():
-        try:
-            await ws.send_str(prompt_form)
-        except Exception:
-            ws_connections.discard(ws)
-
-    submitted_data = await pending_prompt_future
-    pending_prompt_future = None
-    return submitted_data
-
-async def handle_prompt_input_result(request: aiohttp.web.Request):
-    data = await request.post()
-    print("Received form input data:", dict(data))
-
-    global pending_prompt_future
-    if pending_prompt_future is not None and not pending_prompt_future.done():
-        pending_prompt_future.set_result(dict(data))
-
-    return aiohttp.web.Response(text="<p class='text-sm'>Data received. Thank you.</p>")
-
-# websocket handler that pushes the prompt html to frontend
-async def websocket_handler(request):
-    ws = aiohttp.web.WebSocketResponse()
-    await ws.prepare(request)
-
-    ws_connections.add(ws)
-
-    try:
-        await ws.send_str(current_prompt_html)
-
-        async for msg in ws:
-            if msg.type == aiohttp.WSMsgType.TEXT:
-                pass
-            elif msg.type == aiohttp.WSMsgType.ERROR:
-                print(f"WebSocket connection closed with exception: {ws.exception()}")
-
-    finally:
-        ws_connections.remove(ws)
-        await ws.close()
-
-    return ws
 
 
 class WebchatSink(Sink):
