@@ -210,34 +210,44 @@ def find_module_path(module_name):
     else:
         return f"Module '{module_name}' not found or built-in."
 
-
-# What if the expression is like variable=WebchatResponse?
-def parse_response_strings(response_strings):
-    responses = []
+async def parse_response_strings(response_strings: list[str], template_env: Environment) -> AsyncGenerator[str, None]:
     context = {
         "WebChatResponse": WebChatResponse,
         "WebChatWelcomeWindow": WebChatWelcomeWindow,
         "WebChatPromptForm": WebChatPromptForm,
         "FormInput": FormInput,
+        "set_prompt": set_prompt,
     }
 
+    local_vars = {}
+
     for response_str in response_strings:
+        # print("Processing:", response_str)
         try:
-            # Try eval first (if it's an expression)
-            result = eval(response_str, context)
-            if isinstance(result, (WebChatResponse, WebChatWelcomeWindow)):
-                responses.append(result)
-        except SyntaxError:
-            # It's an assignment or statement -> exec it
-            try:
-                exec(response_str, context)
-            except Exception as e:
-                print(f"Failed to exec response string: {response_str}\nError: {e}")
+            if "\n" in response_str or "await" in response_str or "return" in response_str:
+                if "await" in response_str or "return" in response_str:
+                    exec_code = 'async def __temp_func():\n'
+                    for line in response_str.splitlines():
+                        exec_code += f'    {line}\n'
+
+                    exec(exec_code, context, local_vars)
+                    result = await local_vars['__temp_func']()
+
+                    if isinstance(result, (WebChatResponse, WebChatWelcomeWindow)):
+                        yield result.get_html(template_env)
+                else:
+                    exec(response_str, context, local_vars)
+
+            else:
+                try:
+                    result = eval(response_str, context, local_vars)
+                    if isinstance(result, (WebChatResponse, WebChatWelcomeWindow)):
+                        yield result.get_html(template_env)
+                except SyntaxError:
+                    exec(response_str, context, local_vars)
+
         except Exception as e:
-            print(f"Failed to eval response string: {response_str}\nError: {e}")
-
-    return responses
-
+            print(f"Failed to process response string: {response_str}\nError: {e}")
 
 def create_webchat_flow(route: str):
 
@@ -245,17 +255,16 @@ def create_webchat_flow(route: str):
         async def wrapped(request):
             try:
                 response_code_list = await func(request)
-                responses = parse_response_strings(response_code_list)
                 template_env = WebChatTemplateEnv().get_jinja_env()
 
-                if len(responses) == 1 and isinstance(
-                    responses[0], WebChatWelcomeWindow
-                ):
-                    html = responses[0].get_html(template_env)
-                else:
-                    html = WebChatResponseSequence(responses).get_html(template_env)
+                resp = aiohttp.web.StreamResponse(status=200, reason='OK', headers={'Content-Type': 'text/html'})
+                await resp.prepare(request)
 
-                return aiohttp.web.Response(text=html, content_type="text/html")
+                async for fragment in parse_response_strings(response_code_list, template_env):
+                    await resp.write(fragment.encode('utf-8'))
+
+                await resp.write_eof()
+                return resp
 
             except Exception as e:
                 return aiohttp.web.Response(status=500, text=f"Error: {str(e)}")
@@ -264,6 +273,7 @@ def create_webchat_flow(route: str):
         return wrapped
 
     return decorator
+
 
 class WebChatServerConnection(Connection):
 
@@ -444,7 +454,7 @@ async def handle_prompt_input_result(request: aiohttp.web.Request):
 
     return aiohttp.web.Response(text="<p class='text-sm'>Data received. Thank you.</p>")
 
-
+# websocket handler that pushes the prompt html to frontend
 async def websocket_handler(request):
     ws = aiohttp.web.WebSocketResponse()
     await ws.prepare(request)
@@ -472,61 +482,3 @@ class WebchatSink(Sink):
         response_future = item.get("response_future")
         if response_future and not response_future.done():
             response_future.set_result(aiohttp.web.Response(status=204))
-
-
-'''
-def set_prompt(
-    form_inputs: list[FormInput],
-    submit_api_call: str = "/api/response_box",
-) -> tuple[WebChatResponse, asyncio.Future]:
-    global _current_prompt_html
-
-    prompt_form = WebChatPromptForm(form_inputs, submit_api_call)
-    form_id = prompt_form.get_context()["form_id"]
-
-    fut: asyncio.Future = asyncio.get_event_loop().create_future()
-    _pending_prompts[form_id] = fut
-
-    response = WebChatResponse("", prompt_form=prompt_form)
-
-    # Render the prompt form HTML once and store it globally
-    template_env = WebChatTemplateEnv().get_jinja_env()
-    _current_prompt_html = prompt_form.get_html(template_env)
-
-    return response, fut
-
-# Add aiohttp handler for /prompt that returns current prompt form HTML
-async def serve_prompt(request: aiohttp.web.Request) -> aiohttp.web.Response:
-    global _current_prompt_html
-
-    if not _current_prompt_html:
-        return aiohttp.web.Response(
-            text="No prompt form set yet.",
-            content_type="text/plain",
-            status=404,
-        )
-    return aiohttp.web.Response(
-        text=_current_prompt_html,
-        content_type="text/html",
-    )
-
-async def response_box(request: aiohttp.web.Request) -> aiohttp.web.Response:
-    """
-    POST endpoint for form submission.
-    Resolves the matching Future so awaiting code continues.
-    """
-    try:
-        data = await request.post()
-        form_id = data.get("form_id")
-        if not form_id:
-            raise ValueError("Missing form_id")
-
-        fut = _pending_prompts.pop(form_id, None)
-        if fut is None:
-            raise ValueError("Unknown or expired form_id")
-
-        fut.set_result({k: v for k, v in data.items() if k != "form_id"})
-        return aiohttp.web.json_response({"status": "ok"})
-    except Exception as e:
-        return aiohttp.web.json_response({"error": str(e)}, status=400)
-'''

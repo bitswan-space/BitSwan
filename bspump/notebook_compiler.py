@@ -105,7 +105,13 @@ class NotebookCompiler:
                                 return
 
                 if self._current_flow_name is not None:
-                    self._webchat_flows[self._current_flow_name].append(clean_code)
+                    cleaned_lines = [
+                        line for line in clean_code.split('\n')
+                        if line.strip() != "" and not line.strip().startswith("#")
+                    ]
+                    cleaned_code = "\n".join(cleaned_lines)
+                    if cleaned_code.strip():
+                        self._webchat_flows[self._current_flow_name].append(cleaned_code)
                     return
 
                 if not self._in_autopipeline:
