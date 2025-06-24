@@ -1,103 +1,105 @@
 <!DOCTYPE html>
 <html lang="en" class="">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fund Info</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fund Info</title>
 
-    <script>
-      if (localStorage.getItem('theme') === 'dark') {
-        document.documentElement.classList.add('dark');
-      }
-    </script>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.classList.add('dark');
+    }
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
 
-    <script>
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            colors: {
-              primary: {
-                DEFAULT: '#1c1917',
-                dark: '#FAFAF9',
-                light: '#1c1917',
-              },
-              secondary: {
-                DEFAULT: '#CBCACA',
-                dark: '#2D2D2D',
-                light: '#CBCACA',
-              },
-              neutral: {
-                DEFAULT: '#FAFAF9',
-                light: '#FAFAF9',
-                dark: '#424242',
-              }
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              DEFAULT: '#1c1917',
+              dark: '#FAFAF9',
+              light: '#1c1917',
             },
+            secondary: {
+              DEFAULT: '#CBCACA',
+              dark: '#2D2D2D',
+              light: '#CBCACA',
+            },
+            neutral: {
+              DEFAULT: '#FAFAF9',
+              light: '#FAFAF9',
+              dark: '#424242',
+            }
           },
         },
-      }
-    </script>
-    <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.js" crossorigin="anonymous"></script>
-    <script>
-      document.addEventListener("DOMContentLoaded", () => {
+      },
+    };
+  </script>
+
+  <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.js" crossorigin="anonymous"></script>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
       const promptEl = document.getElementById("prompt");
       const ws = new WebSocket("ws://" + window.location.host + "/ws");
 
       ws.onmessage = (event) => {
         promptEl.innerHTML = event.data;
-
         htmx.process(promptEl);
+        console.log("Prompt form loaded via WebSocket");
+        ws.close();
       };
     });
-    </script>
+  </script>
 
-    <style>
-      body, .dark\:bg-neutral-dark {
-        transition: background-color 0.3s ease;
+  <style>
+    body, .dark\:bg-neutral-dark {
+      transition: background-color 0.3s ease;
+    }
+    .fade-in {
+      opacity: 0;
+      transform: translateY(10px);
+      animation: fadeSlideIn 0.6s ease forwards;
+    }
+    @keyframes fadeSlideIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
       }
-      .fade-in {
-        opacity: 0;
-        transform: translateY(10px);
-        animation: fadeSlideIn 0.6s ease forwards;
-      }
-
-      @keyframes fadeSlideIn {
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-    </style>
+    }
+  </style>
 </head>
 <body class="bg-neutral dark:bg-neutral-dark flex justify-center items-center h-screen relative">
-    <img src="/static/Bitswan logo.svg" class="dark:hidden fixed top-4 right-4 w-44 h-auto">
-    <img src="/static/Bitswan logo white.svg" class="hidden dark:block fixed top-4 right-4 w-44 h-auto">
+  <img src="/static/Bitswan logo.svg" class="dark:hidden fixed top-4 right-4 w-44 h-auto">
+  <img src="/static/Bitswan logo white.svg" class="hidden dark:block fixed top-4 right-4 w-44 h-auto">
 
-    {% include "components/side-bar.html" %}
-    <div class="p-8 w-[50%] max-w-screen-lg h-[90%] flex flex-col relative">
-        <div class="flex-grow overflow-y-auto flex flex-col items-end pr-2">
-            <div id="welcome-message" class="w-[90%] px-8 pb-8 flex items-center text-primary dark:text-primary-dark border-b border-secondary">
-                {{ welcome_html | safe }}
-            </div>
-            <div id="response-box" class="h-[90%] w-full overflow-y-auto flex flex-col items-end mb-12"></div>
-            <div id="prompt" class="shadow-md rounded-xl w-[90%] px-8 py-6 border border-secondary"></div>
-        </div>
+  {% include "components/side-bar.html" %}
+  <div class="p-8 w-[50%] max-w-screen-lg h-[90%] flex flex-col relative">
+    <div class="flex-grow overflow-y-auto flex flex-col items-end pr-2">
+      <div id="welcome-message" class="w-[90%] px-8 pb-8 flex items-center text-primary dark:text-primary-dark border-b border-secondary">
+        {{ welcome_html | safe }}
+      </div>
+      <div id="response-box" class="h-[90%] w-full overflow-y-auto flex flex-col items-end mb-12"></div>
+      <div id="prompt" class="shadow-md rounded-xl w-[90%] px-8 py-6 border border-secondary"></div>
     </div>
+  </div>
 
-     <button
-      id="theme-toggle"
-      onclick="
-        document.documentElement.classList.toggle('dark');
-        localStorage.setItem(
-          'theme',
-          document.documentElement.classList.contains('dark') ? 'dark' : 'light'
-        );
-      "
-      class="fixed bottom-4 right-4 text-primary dark:text-primary-dark px-3 py-1 text-xl"
-    >
-      <img src="/static/brightness_2.svg" class="dark:hidden">
-      <img src="/static/wb_sunny.svg" class="hidden dark:block">
-    </button>
+  <button
+    id="theme-toggle"
+    onclick="
+      document.documentElement.classList.toggle('dark');
+      localStorage.setItem(
+        'theme',
+        document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+      );
+    "
+    class="fixed bottom-4 right-4 text-primary dark:text-primary-dark px-3 py-1 text-xl"
+  >
+    <img src="/static/brightness_2.svg" class="dark:hidden">
+    <img src="/static/wb_sunny.svg" class="hidden dark:block">
+  </button>
 </body>
 </html>
