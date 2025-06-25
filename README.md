@@ -12,6 +12,7 @@ You must first install the [bitswan workspaces](https://github.com/bitswan-space
 ```
 $ git clone git@github.com:bitswan-space/BitSwan.git
 $ cd BitSwan
+$ curl -LsSf https://astral.sh/uv/install.sh | sh
 $ python3 -m venv venv
 $ source venv/bin/activate
 $ pip3 install -e ".[dev]"
