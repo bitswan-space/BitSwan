@@ -21,11 +21,13 @@ RUN apt-get -yqq install \
  build-essential \
  docker-compose
 
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
 COPY . /src/
 
 RUN apt-get remove -y python3-yaml && apt-get autoremove -y
 
-RUN cd /src/ ; pip3 install .
+RUN cd /src/ && uv pip install --system .
 
 COPY pre/ /opt/
 
