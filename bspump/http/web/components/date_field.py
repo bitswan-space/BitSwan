@@ -8,6 +8,7 @@ class DateField(Field):
     Renders an HTML5 <input type="date"> and
     cleans the incoming string into the same format.
     """
+
     def inner_html(self, default="", readonly=False):
         # default should be an ISO date string "YYYY-MM-DD"
         template = env.get_template("date-field.html")

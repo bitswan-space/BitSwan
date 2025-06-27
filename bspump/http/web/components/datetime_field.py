@@ -8,6 +8,7 @@ class DateTimeField(Field):
     Renders an HTML5 <input type="datetime-local"> and
     cleans the incoming string into the same ISO format.
     """
+
     def inner_html(self, default="", readonly=False):
         # default should be "YYYY-MM-DDTHH:MM"
         template = env.get_template("datetime-field.html")
