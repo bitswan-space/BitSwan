@@ -1,0 +1,9 @@
+<div class="mt-1">
+  <input
+    type="date"
+    value="{{ default }}"
+    {% if readonly %} readonly {% endif %}
+    {{ default_input_props|safe }}
+    class="{{ default_classes|safe }}"
+  />
+</div>

@@ -1,0 +1,9 @@
+<div class="mt-1">
+  <input
+    type="datetime-local"
+    value="{{ default }}"
+    class="{{ default_classes|safe }}"
+    {% if readonly %} readonly {% endif %}
+    {{ default_input_props|safe }}
+  />
+</div>
