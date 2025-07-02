@@ -42,7 +42,7 @@ def sanitize_flow_name(flow_name: str) -> str:
     sanitized = re.sub(r"\W+", "_", sanitized)
     if not sanitized[0].isalpha() and sanitized[0] != "_":
         sanitized = f"_{sanitized}"
-    return f"flow_{sanitized}"
+    return f"{sanitized}"
 
 
 def clean_webchat_flow_code(steps) -> list[str]:
