@@ -1,9 +1,6 @@
 import asyncio
-import importlib.util
-import json
 import re
-import time
-from typing import Callable, List, Any, AsyncGenerator, Coroutine
+from typing import Callable, AsyncGenerator
 import logging
 
 import aiohttp.web
@@ -14,18 +11,17 @@ import uuid
 
 from jinja2 import Environment
 
-import bspump
 from bspump import Source, Connection, Sink
 from bspump.http_webchat.webchat import WebChatPromptForm, WebChatTemplateEnv, WebChatResponse, WebChatWelcomeWindow, \
     FormInput
 
 app = aiohttp.web.Application()
-L = logging.getLogger(__name__)
 '''
 SESSIONS = {
     "session_id_1": {
         "username": "username_1",
         "chat_id": "chat_id_1",
+        "registered_endpoints": []
     },
     ...
 }
@@ -34,39 +30,43 @@ CHATS = {
     "chat_id_1": {
         "chat_history": [],
         "current_prompt": None,
-        "registered_endpoints": []
     },
     ...
 }
 '''
+
+L = logging.getLogger(__name__)
 SESSIONS = {}
 CHATS = {}
+_registered_endpoints = {}
 
 def generate_session_id():
     return str(uuid.uuid4())
 
-DEFAULT_CHAT_ID = "default-room"
-
 @aiohttp.web.middleware
 async def session_middleware(request, handler):
     session_id = request.cookies.get("session_id")
-
     if not session_id or session_id not in SESSIONS:
         session_id = generate_session_id()
-        SESSIONS[session_id] = {"chat_id": DEFAULT_CHAT_ID, "username": "username_1"}
+        SESSIONS[session_id] = {"username": f"user_{session_id[:5]}", "registered_endpoints": []}
 
     request["session_id"] = session_id
+    request["session_data"] = SESSIONS[session_id]
 
-    chat_id = SESSIONS[session_id]["chat_id"]
-    if chat_id not in CHATS:
+    # Extract chat_id from query parameter
+    chat_id = request.rel_url.query.get("chat_id")
+
+    # Create a new chat if chat_id missing or chat not found
+    if not chat_id or chat_id not in CHATS:
+        chat_id = f"chat_{generate_session_id()[:8]}"
         CHATS[chat_id] = {
             "chat_history": [],
             "current_prompt": None,
-            "registered_endpoints": []
         }
 
     request["chat_id"] = chat_id
     request["chat_data"] = CHATS[chat_id]
+    SESSIONS[session_id]["chat_id"] = chat_id
 
     response = await handler(request)
 
@@ -75,15 +75,12 @@ async def session_middleware(request, handler):
 
     return response
 
-
 async def general_proxy(request):
     target_url = request.query.get("url")
     if not target_url or not re.match(r"^https?://", target_url):
         return aiohttp.web.Response(status=400, text="Invalid or missing URL")
     if "127.0.0.1" in target_url or "localhost" in target_url:
-        return aiohttp.web.Response(
-            status=403, text="Access to internal resources is forbidden"
-        )
+        return aiohttp.web.Response(status=403, text="Access to internal resources is forbidden")
 
     try:
         async with aiohttp.ClientSession() as session:
@@ -94,89 +91,61 @@ async def general_proxy(request):
         return aiohttp.web.Response(status=500, text=f"Proxy error: {str(e)}")
 
 
-_registered_endpoints = {}
+async def set_prompt(form_inputs: list, submit_api_call: str = "/api/prompt_input_result") -> dict:
+    future = asyncio.get_event_loop().create_future()
+    prompt_html = WebChatPromptForm(form_inputs, submit_api_call).get_html(template_env=WebChatTemplateEnv().get_jinja_env())
 
-async def set_prompt(form_inputs: list, submit_api_call: str = "/api/prompt_input_result", request=None) -> dict:
-    pending_prompt_future = asyncio.get_event_loop().create_future()
-
-    prompt_form = WebChatPromptForm(
-        form_inputs, submit_api_call
-    ).get_html(template_env=WebChatTemplateEnv().get_jinja_env())
-
+    # or pass chat_id
     if request:
-        request["session_data"]["current_prompt"] = prompt_form
+        request["chat_data"]["current_prompt"] = prompt_html
+        request["chat_data"]["_pending_prompt_future"] = future
 
-    submitted_data = await pending_prompt_future
-    request["session_data"]["chat_history"].append({
-        "prompt": submitted_data
-    })
+    submitted_data = await future
+    request["chat_data"]["chat_history"].append({"prompt": submitted_data})
 
     return submitted_data
 
-
-async def parse_response_strings(flow_steps: list[str], template_env: Environment) -> AsyncGenerator[str, None]:
+async def parse_response_strings(flow_steps: list[str], template_env: Environment, request) -> AsyncGenerator[str, None]:
     context = {
         "WebChatResponse": WebChatResponse,
         "WebChatWelcomeWindow": WebChatWelcomeWindow,
         "WebChatPromptForm": WebChatPromptForm,
         "FormInput": FormInput,
-        "set_prompt": set_prompt,
+        "set_prompt": lambda *args, **kwargs: set_prompt(*args, request=request, **kwargs),
     }
-
     local_vars = {}
 
     for step in flow_steps:
-        # print(step)
         try:
-            if "\n" in step or "await" in step or "return" in step:
-                if "await" in step or "return" in step:
-                    exec_code = 'async def __temp_func():\n'
-                    for line in step.splitlines():
-                        exec_code += f'    {line}\n'
-                    exec(exec_code, context, local_vars)
-                    await local_vars["__temp_func"]()
-                else:
-                    exec(step, context, local_vars)
-
+            if "await" in step or "return" in step:
+                exec_code = "async def __temp_func():\n" + "\n".join(f"    {line}" for line in step.splitlines())
+                exec(exec_code, context, local_vars)
+                await local_vars["__temp_func"]()
             else:
-                try:
-                    result = eval(step, context, local_vars)
-                    if isinstance(result, (WebChatResponse, WebChatWelcomeWindow)):
-                        yield result.get_html(template_env)
-                except SyntaxError:
-                    exec(step, context, local_vars)
-
+                result = eval(step, context, local_vars)
+                if isinstance(result, (WebChatResponse, WebChatWelcomeWindow)):
+                    yield result.get_html(template_env)
         except Exception as e:
-            print(f"Failed to process response string: {step}\nError: {e}")
+            print(f"Error executing step:\n{step}\n{e}")
 
 
 def create_webchat_flow(route: str):
-
     def decorator(func: Callable):
         async def wrapped(request):
             try:
-                response_code_list = await func(request)
+                flow = await func(request)
                 template_env = WebChatTemplateEnv().get_jinja_env()
-
-                resp = aiohttp.web.StreamResponse(status=200, reason='OK', headers={'Content-Type': 'text/html'})
+                resp = aiohttp.web.StreamResponse(status=200, headers={"Content-Type": "text/html"})
                 await resp.prepare(request)
-
-                async for fragment in parse_response_strings(response_code_list, template_env):
-                    await resp.write(fragment.encode('utf-8'))
-
-
+                async for fragment in parse_response_strings(flow, template_env, request):
+                    await resp.write(fragment.encode("utf-8"))
                 await resp.write_eof()
                 return resp
-
             except Exception as e:
-                return aiohttp.web.Response(status=500, text=f"Error: {str(e)}")
-
+                return aiohttp.web.Response(status=500, text=f"Error: {e}")
         _registered_endpoints[route] = wrapped
         return wrapped
-
     return decorator
-
-
 
 class WebChatServerConnection(Connection):
 
@@ -188,6 +157,7 @@ class WebChatServerConnection(Connection):
     def __init__(self, app, id=None, config=None):
         super().__init__(app, id=id, config=config)
 
+        # http://0.0.0.0:8080/?chat_id=1
         self.aiohttp_app = aiohttp.web.Application(
             client_max_size=int(self.Config["max_body_size_bytes"]), middlewares=[session_middleware]
         )
