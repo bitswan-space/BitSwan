@@ -10,6 +10,7 @@ import aiohttp.web
 import aiohttp_jinja2
 import jinja2
 import os
+import uuid
 
 from jinja2 import Environment
 
@@ -19,6 +20,34 @@ from bspump import Source, Connection, Sink
 app = aiohttp.web.Application()
 L = logging.getLogger(__name__)
 
+SESSIONS = {}
+
+def generate_session_id():
+    return str(uuid.uuid4())
+
+@aiohttp.web.middleware
+async def session_middleware(request, handler):
+    session_id = request.cookies.get("session_id")
+
+    if not session_id or session_id not in SESSIONS:
+        # New user: generate session
+        session_id = generate_session_id()
+        SESSIONS[session_id] = {
+            # chat_history = list [Response, Prompt: prompt_data]
+            "chat_history": [],
+            "current_prompt": None,
+        }
+
+    request["session_id"] = session_id
+    request["session_data"] = SESSIONS[session_id]
+
+    response = await handler(request)
+
+    # Set the cookie if it's new
+    if "session_id" not in request.cookies:
+        response.set_cookie("session_id", session_id, httponly=True, max_age=3600*24*30)
+
+    return response
 
 class WebChatTemplateEnv:
     def __init__(self, extra_template_dir: str = None):
@@ -203,106 +232,23 @@ async def general_proxy(request):
 
 _registered_endpoints = {}
 
-def find_module_path(module_name):
-    spec = importlib.util.find_spec(module_name)
-    if spec and spec.origin:
-        return spec.origin
-    else:
-        return f"Module '{module_name}' not found or built-in."
-
-
-current_prompt_html = "<p>Initial prompt</p>"
-ws_connections = set()
-pending_prompt_future: asyncio.Future | None = None
-
-async def prompt_input_result(request):
-    global pending_prompt_future
-
-    if pending_prompt_future is None:
-        return aiohttp.web.Response(status=400, text="No prompt is currently active")
-
-    try:
-        data = await request.post()
-        result_dict = dict(data)
-
-        rendered_html = None
-
-        async with aiohttp.ClientSession() as session:
-            for i, (key, value) in enumerate(result_dict.items()):
-                flow_url = str(request.url.with_path(f"/flow_{key}_{value}").with_query(""))
-
-                # add here params
-                async with session.get(flow_url) as resp:
-                    text = await resp.text()
-                    if resp.status not in (200, 204):
-                        return aiohttp.web.Response(
-                            status=resp.status,
-                            text=f"Failed to forward data to {flow_url}: {text}"
-                        )
-
-                    if rendered_html is None and resp.content_type == "text/html":
-                        rendered_html = text
-
-        if not pending_prompt_future.done():
-            pending_prompt_future.set_result(result_dict)
-
-        if rendered_html:
-            return aiohttp.web.Response(text=rendered_html, content_type='text/html')
-        else:
-            return aiohttp.web.Response(status=204)
-
-    except Exception as e:
-        return aiohttp.web.Response(status=500, text=f"Failed to submit prompt data: {str(e)}")
-
-async def set_prompt(
-    form_inputs: list,
-    submit_api_call: str = "/api/prompt_input_result"
-) -> dict:
-    global current_prompt_html, pending_prompt_future
-
+async def set_prompt(form_inputs: list, submit_api_call: str = "/api/prompt_input_result", request=None) -> dict:
     pending_prompt_future = asyncio.get_event_loop().create_future()
 
-    # creates a new prompt html
     prompt_form = WebChatPromptForm(
         form_inputs, submit_api_call
     ).get_html(template_env=WebChatTemplateEnv().get_jinja_env())
 
-    current_prompt_html = prompt_form
+    if request:
+        request["session_data"]["current_prompt"] = prompt_form
 
-    # sends the new prompt to connected websocket clients
-    for ws in ws_connections.copy():
-        try:
-            await ws.send_str(prompt_form)
-        except Exception:
-            ws_connections.discard(ws)
-
-    # waits and returns the submitted data
     submitted_data = await pending_prompt_future
-    print("submitted_data:", submitted_data)
-    pending_prompt_future = None
+    request["session_data"]["chat_history"].append({
+        "prompt": submitted_data
+    })
+
     return submitted_data
 
-# everytime I make a request to ws endpoint a new connection is added
-async def websocket_handler(request):
-    ws = aiohttp.web.WebSocketResponse()
-    await ws.prepare(request)
-    # Adds WebSocket connection to ws_connections
-    ws_connections.add(ws)
-
-    try:
-        await ws.send_str(current_prompt_html)
-
-        async for msg in ws:
-            if msg.type == aiohttp.WSMsgType.TEXT:
-                pass
-            elif msg.type == aiohttp.WSMsgType.ERROR:
-                print(f"WebSocket connection closed with exception: {ws.exception()}")
-
-    finally:
-        ws_connections.remove(ws)
-        await ws.close()
-
-    return ws
 
 async def parse_response_strings(flow_steps: list[str], template_env: Environment) -> AsyncGenerator[str, None]:
     context = {
@@ -339,14 +285,6 @@ async def parse_response_strings(flow_steps: list[str], template_env: Environmen
         except Exception as e:
             print(f"Failed to process response string: {step}\nError: {e}")
 
-# sends a string message to all active WebSocket connections
-async def websocket_broadcast(message: str):
-    for ws in ws_connections.copy():
-        try:
-            await ws.send_str(message)
-        except Exception:
-            ws_connections.discard(ws)
-
 
 def create_webchat_flow(route: str):
 
@@ -360,7 +298,6 @@ def create_webchat_flow(route: str):
                 await resp.prepare(request)
 
                 async for fragment in parse_response_strings(response_code_list, template_env):
-                    await websocket_broadcast(fragment)
                     await resp.write(fragment.encode('utf-8'))
 
 
@@ -388,8 +325,9 @@ class WebChatServerConnection(Connection):
         super().__init__(app, id=id, config=config)
 
         self.aiohttp_app = aiohttp.web.Application(
-            client_max_size=int(self.Config["max_body_size_bytes"])
+            client_max_size=int(self.Config["max_body_size_bytes"]), middlewares=[session_middleware]
         )
+
         self.base_dir = os.path.dirname(os.path.abspath(__file__))
         aiohttp_jinja2.setup(
             self.aiohttp_app,
@@ -399,8 +337,8 @@ class WebChatServerConnection(Connection):
         if _registered_endpoints:
             for route, handler in _registered_endpoints.items():
                 router.add_route("*", route, handler)
-        router.add_post("/api/prompt_input_result", prompt_input_result)
-        router.add_get("/ws", websocket_handler)
+        # router.add_post("/api/prompt_input_result", prompt_input_result)
+        # router.add_get("/ws", websocket_handler)
         router.add_get("/api/proxy", general_proxy)
         self.aiohttp_app.router.add_static("/static", os.path.join(self.base_dir, "static"))
         # static_dir = str(files("bspump").joinpath("styles")) add once the tailwind from cdn is removed
