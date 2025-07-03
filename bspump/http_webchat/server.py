@@ -66,12 +66,21 @@ async def websocket_handler(request):
         return ws
 
     WEBSOCKETS.setdefault(chat_id, set()).add(ws)
-    print(f"WebSocket connected: chat_id={chat_id}, total connections: {len(WEBSOCKETS[chat_id])}")
-    print(WEBSOCKETS)
     try:
         async for msg in ws:
             if msg.type == aiohttp.WSMsgType.TEXT:
                 print(f"Received message from client: {msg.data}")
+                try:
+                    import json
+                    data = json.loads(msg.data)
+                except Exception:
+                    data = {}
+
+                if data.get("type") == "ready":
+                    print(f"WebSocket client ready for chat_id={chat_id}")
+                    ws._is_ready = True
+                    CHATS[chat_id]["ready_event"].set()
+
             elif msg.type == aiohttp.WSMsgType.ERROR:
                 print(f"WS connection closed with exception {ws.exception()}")
                 break
@@ -83,8 +92,6 @@ async def websocket_handler(request):
         print(f"WebSocket disconnected: chat_id={chat_id}, remaining connections: {len(WEBSOCKETS.get(chat_id, []))}")
 
     return ws
-
-
 
 def generate_session_id():
     return str(uuid.uuid4())
@@ -108,6 +115,12 @@ async def set_prompt(form_inputs: list, bearer_token: str) -> dict:
     payload = jwt.decode(bearer_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
     chat_id = payload["chat_id"]
     chat_data = CHATS[chat_id]
+
+    # Wait until the WebSocket is ready (someone sent the "ready" message)
+    print(f"Waiting for WebSocket client to be ready for chat_id={chat_id}...")
+    await chat_data["ready_event"].wait()
+    print(f"WebSocket ready for chat_id={chat_id}, sending prompt.")
+
     future = asyncio.get_event_loop().create_future()
     prompt_html = WebChatPromptForm(form_inputs, "").get_html(
         template_env=WebChatTemplateEnv().get_jinja_env()
@@ -117,9 +130,10 @@ async def set_prompt(form_inputs: list, bearer_token: str) -> dict:
     chat_data["_pending_prompt_future"] = future
 
     websockets = WEBSOCKETS.get(chat_id, set())
-    print(WEBSOCKETS)
+    print("websockets", websockets)
     for ws in websockets.copy():
         try:
+            print(f"Sending prompt to WebSocket: {ws}")
             await ws.send_str(prompt_html)
         except Exception as e:
             WEBSOCKETS[chat_id].discard(ws)
@@ -363,6 +377,7 @@ class WebChatSource(WebChatRouteSource):
             CHATS[chat_id] = {
                 "chat_history": [],
                 "current_prompt": None,
+                "ready_event": asyncio.Event()
             }
             print(f"Initialized chat store for chat_id={chat_id}")
 
