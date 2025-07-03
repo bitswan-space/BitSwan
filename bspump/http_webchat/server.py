@@ -8,24 +8,18 @@ import aiohttp_jinja2
 import jinja2
 import os
 import uuid
-
+import jwt
+import datetime
 from jinja2 import Environment
+from dotenv import load_dotenv
 
 from bspump import Source, Connection, Sink
+from bspump.common import json
 from bspump.http_webchat.webchat import WebChatPromptForm, WebChatTemplateEnv, WebChatResponse, WebChatWelcomeWindow, \
     FormInput
 
 app = aiohttp.web.Application()
 '''
-SESSIONS = {
-    "session_id_1": {
-        "username": "username_1",
-        "chat_id": "chat_id_1",
-        "registered_endpoints": []
-    },
-    ...
-}
-
 CHATS = {
     "chat_id_1": {
         "chat_history": [],
@@ -34,46 +28,61 @@ CHATS = {
     ...
 }
 '''
-
+load_dotenv()
 L = logging.getLogger(__name__)
-SESSIONS = {}
 CHATS = {}
+WEBSOCKETS = {}
 _registered_endpoints = {}
+
+JWT_SECRET = os.getenv("JWT_SECRET")
+JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+
+if not JWT_SECRET:
+    raise RuntimeError("JWT_SECRET is not set in the environment!")
+
+def decode_chat_token(token: str) -> str:
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        return payload["chat_id"]
+    except jwt.ExpiredSignatureError:
+        # token expired
+        raise
+    except jwt.InvalidTokenError:
+        # invalid token
+        raise
+
+async def websocket_handler(request):
+    ws = aiohttp.web.WebSocketResponse()
+    await ws.prepare(request)
+
+    bearer_token = request.rel_url.query.get("chat_id")
+    if not bearer_token:
+        await ws.close(message=b"No chat_id token")
+        return ws
+
+    try:
+        decoded = jwt.decode(bearer_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        chat_id = decoded["chat_id"]
+    except Exception:
+        await ws.close(message=b"Invalid or expired token")
+        return ws
+
+    if chat_id not in WEBSOCKETS:
+        WEBSOCKETS[chat_id] = set()
+    WEBSOCKETS[chat_id].add(ws)
+
+    try:
+        async for msg in ws:
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                data = json.loads(msg.data)
+                await handle_ws_message(ws, chat_id, data, request)
+    finally:
+        WEBSOCKETS[chat_id].discard(ws)
+
+    return ws
 
 def generate_session_id():
     return str(uuid.uuid4())
-
-@aiohttp.web.middleware
-async def session_middleware(request, handler):
-    session_id = request.cookies.get("session_id")
-    if not session_id or session_id not in SESSIONS:
-        session_id = generate_session_id()
-        SESSIONS[session_id] = {"username": f"user_{session_id[:5]}", "registered_endpoints": []}
-
-    request["session_id"] = session_id
-    request["session_data"] = SESSIONS[session_id]
-
-    # Extract chat_id from query parameter
-    chat_id = request.rel_url.query.get("chat_id")
-
-    # Create a new chat if chat_id missing or chat not found
-    if not chat_id or chat_id not in CHATS:
-        chat_id = f"chat_{generate_session_id()[:8]}"
-        CHATS[chat_id] = {
-            "chat_history": [],
-            "current_prompt": None,
-        }
-
-    request["chat_id"] = chat_id
-    request["chat_data"] = CHATS[chat_id]
-    SESSIONS[session_id]["chat_id"] = chat_id
-
-    response = await handler(request)
-
-    if "session_id" not in request.cookies:
-        response.set_cookie("session_id", session_id, httponly=True, max_age=3600*24*30)
-
-    return response
 
 async def general_proxy(request):
     target_url = request.query.get("url")
@@ -90,20 +99,40 @@ async def general_proxy(request):
     except Exception as e:
         return aiohttp.web.Response(status=500, text=f"Proxy error: {str(e)}")
 
+# potrebujem funkciu set_prompt ktora len donuti frontend aby spravil request na endpoint nizsie
 
-async def set_prompt(form_inputs: list, submit_api_call: str = "/api/prompt_input_result") -> dict:
-    future = asyncio.get_event_loop().create_future()
-    prompt_html = WebChatPromptForm(form_inputs, submit_api_call).get_html(template_env=WebChatTemplateEnv().get_jinja_env())
+async def set_prompt(form_inputs: list, chat_id) -> dict:
 
-    # or pass chat_id
-    if request:
-        request["chat_data"]["current_prompt"] = prompt_html
-        request["chat_data"]["_pending_prompt_future"] = future
+    prompt_html = WebChatPromptForm(form_inputs, submit_api_call).get_html(
+        template_env=WebChatTemplateEnv().get_jinja_env()
+    )
 
-    submitted_data = await future
-    request["chat_data"]["chat_history"].append({"prompt": submitted_data})
+    # request to set_prompt_handler and return the submitted data
 
     return submitted_data
+
+# ako ziskam request parameter? I need the session info from the frontend
+async def set_prompt_handler(prompt_html: WebChatPromptForm, request=None) -> dict:
+    if request is None:
+        raise Exception("Request object must be passed to set_prompt")
+
+    session_id = request["session_id"]
+    chat_id = SESSIONS[session_id]["chat_id"]
+    chat_data = CHATS[chat_id]
+
+    future = asyncio.get_event_loop().create_future()
+    prompt_html = WebChatPromptForm(form_inputs, submit_api_call).get_html(
+        template_env=WebChatTemplateEnv().get_jinja_env()
+    )
+
+    chat_data["current_prompt"] = prompt_html
+    chat_data["_pending_prompt_future"] = future
+
+    submitted_data = await future
+    chat_data["chat_history"].append({"prompt": submitted_data})
+
+    return submitted_data
+
 
 async def parse_response_strings(flow_steps: list[str], template_env: Environment, request) -> AsyncGenerator[str, None]:
     context = {
@@ -159,8 +188,7 @@ class WebChatServerConnection(Connection):
 
         # http://0.0.0.0:8080/?chat_id=1
         self.aiohttp_app = aiohttp.web.Application(
-            client_max_size=int(self.Config["max_body_size_bytes"]), middlewares=[session_middleware]
-        )
+            client_max_size=int(self.Config["max_body_size_bytes"]))
 
         self.base_dir = os.path.dirname(os.path.abspath(__file__))
         aiohttp_jinja2.setup(
@@ -256,6 +284,13 @@ class WebChatRouteSource(Source):
             L.exception("Exception in WebSource")
             return aiohttp.web.Response(status=500)
 
+def generate_bearer_token(chat_id: str) -> str:
+    payload = {
+        "chat_id": chat_id,
+        "exp": datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=1)
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
 class WebChatSource(WebChatRouteSource):
 
     def __init__(self, app, pipeline, welcome_text, connection="DefaultWebServerConnection",
@@ -273,20 +308,38 @@ class WebChatSource(WebChatRouteSource):
         self.pipeline = pipeline
         self.welcome_window = welcome_text
 
-    async def trigger_start_event(self):
-        fake_event = {}
-        await self.pipeline.process(fake_event)
-
-    async def serve_index(self, request: aiohttp.web.Request) -> aiohttp.web.Response:
+    async def serve_index(self, request: aiohttp.web.Request, encoded_chat_id) -> aiohttp.web.Response:
         template_env = WebChatTemplateEnv().get_jinja_env()
         welcome_html = self.welcome_window.get_html(template_env)
         context = {"welcome_html": welcome_html}
-        await self.trigger_start_event()
+
+        try:
+            decoded = jwt.decode(encoded_chat_id, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+            chat_id = decoded["chat_id"]
+        except jwt.ExpiredSignatureError:
+            return aiohttp.web.Response(status=401, text="Token expired")
+        except Exception:
+            return aiohttp.web.Response(status=401, text="Invalid token")
+
+        await self.pipeline.process(chat_id)
+
         return aiohttp_jinja2.render_template("index.html", request, context)
+
+    # nahodne chat_id, generovat token a poslem do serve_index
+    # ten isty chat_id poslem do self.pipeline.process(chat_id)
+    # a ked dam set_prompt tak vyhladam websocket podla chat_id
+    # zavriem websocket ak token nie je platny, bearer token
+    # chat_id ziskam v notebooku z eventu
 
     async def handle_request(self, request: aiohttp.web.Request) -> aiohttp.web.Response:
         if request.method == "GET":
-            return await self.serve_index(request)
+            chat_id = str(uuid.uuid4())
+            CHATS[chat_id] = {
+                "chat_history": [],
+                "current_prompt": None,
+            }
+            bearer_token = generate_bearer_token(chat_id)
+            return await self.serve_index(request, encoded_chat_id=bearer_token)
         return aiohttp.web.Response(status=405)
 
 
