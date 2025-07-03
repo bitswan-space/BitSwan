@@ -42,20 +42,44 @@
   <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.js" crossorigin="anonymous"></script>
 
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const chatIdToken = urlParams.get("chat_id");
-      const ws = new WebSocket("ws://" + window.location.host + "/ws?chat_id=" + chatIdToken);
+  document.addEventListener("DOMContentLoaded", () => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("chat_id");
 
+    const ws = new WebSocket(`ws://${window.location.host}/ws?chat_id=${encodeURIComponent(token)}`);
 
-      ws.onmessage = (event) => {
-        promptEl.innerHTML = event.data;
+    ws.onopen = () => {
+      console.log("WebSocket connected, sending ready signal");
+      ws.send(JSON.stringify({ type: "ready" }));  // <--- SEND READY MESSAGE HERE
+    };
+
+    const promptEl = document.getElementById("prompt");
+    const responseBox = document.getElementById("response-box");
+
+    ws.onmessage = (event) => {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(event.data, "text/html");
+      const incomingEl = doc.body.firstElementChild;
+      console.log("Received tag:", incomingEl.tagName);
+
+      if (!incomingEl) {
+          console.warn("Received empty or invalid HTML:", event.data);
+          return;
+      }
+      if (incomingEl.tagName === "FORM") {
+        promptEl.innerHTML = "";
+        promptEl.appendChild(incomingEl);
         htmx.process(promptEl);
         console.log("Prompt form loaded via WebSocket");
-        ws.close();
-      };
-    });
-  </script>
+      } else {
+        const container = document.createElement("div");
+        container.appendChild(incomingEl);
+        responseBox.appendChild(container);
+        responseBox.scrollTop = responseBox.scrollHeight;
+      }
+    };
+  });
+</script>
 
   <style>
     body, .dark\:bg-neutral-dark {
