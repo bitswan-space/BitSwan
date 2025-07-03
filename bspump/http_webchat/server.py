@@ -128,7 +128,7 @@ async def set_prompt(form_inputs: list, bearer_token: str) -> dict:
     print(f"WebSocket ready for chat_id={chat_id}, sending prompt.")
 
     future = asyncio.get_event_loop().create_future()
-    prompt_html = WebChatPromptForm(form_inputs, "").get_html(
+    prompt_html = WebChatPromptForm(form_inputs).get_html(
         template_env=WebChatTemplateEnv().get_jinja_env()
     )
 
@@ -146,6 +146,20 @@ async def set_prompt(form_inputs: list, bearer_token: str) -> dict:
             print(f"WebSocket error for chat_token={chat_id}: {e}")
 
     submitted_data = await future
+    awaiting_html = WebChatPromptForm([], awaiting_text='Awaiting prompt from server...'
+        ).get_html(
+            template_env=WebChatTemplateEnv().get_jinja_env()
+        )
+    chat_data["current_prompt"] = awaiting_html
+
+    for ws in websockets.copy():
+        try:
+            print(f"Sending awaiting prompt to WebSocket: {ws}")
+            await ws.send_str(awaiting_html)
+        except Exception as e:
+            WEBSOCKETS[chat_id].discard(ws)
+            print(f"WebSocket error for chat_token={chat_id}: {e}")
+
     chat_data["chat_history"].append({"prompt": submitted_data})
     return submitted_data
 
