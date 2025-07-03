@@ -43,8 +43,10 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      const promptEl = document.getElementById("prompt");
-      const ws = new WebSocket("ws://" + window.location.host + "/ws");
+      const urlParams = new URLSearchParams(window.location.search);
+      const chatIdToken = urlParams.get("chat_id");
+      const ws = new WebSocket("ws://" + window.location.host + "/ws?chat_id=" + chatIdToken);
+
 
       ws.onmessage = (event) => {
         promptEl.innerHTML = event.data;
