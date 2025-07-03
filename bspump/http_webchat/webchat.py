@@ -5,8 +5,12 @@ from typing import List
 import aiohttp_jinja2
 import jinja2
 import os
+import aiohttp.web
 
 from jinja2 import Environment
+
+app = aiohttp.web.Application()
+
 
 class WebChatTemplateEnv:
     def __init__(self, extra_template_dir: str = None):
@@ -47,12 +51,12 @@ class WebChatTemplateEnv:
 
 class FormInput:
     def __init__(
-        self,
-        label: str,
-        name: str,
-        input_type: str,
-        step: float | int = None,
-        required=False,
+            self,
+            label: str,
+            name: str,
+            input_type: str,
+            step: float | int = None,
+            required=False,
     ):
         """
         Class for defining one input field
@@ -67,6 +71,7 @@ class FormInput:
         self.input_type = input_type
         self.step = step
         self.required = required
+
 
 # this returns the final html for the prompt, and then I want to render this instead of prompt
 class WebChatPromptForm:
@@ -114,10 +119,10 @@ class WebChatWelcomeWindow:
 
 class WebChatResponse:
     def __init__(
-        self,
-        input_html: str,
-        prompt_form: WebChatPromptForm = None,
-        api_endpoint: str = None,
+            self,
+            input_html: str,
+            prompt_form: WebChatPromptForm = None,
+            api_endpoint: str = None,
     ):
         """
         Class for creating one response

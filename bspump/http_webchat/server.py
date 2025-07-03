@@ -14,11 +14,9 @@ from jinja2 import Environment
 from dotenv import load_dotenv
 
 from bspump import Source, Connection, Sink
-from bspump.common import json
 from bspump.http_webchat.webchat import WebChatPromptForm, WebChatTemplateEnv, WebChatResponse, WebChatWelcomeWindow, \
     FormInput
 
-app = aiohttp.web.Application()
 '''
 CHATS = {
     "chat_id_1": {
@@ -68,15 +66,24 @@ async def websocket_handler(request):
         return ws
 
     WEBSOCKETS.setdefault(chat_id, set()).add(ws)
-
+    print(f"WebSocket connected: chat_id={chat_id}, total connections: {len(WEBSOCKETS[chat_id])}")
+    print(WEBSOCKETS)
     try:
-        await ws.receive()
-    except Exception:
-        pass
+        async for msg in ws:
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                print(f"Received message from client: {msg.data}")
+            elif msg.type == aiohttp.WSMsgType.ERROR:
+                print(f"WS connection closed with exception {ws.exception()}")
+                break
+
+    except Exception as e:
+        print(f"WebSocket exception: {e}")
     finally:
         WEBSOCKETS[chat_id].discard(ws)
+        print(f"WebSocket disconnected: chat_id={chat_id}, remaining connections: {len(WEBSOCKETS.get(chat_id, []))}")
 
     return ws
+
 
 
 def generate_session_id():
@@ -97,9 +104,9 @@ async def general_proxy(request):
     except Exception as e:
         return aiohttp.web.Response(status=500, text=f"Proxy error: {str(e)}")
 
-# potrebujem funkciu set_prompt ktora len donuti frontend aby spravil request na endpoint nizsie
-
-async def set_prompt(form_inputs: list, chat_id: str) -> dict:
+async def set_prompt(form_inputs: list, bearer_token: str) -> dict:
+    payload = jwt.decode(bearer_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    chat_id = payload["chat_id"]
     chat_data = CHATS[chat_id]
     future = asyncio.get_event_loop().create_future()
     prompt_html = WebChatPromptForm(form_inputs, "").get_html(
@@ -109,19 +116,33 @@ async def set_prompt(form_inputs: list, chat_id: str) -> dict:
     chat_data["current_prompt"] = prompt_html
     chat_data["_pending_prompt_future"] = future
 
-    # ✅ Push the prompt HTML to all connected WebSocket clients
     websockets = WEBSOCKETS.get(chat_id, set())
+    print(WEBSOCKETS)
     for ws in websockets.copy():
         try:
             await ws.send_str(prompt_html)
         except Exception as e:
             WEBSOCKETS[chat_id].discard(ws)
-            print(f"WebSocket error for chat_id={chat_id}: {e}")
+            print(f"WebSocket error for chat_token={chat_id}: {e}")
 
     submitted_data = await future
     chat_data["chat_history"].append({"prompt": submitted_data})
     return submitted_data
 
+
+async def tell_user(bearer_token, response_text):
+    response = WebChatResponse(input_html=response_text)
+    payload = jwt.decode(bearer_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    chat_id = payload["chat_id"]
+    websockets = WEBSOCKETS.get(chat_id, set())
+    chat_data = CHATS[chat_id]
+    chat_data["chat_history"].append({"response": response_text})
+
+    for ws in list(websockets):
+        try:
+            await ws.send_str(response.get_html(template_env=WebChatTemplateEnv().get_jinja_env()))
+        except Exception:
+            websockets.discard(ws)
 
 async def parse_response_strings(flow_steps: list[str], template_env: Environment, request) -> AsyncGenerator[str, None]:
     context = {
@@ -189,7 +210,7 @@ class WebChatServerConnection(Connection):
             for route, handler in _registered_endpoints.items():
                 router.add_route("*", route, handler)
         # router.add_post("/api/prompt_input_result", prompt_input_result)
-        # router.add_get("/ws", websocket_handler)
+        router.add_get("/ws", websocket_handler)
         router.add_get("/api/proxy", general_proxy)
         self.aiohttp_app.router.add_static("/static", os.path.join(self.base_dir, "static"))
         # static_dir = str(files("bspump").joinpath("styles")) add once the tailwind from cdn is removed
@@ -297,20 +318,15 @@ class WebChatSource(WebChatRouteSource):
         self.pipeline = pipeline
         self.welcome_window = welcome_text
 
-    async def serve_index(self, request: aiohttp.web.Request, encoded_chat_id) -> aiohttp.web.Response:
+    async def serve_index(self, request: aiohttp.web.Request, bearer_token) -> aiohttp.web.Response:
         template_env = WebChatTemplateEnv().get_jinja_env()
         welcome_html = self.welcome_window.get_html(template_env)
-        context = {"welcome_html": welcome_html}
+        context = {
+            "welcome_html": welcome_html,
+            "bearer_token": bearer_token
+        }
 
-        try:
-            decoded = jwt.decode(encoded_chat_id, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-            chat_id = decoded["chat_id"]
-        except jwt.ExpiredSignatureError:
-            return aiohttp.web.Response(status=401, text="Token expired")
-        except Exception:
-            return aiohttp.web.Response(status=401, text="Invalid token")
-
-        await self.pipeline.process(chat_id)
+        await self.pipeline.process({"bearer_token": bearer_token})
 
         return aiohttp_jinja2.render_template("index.html", request, context)
 
@@ -321,15 +337,36 @@ class WebChatSource(WebChatRouteSource):
     # chat_id ziskam v notebooku z eventu
 
     async def handle_request(self, request: aiohttp.web.Request) -> aiohttp.web.Response:
-        if request.method == "GET":
+        if request.method != "GET":
+            return aiohttp.web.Response(status=405)
+
+        token = request.query.get("chat_id")
+        chat_id = None
+
+        if token:
+            try:
+                payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+                chat_id = payload.get("chat_id")
+            except (jwt.ExpiredSignatureError, jwt.InvalidTokenError) as e:
+                print(f"Invalid or expired token: {e}")
+                token = None
+                chat_id = None
+
+        if not chat_id:
             chat_id = str(uuid.uuid4())
+            token = generate_bearer_token(chat_id)
+            print(f"Generated NEW token for new chat_id={chat_id}: {token}")
+            location = f"/?chat_id={token}"
+            raise aiohttp.web.HTTPFound(location)
+
+        if chat_id not in CHATS:
             CHATS[chat_id] = {
                 "chat_history": [],
                 "current_prompt": None,
             }
-            bearer_token = generate_bearer_token(chat_id)
-            return await self.serve_index(request, encoded_chat_id=bearer_token)
-        return aiohttp.web.Response(status=405)
+            print(f"Initialized chat store for chat_id={chat_id}")
+
+        return await self.serve_index(request, bearer_token=token)
 
 
 class WebchatSink(Sink):
