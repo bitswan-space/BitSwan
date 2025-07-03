@@ -144,12 +144,18 @@ async def set_prompt(form_inputs: list, bearer_token: str) -> dict:
     return submitted_data
 
 
-async def tell_user(bearer_token, response_text):
+async def tell_user(response_text, bearer_token):
     response = WebChatResponse(input_html=response_text)
     payload = jwt.decode(bearer_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
     chat_id = payload["chat_id"]
-    websockets = WEBSOCKETS.get(chat_id, set())
     chat_data = CHATS[chat_id]
+
+    # Wait for WebSocket client to be ready
+    print(f"Waiting for WebSocket client to be ready for chat_id={chat_id}...")
+    await chat_data["ready_event"].wait()
+    print(f"WebSocket ready for chat_id={chat_id}, sending response.")
+
+    websockets = WEBSOCKETS.get(chat_id, set())
     chat_data["chat_history"].append({"response": response_text})
 
     for ws in list(websockets):
