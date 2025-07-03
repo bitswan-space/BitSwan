@@ -67,19 +67,17 @@ async def websocket_handler(request):
         await ws.close(message=b"Invalid or expired token")
         return ws
 
-    if chat_id not in WEBSOCKETS:
-        WEBSOCKETS[chat_id] = set()
-    WEBSOCKETS[chat_id].add(ws)
+    WEBSOCKETS.setdefault(chat_id, set()).add(ws)
 
     try:
-        async for msg in ws:
-            if msg.type == aiohttp.WSMsgType.TEXT:
-                data = json.loads(msg.data)
-                await handle_ws_message(ws, chat_id, data, request)
+        await ws.receive()
+    except Exception:
+        pass
     finally:
         WEBSOCKETS[chat_id].discard(ws)
 
     return ws
+
 
 def generate_session_id():
     return str(uuid.uuid4())
@@ -101,36 +99,27 @@ async def general_proxy(request):
 
 # potrebujem funkciu set_prompt ktora len donuti frontend aby spravil request na endpoint nizsie
 
-async def set_prompt(form_inputs: list, chat_id) -> dict:
-
-    prompt_html = WebChatPromptForm(form_inputs, submit_api_call).get_html(
-        template_env=WebChatTemplateEnv().get_jinja_env()
-    )
-
-    # request to set_prompt_handler and return the submitted data
-
-    return submitted_data
-
-# ako ziskam request parameter? I need the session info from the frontend
-async def set_prompt_handler(prompt_html: WebChatPromptForm, request=None) -> dict:
-    if request is None:
-        raise Exception("Request object must be passed to set_prompt")
-
-    session_id = request["session_id"]
-    chat_id = SESSIONS[session_id]["chat_id"]
+async def set_prompt(form_inputs: list, chat_id: str) -> dict:
     chat_data = CHATS[chat_id]
-
     future = asyncio.get_event_loop().create_future()
-    prompt_html = WebChatPromptForm(form_inputs, submit_api_call).get_html(
+    prompt_html = WebChatPromptForm(form_inputs, "").get_html(
         template_env=WebChatTemplateEnv().get_jinja_env()
     )
 
     chat_data["current_prompt"] = prompt_html
     chat_data["_pending_prompt_future"] = future
 
+    # ✅ Push the prompt HTML to all connected WebSocket clients
+    websockets = WEBSOCKETS.get(chat_id, set())
+    for ws in websockets.copy():
+        try:
+            await ws.send_str(prompt_html)
+        except Exception as e:
+            WEBSOCKETS[chat_id].discard(ws)
+            print(f"WebSocket error for chat_id={chat_id}: {e}")
+
     submitted_data = await future
     chat_data["chat_history"].append({"prompt": submitted_data})
-
     return submitted_data
 
 
