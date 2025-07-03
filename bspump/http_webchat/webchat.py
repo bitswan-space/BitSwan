@@ -75,19 +75,19 @@ class FormInput:
 
 # this returns the final html for the prompt, and then I want to render this instead of prompt
 class WebChatPromptForm:
-    def __init__(self, form_inputs: List[FormInput], submit_api_call: str):
+    def __init__(self, form_inputs: List[FormInput], awaiting_text: str = None):
         """
-        Class for defining of form
+        Class for defining the form.
         :param form_inputs: list of individual input fields
-        :param submit_api_call: where the data should be submitted
+        :param awaiting_text: optional awaiting message to render instead of inputs
         """
         self.form_inputs = form_inputs
-        self.submit_api_call = submit_api_call
+        self.awaiting_text = awaiting_text
 
     def get_context(self) -> dict:
         context = {
-            "response_box_api": self.submit_api_call,
             "form_inputs": self.form_inputs,
+            "awaiting_text": self.awaiting_text,
             "form_id": f"prompt-form-{int(time.time() * 1000)}",
         }
         return context
