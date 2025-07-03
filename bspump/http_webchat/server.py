@@ -19,31 +19,55 @@ from bspump import Source, Connection, Sink
 
 app = aiohttp.web.Application()
 L = logging.getLogger(__name__)
+'''
+SESSIONS = {
+    "session_id_1": {
+        "username": "username_1",
+        "chat_id": "chat_id_1",
+    },
+    ...
+}
 
+CHATS = {
+    "chat_id_1": {
+        "chat_history": [],
+        "current_prompt": None,
+        "registered_endpoints": []
+    },
+    ...
+}
+'''
 SESSIONS = {}
+CHATS = {}
 
 def generate_session_id():
     return str(uuid.uuid4())
+
+DEFAULT_CHAT_ID = "default-room"
 
 @aiohttp.web.middleware
 async def session_middleware(request, handler):
     session_id = request.cookies.get("session_id")
 
     if not session_id or session_id not in SESSIONS:
-        # New user: generate session
         session_id = generate_session_id()
-        SESSIONS[session_id] = {
-            # chat_history = list [Response, Prompt: prompt_data]
-            "chat_history": [],
-            "current_prompt": None,
-        }
+        SESSIONS[session_id] = {"chat_id": DEFAULT_CHAT_ID, "username": "username_1"}
 
     request["session_id"] = session_id
-    request["session_data"] = SESSIONS[session_id]
+
+    chat_id = SESSIONS[session_id]["chat_id"]
+    if chat_id not in CHATS:
+        CHATS[chat_id] = {
+            "chat_history": [],
+            "current_prompt": None,
+            "registered_endpoints": []
+        }
+
+    request["chat_id"] = chat_id
+    request["chat_data"] = CHATS[chat_id]
 
     response = await handler(request)
 
-    # Set the cookie if it's new
     if "session_id" not in request.cookies:
         response.set_cookie("session_id", session_id, httponly=True, max_age=3600*24*30)
 
