@@ -81,6 +81,12 @@ async def websocket_handler(request):
                     ws._is_ready = True
                     CHATS[chat_id]["ready_event"].set()
 
+                elif data.get("type") == "prompt_submission":
+                    submitted_data = data.get("data")
+                    pending = CHATS[chat_id].get("_pending_prompt_future")
+                    if pending and not pending.done():
+                        pending.set_result(submitted_data)
+
             elif msg.type == aiohttp.WSMsgType.ERROR:
                 print(f"WS connection closed with exception {ws.exception()}")
                 break

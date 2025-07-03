@@ -76,8 +76,17 @@
           if (incomingEl.tagName === "FORM") {
             promptEl.innerHTML = "";
             promptEl.appendChild(incomingEl);
-            htmx.process(promptEl);
-            console.log("Prompt form loaded via WebSocket");
+            // Attach *new* submit handler to the dynamically injected form!
+            const form = document.getElementById("prompt-form");
+            form.addEventListener("submit", (e) => {
+              e.preventDefault();
+              const formData = new FormData(form);
+              const data = {};
+              for (const [key, value] of formData.entries()) {
+                data[key] = value;
+              }
+              ws.send(JSON.stringify({ type: "prompt_submission", data }));
+            });
           } else {
             const container = document.createElement("div");
             container.appendChild(incomingEl);
