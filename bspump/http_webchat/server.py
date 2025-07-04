@@ -374,6 +374,7 @@ class WebChatSource(WebChatRouteSource):
 
         current_prompt_html = chat_data.get("current_prompt", "")
 
+
         context = {
             "welcome_html": welcome_html,
             "bearer_token": bearer_token,
@@ -382,7 +383,7 @@ class WebChatSource(WebChatRouteSource):
             "chats": [
                 {
                     "chat_id": chat_id,
-                    "token": generate_bearer_token(chat_id)
+                    "token": bearer_token
                 }
                 for chat_id in CHATS.keys()
             ]
