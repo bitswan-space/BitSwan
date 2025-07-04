@@ -30,6 +30,7 @@ load_dotenv()
 L = logging.getLogger(__name__)
 CHATS = {}
 WEBSOCKETS = {}
+WEBCHAT_FLOW_REGISTRY: dict[str, callable] = {}
 _registered_endpoints = {}
 
 JWT_SECRET = os.getenv("JWT_SECRET")
@@ -184,13 +185,14 @@ async def tell_user(response_text, bearer_token):
         except Exception:
             websockets.discard(ws)
 
-async def parse_response_strings(flow_steps: list[str], template_env: Environment, request) -> AsyncGenerator[str, None]:
+async def parse_response_strings(flow_steps: list[str], template_env: Environment) -> AsyncGenerator[str, None]:
     context = {
         "WebChatResponse": WebChatResponse,
         "WebChatWelcomeWindow": WebChatWelcomeWindow,
         "WebChatPromptForm": WebChatPromptForm,
         "FormInput": FormInput,
-        "set_prompt": lambda *args, **kwargs: set_prompt(*args, request=request, **kwargs),
+        "set_prompt": set_prompt,
+        "tell_user": tell_user,
     }
     local_vars = {}
 
@@ -208,22 +210,17 @@ async def parse_response_strings(flow_steps: list[str], template_env: Environmen
             print(f"Error executing step:\n{step}\n{e}")
 
 
-def create_webchat_flow(route: str):
-    def decorator(func: Callable):
-        async def wrapped(request):
-            try:
-                flow = await func(request)
-                template_env = WebChatTemplateEnv().get_jinja_env()
-                resp = aiohttp.web.StreamResponse(status=200, headers={"Content-Type": "text/html"})
-                await resp.prepare(request)
-                async for fragment in parse_response_strings(flow, template_env, request):
-                    await resp.write(fragment.encode("utf-8"))
-                await resp.write_eof()
-                return resp
-            except Exception as e:
-                return aiohttp.web.Response(status=500, text=f"Error: {e}")
-        _registered_endpoints[route] = wrapped
-        return wrapped
+async def redirect(flow_name: str, event):
+    flow_func = WEBCHAT_FLOW_REGISTRY.get(flow_name)
+    if not flow_func:
+        raise ValueError(f"Flow '{flow_name}' not registered")
+    template_env = WebChatTemplateEnv().get_jinja_env()
+    flow_steps = await flow_func(event)
+
+def create_webchat_flow(name: str):
+    def decorator(func):
+        WEBCHAT_FLOW_REGISTRY[name] = func
+        return func
     return decorator
 
 class WebChatServerConnection(Connection):
