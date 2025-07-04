@@ -51,12 +51,12 @@ class WebChatTemplateEnv:
 
 class FormInput:
     def __init__(
-            self,
-            label: str,
-            name: str,
-            input_type: str,
-            step: float | int = None,
-            required=False,
+        self,
+        label: str,
+        name: str,
+        input_type: str,
+        step: float | int = None,
+        required=False,
     ):
         """
         Class for defining one input field
@@ -119,10 +119,10 @@ class WebChatWelcomeWindow:
 
 class WebChatResponse:
     def __init__(
-            self,
-            input_html: str,
-            prompt_form: WebChatPromptForm = None,
-            api_endpoint: str = None,
+        self,
+        input_html: str,
+        prompt_form: WebChatPromptForm = None,
+        api_endpoint: str = None,
     ):
         """
         Class for creating one response
