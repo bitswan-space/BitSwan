@@ -17,22 +17,21 @@ def clean_webchat_flow_code(steps) -> list[str]:
     return [step.strip() for step in steps if step.strip()]
 
 def indent_code(lines: list[str]) -> list[str]:
-    multiline = False
-    double_quotes = False
+    multiline_quote_string = None
     indent_lines = []
     lines_out = []
+    # First we mark which lines to indent
     for i, line in enumerate(lines):
-        if not multiline and line.strip(" ") != "":
+        if not multiline_quote_string and line.strip(" ") != "":
             indent_lines.append(i)
-        if '"""' in line or "'''" in line:
-            if not multiline:
-                double_quotes = '"""' in line
-            elif (double_quotes and "'''" in line) or (
-                not double_quotes and '"""' in line
-            ):
-                continue
-            multiline = not multiline
+        if multiline_quote_string and multiline_quote_string in line:
+            multiline_quote_string = None
             continue
+        if line.count('"""') % 2 == 1:
+            multiline_quote_string = '"""'
+        if line.count("'''") % 2 == 1:
+            multiline_quote_string = "'''"
+    # Then we indent them.
     for i in range(len(lines)):
         _indent = "    " if i in indent_lines else ""
         lines_out.append(_indent + lines[i])
