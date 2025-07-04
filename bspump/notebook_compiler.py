@@ -131,7 +131,7 @@ class NotebookCompiler:
                 markdown_content = markdown_content.strip()
                 if markdown_content:
                     escaped_md = markdown_content.replace('"""', '\\"\\"\\"')
-                    response_code = f'    await tell_user(f"""{escaped_md}""", event)\n'
+                    response_code = f'    await tell_user(f"""{escaped_md}""", event[\'bearer_token\'])\n'
                     if self._current_flow_name is not None:
                         self._webchat_flows[self._current_flow_name] += response_code
 
