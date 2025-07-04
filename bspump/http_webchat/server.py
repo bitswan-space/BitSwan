@@ -377,9 +377,7 @@ class WebChatSource(WebChatRouteSource):
         token = request.query.get("chat_id")
         chat_id = None
 
-        # If no token at all in the URL => always create new chat
         if not token:
-            print('aaaaaaaaaaaaa')
             # Create new chat session and redirect with token
             chat_id = str(uuid.uuid4())
             token = generate_bearer_token(chat_id)

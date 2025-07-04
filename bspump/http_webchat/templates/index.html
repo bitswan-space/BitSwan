@@ -81,7 +81,6 @@
         if (!incomingEl) return;
 
         if (incomingEl.tagName === "FORM") {
-          // IMMEDIATE rendering for prompt forms
           promptEl.innerHTML = "";
           promptEl.appendChild(incomingEl);
 
@@ -96,7 +95,6 @@
             ws.send(JSON.stringify({ type: "prompt_submission", data }));
           });
         } else {
-          // Enqueue *only* non-form responses
           responseQueue.push(incomingEl);
           processResponseQueue();
         }
