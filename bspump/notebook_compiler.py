@@ -13,6 +13,8 @@ def contains_function_call(ast_tree, function_name):
                 return True
     return False
 
+def clean_webchat_flow_code(steps) -> list[str]:
+    return [step.strip() for step in steps if step.strip()]
 
 def indent_code(lines: list[str]) -> list[str]:
     multiline = False
@@ -45,15 +47,11 @@ def sanitize_flow_name(flow_name: str) -> str:
     return f"{sanitized}"
 
 
-def clean_webchat_flow_code(steps) -> list[str]:
-    return [step.strip() for step in steps if step.strip()]
-
-
 class NotebookCompiler:
     _in_autopipeline = False
     _cell_number: int = 0
     _cell_processor_contents: dict[int, str] = {}
-    _webchat_flows: dict[str, list[str]] = {}
+    _webchat_flows: dict[str, str] = {}
     _current_flow_name: str | None = None
 
     def parse_cell(self, cell, fout):
@@ -101,7 +99,7 @@ class NotebookCompiler:
                                     flow_name = self._cell_number
                                 sanitized_flow_name = sanitize_flow_name(flow_name)
                                 self._current_flow_name = sanitized_flow_name
-                                self._webchat_flows[sanitized_flow_name] = []
+                                self._webchat_flows[sanitized_flow_name] = ""
                                 return
 
                 if self._current_flow_name is not None:
@@ -109,9 +107,9 @@ class NotebookCompiler:
                         line for line in clean_code.split('\n')
                         if line.strip() != "" and not line.strip().startswith("#")
                     ]
-                    cleaned_code = "\n".join(cleaned_lines)
-                    if cleaned_code.strip():
-                        self._webchat_flows[self._current_flow_name].append(cleaned_code)
+                    if cleaned_lines:
+                        cleaned_code = "\n".join(cleaned_lines)
+                        self._webchat_flows[self._current_flow_name] += "\n".join(indent_code(cleaned_code.split("\n"))) + "\n\n"
                     return
 
                 if not self._in_autopipeline:
@@ -133,11 +131,9 @@ class NotebookCompiler:
                 markdown_content = markdown_content.strip()
                 if markdown_content:
                     escaped_md = markdown_content.replace('"""', '\\"\\"\\"')
-                    response_code = f'WebChatResponse(input_html=f"""{escaped_md}""")'
+                    response_code = f'    await tell_user(f"""{escaped_md}""", event)\n'
                     if self._current_flow_name is not None:
-                        self._webchat_flows[self._current_flow_name].append(
-                            response_code
-                        )
+                        self._webchat_flows[self._current_flow_name] += response_code
 
     def compile_notebook(self, ntb, out_path="tmp.py"):
         self._cell_number = 0
@@ -153,15 +149,16 @@ async def processor_internal(inject, event):
 """
             f.write(step_func_code)
             for flow_name, steps in self._webchat_flows.items():
-                cleaned_steps = clean_webchat_flow_code(steps)
+                print(steps)
                 flow_func_code = (
-                    f"@create_webchat_flow('/{flow_name.replace('-', '_')}')\n"
-                    + f"async def {flow_name.replace('-', '_')}(request):\n"
-                    + f"    return {cleaned_steps}\n"
+                        f"@create_webchat_flow('/{flow_name.replace('-', '_')}')\n"
+                        + f"async def {flow_name.replace('-', '_')}(event):\n"
+                        + f"{steps}\n"
                 )
+                #print(flow_func_code)
                 f.write(flow_func_code)
 
-        # Print the contents of the written file
+         # Print the contents of the written file
         with open(out_path, "r") as f:
-            print(f"\n--- Contents of {out_path} ---\n")
-            print(f.read())
+         print(f"\n--- Contents of {out_path} ---\n")
+         print(f.read())
