@@ -42,6 +42,29 @@
   <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.js" crossorigin="anonymous"></script>
 
   <script>
+
+    function attachPromptFormHandler(ws) {
+      const form = document.getElementById("prompt-form");
+      if (!form) {
+        console.warn("No prompt form found");
+        return;
+      }
+
+      // Remove any previous handlers to avoid duplicates
+      const clone = form.cloneNode(true);
+      form.parentNode.replaceChild(clone, form);
+
+      clone.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const formData = new FormData(clone);
+        const data = {};
+        for (const [key, value] of formData.entries()) {
+          data[key] = value;
+        }
+        ws.send(JSON.stringify({ type: "prompt_submission", data }));
+      });
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
       const params = new URLSearchParams(window.location.search);
       const token = params.get("chat_id");
@@ -54,6 +77,8 @@
 
       const promptEl = document.getElementById("prompt");
       const responseBox = document.getElementById("response-box");
+      attachPromptFormHandler(ws);
+
 
       const responseQueue = [];
       let processing = false;
@@ -74,31 +99,21 @@
         processing = false;
       }
 
-      ws.onmessage = (event) => {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(event.data, "text/html");
-        const incomingEl = doc.body.firstElementChild;
-        if (!incomingEl) return;
+     ws.onmessage = (event) => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(event.data, "text/html");
+    const incomingEl = doc.body.firstElementChild;
+    if (!incomingEl) return;
 
-        if (incomingEl.tagName === "FORM") {
-          promptEl.innerHTML = "";
-          promptEl.appendChild(incomingEl);
-
-          const form = document.getElementById("prompt-form");
-          form.addEventListener("submit", (e) => {
-            e.preventDefault();
-            const formData = new FormData(form);
-            const data = {};
-            for (const [key, value] of formData.entries()) {
-              data[key] = value;
-            }
-            ws.send(JSON.stringify({ type: "prompt_submission", data }));
-          });
-        } else {
-          responseQueue.push(incomingEl);
-          processResponseQueue();
-        }
-      };
+    if (incomingEl.tagName === "FORM") {
+      promptEl.innerHTML = "";
+      promptEl.appendChild(incomingEl);
+      attachPromptFormHandler(ws);
+    } else {
+      responseQueue.push(incomingEl);
+      processResponseQueue();
+    }
+  };
     });
   </script>
 
