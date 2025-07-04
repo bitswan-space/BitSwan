@@ -1,0 +1,168 @@
+import ast
+import re
+
+config = None
+__bitswan_dev = False
+__bs_step_locals = {}
+
+
+def contains_function_call(ast_tree, function_name):
+    for node in ast.walk(ast_tree):
+        if isinstance(node, ast.Call):  # Check if the node is a function call
+            if isinstance(node.func, ast.Name) and node.func.id == function_name:
+                return True
+    return False
+
+
+def clean_webchat_flow_code(steps) -> list[str]:
+    return [step.strip() for step in steps if step.strip()]
+
+
+def indent_code(lines: list[str]) -> list[str]:
+    multiline_quote_string = None
+    indent_lines = []
+    lines_out = []
+    # First we mark which lines to indent
+    for i, line in enumerate(lines):
+        if not multiline_quote_string and line.strip(" ") != "":
+            indent_lines.append(i)
+        if multiline_quote_string and multiline_quote_string in line:
+            multiline_quote_string = None
+            continue
+        if line.count('"""') % 2 == 1:
+            multiline_quote_string = '"""'
+        if line.count("'''") % 2 == 1:
+            multiline_quote_string = "'''"
+    # Then we indent them.
+    for i in range(len(lines)):
+        _indent = "    " if i in indent_lines else ""
+        lines_out.append(_indent + lines[i])
+    return lines_out
+
+
+def sanitize_flow_name(flow_name: str) -> str:
+    sanitized = flow_name.lstrip("/")
+    sanitized = re.sub(r"\W+", "_", sanitized)
+    if not sanitized[0].isalpha() and sanitized[0] != "_":
+        sanitized = f"_{sanitized}"
+    return f"{sanitized}"
+
+
+class NotebookCompiler:
+    _in_autopipeline = False
+    _cell_number: int = 0
+    _cell_processor_contents: dict[int, str] = {}
+    _webchat_flows: dict[str, str] = {}
+    _current_flow_name: str | None = None
+
+    def parse_cell(self, cell, fout):
+        if cell["cell_type"] == "code":
+            source = cell["source"]
+            if len(source) > 0 and "#ignore" not in source[0]:
+                code = (
+                    "".join(cell["source"])
+                    if isinstance(cell["source"], list)
+                    else cell["source"]
+                )
+
+                clean_code = (
+                    "\n".join(
+                        [
+                            re.sub(r"^\t+(?=\S)", "", line)
+                            if not line.startswith("!")
+                            else ""
+                            for line in code.split("\n")
+                        ]
+                    ).strip("\n")
+                    + "\n"
+                )
+
+                if not clean_code.strip():
+                    return
+                parsed_ast = ast.parse(clean_code)
+                if contains_function_call(parsed_ast, "create_webchat_flow"):
+                    for node in ast.walk(parsed_ast):
+                        if isinstance(node, ast.Expr) and isinstance(
+                            node.value, ast.Call
+                        ):
+                            call = node.value
+                            if (
+                                isinstance(call, ast.Call)
+                                and isinstance(call.func, ast.Name)
+                                and call.func.id == "create_webchat_flow"
+                            ):
+                                arg0 = call.args[0]
+                                if isinstance(arg0, ast.Constant):
+                                    flow_name = arg0.value
+                                elif isinstance(arg0, ast.Name):
+                                    flow_name = arg0.id
+                                else:
+                                    flow_name = self._cell_number
+                                sanitized_flow_name = sanitize_flow_name(flow_name)
+                                self._current_flow_name = sanitized_flow_name
+                                self._webchat_flows[sanitized_flow_name] = ""
+                                return
+
+                if self._current_flow_name is not None:
+                    cleaned_lines = [
+                        line
+                        for line in clean_code.split("\n")
+                        if line.strip() != "" and not line.strip().startswith("#")
+                    ]
+                    if cleaned_lines:
+                        cleaned_code = "\n".join(cleaned_lines)
+                        self._webchat_flows[self._current_flow_name] += (
+                            "\n".join(indent_code(cleaned_code.split("\n"))) + "\n\n"
+                        )
+                    return
+
+                if not self._in_autopipeline:
+                    fout.write(clean_code + "\n\n")
+                else:
+                    self._cell_processor_contents[self._cell_number] = (
+                        "\n".join(indent_code(clean_code.split("\n"))) + "\n\n"
+                    )
+                if not self._in_autopipeline and contains_function_call(
+                    ast.parse(clean_code), "auto_pipeline"
+                ):
+                    self._in_autopipeline = True
+
+        elif cell["cell_type"] == "markdown":
+            if self._current_flow_name is not None:
+                markdown_content = cell["source"]
+                if isinstance(markdown_content, list):
+                    markdown_content = "".join(markdown_content)
+                markdown_content = markdown_content.strip()
+                if markdown_content:
+                    escaped_md = markdown_content.replace('"""', '\\"\\"\\"')
+                    response_code = f'    await tell_user(f"""{escaped_md}""", event[\'bearer_token\'])\n'
+                    if self._current_flow_name is not None:
+                        self._webchat_flows[self._current_flow_name] += response_code
+
+    def compile_notebook(self, ntb, out_path="tmp.py"):
+        self._cell_number = 0
+        self._in_autopipeline = False
+        self._cell_processor_contents = {}
+        with open(out_path, "w") as f:
+            for cell in ntb["cells"]:
+                self._cell_number += 1
+                self.parse_cell(cell, f)
+            step_func_code = f"""@async_step
+async def processor_internal(inject, event):
+{''.join(list(self._cell_processor_contents.values()))}    await inject(event)
+"""
+            f.write(step_func_code)
+            for flow_name, steps in self._webchat_flows.items():
+                print(steps)
+                flow_func_code = (
+                    f"@create_webchat_flow('/{flow_name.replace('-', '_')}')\n"
+                    + f"async def {flow_name.replace('-', '_')}(event):\n"
+                    + f"{steps}\n"
+                )
+                # print(flow_func_code)
+                f.write(flow_func_code)
+
+        # Print the contents of the written file
+        with open(out_path, "r") as f:
+            print(f"\n--- Contents of {out_path} ---\n")
+            print(f.read())
