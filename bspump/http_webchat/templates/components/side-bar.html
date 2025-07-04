@@ -12,10 +12,12 @@
         <img src="/static/forum white.svg" class="h-6 ml-2 hidden dark:block">
       </div>
     </div>
-  <nav class="flex flex-col p-4 space-y-2 text-primary dark:text-primary-dark">
-    <a href="#" class="hover:bg-secondary dark:hover:bg-secondary-dark px-4 py-2 rounded">Chat 1</a>
-    <a href="#" class="hover:bg-secondary dark:hover:bg-secondary-dark px-4 py-2 rounded">Chat 2</a>
-    <a href="#" class="hover:bg-secondary dark:hover:bg-secondary-dark px-4 py-2 rounded">Chat 3</a>
-    <a href="#" class="hover:bg-secondary dark:hover:bg-secondary-dark px-4 py-2 rounded">Chat 4</a>
-  </nav>
+    <nav class="flex flex-col p-4 space-y-2 text-primary dark:text-primary-dark">
+    {% for chat in chats %}
+      <a href="/?chat_id={{ chat.token }}" class="hover:bg-secondary dark:hover:bg-secondary-dark px-4 py-2 rounded">
+        {{ chat.chat_id }}
+      </a>
+    {% endfor %}
+    </nav>
+
 </aside>
