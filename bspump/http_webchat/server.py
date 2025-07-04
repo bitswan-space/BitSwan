@@ -80,6 +80,19 @@ async def websocket_handler(request):
                     ws._is_ready = True
                     CHATS[chat_id]["ready_event"].set()
 
+                    '''
+                    for item in CHATS[chat_id]["chat_history"]:
+                        if "response" in item:
+                            response_html = WebChatResponse(input_html=item["response"]).get_html(
+                                template_env=WebChatTemplateEnv().get_jinja_env()
+                            )
+                            await ws.send_str(response_html)
+
+                    current_prompt = CHATS[chat_id].get("current_prompt")
+                    if current_prompt:
+                        await ws.send_str(current_prompt)
+                        
+                    '''
                 elif data.get("type") == "prompt_submission":
                     submitted_data = data.get("data")
                     pending = CHATS[chat_id].get("_pending_prompt_future")
@@ -237,12 +250,9 @@ class WebChatServerConnection(Connection):
         if _registered_endpoints:
             for route, handler in _registered_endpoints.items():
                 router.add_route("*", route, handler)
-        # router.add_post("/api/prompt_input_result", prompt_input_result)
         router.add_get("/ws", websocket_handler)
         router.add_get("/api/proxy", general_proxy)
         self.aiohttp_app.router.add_static("/static", os.path.join(self.base_dir, "static"))
-        # static_dir = str(files("bspump").joinpath("styles")) add once the tailwind from cdn is removed
-        # self.aiohttp_app.router.add_static("/styles/", static_dir, show_index=True)
         self.start_server()
 
     def start_server(self):
@@ -349,9 +359,26 @@ class WebChatSource(WebChatRouteSource):
     async def serve_index(self, request: aiohttp.web.Request, bearer_token) -> aiohttp.web.Response:
         template_env = WebChatTemplateEnv().get_jinja_env()
         welcome_html = self.welcome_window.get_html(template_env)
+
+        chat_data = CHATS[decode_chat_token(bearer_token)]
+        # Generate chat history HTML as one big chunk
+        chat_history_html = ""
+        for item in chat_data["chat_history"]:
+            if "response" in item:
+                html = WebChatResponse(input_html=item["response"]).get_html(
+                    template_env=template_env
+                )
+            else:
+                continue
+            chat_history_html += html
+
+        current_prompt_html = chat_data.get("current_prompt", "")
+
         context = {
             "welcome_html": welcome_html,
             "bearer_token": bearer_token,
+            "current_prompt_html": current_prompt_html,
+            "chat_history_html": chat_history_html,
             "chats": [
                 {
                     "chat_id": chat_id,
@@ -361,14 +388,11 @@ class WebChatSource(WebChatRouteSource):
             ]
         }
 
-        await self.pipeline.process({"bearer_token": bearer_token})
-        return aiohttp_jinja2.render_template("index.html", request, context)
+        if not chat_data.get("started"):
+            await self.pipeline.process({"bearer_token": bearer_token})
+            chat_data["started"] = True
 
-    # nahodne chat_id, generovat token a poslem do serve_index
-    # ten isty chat_id poslem do self.pipeline.process(chat_id)
-    # a ked dam set_prompt tak vyhladam websocket podla chat_id
-    # zavriem websocket ak token nie je platny, bearer token
-    # chat_id ziskam v notebooku z eventu
+        return aiohttp_jinja2.render_template("index.html", request, context)
 
     async def handle_request(self, request: aiohttp.web.Request) -> aiohttp.web.Response:
         if request.method != "GET":
@@ -402,10 +426,12 @@ class WebChatSource(WebChatRouteSource):
             CHATS[chat_id] = {
                 "chat_history": [],
                 "current_prompt": None,
-                "ready_event": asyncio.Event()
+                "ready_event": asyncio.Event(),
+                "started": False
             }
             print(f"Initialized chat store for chat_id={chat_id}")
-
+        else:
+            print(CHATS[chat_id]["chat_history"], CHATS[chat_id]["current_prompt"])
         return await self.serve_index(request, bearer_token=token)
 
 
