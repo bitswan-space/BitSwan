@@ -14,9 +14,10 @@
     </div>
     <nav class="flex flex-col p-4 space-y-2 text-primary dark:text-primary-dark">
     {% for chat in chats %}
-      <a href="/?chat_id={{ chat.token }}" class="hover:bg-secondary dark:hover:bg-secondary-dark px-4 py-2 rounded">
-        {{ chat.chat_id }}
+      <a href="/?chat_id={{ chat.token }}" data-chat-id="{{ chat.token }}" class="hover:bg-secondary dark:hover:bg-secondary-dark px-4 py-2 rounded">
+          {{ chat.chat_id }}
       </a>
+
     {% endfor %}
     </nav>
 
