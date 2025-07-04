@@ -42,60 +42,68 @@
   <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.js" crossorigin="anonymous"></script>
 
   <script>
-      document.addEventListener("DOMContentLoaded", () => {
-        const params = new URLSearchParams(window.location.search);
-        const token = params.get("chat_id");
+    document.addEventListener("DOMContentLoaded", () => {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("chat_id");
+      const ws = new WebSocket(`ws://${window.location.host}/ws?chat_id=${encodeURIComponent(token)}`);
 
-        const ws = new WebSocket(`ws://${window.location.host}/ws?chat_id=${encodeURIComponent(token)}`);
+      ws.onopen = () => {
+        console.log("WebSocket connected, sending ready signal");
+        ws.send(JSON.stringify({ type: "ready" }));
+      };
 
-        ws.onopen = () => {
-          console.log("WebSocket connected, sending ready signal");
-          ws.send(JSON.stringify({ type: "ready" }));
-        };
+      const promptEl = document.getElementById("prompt");
+      const responseBox = document.getElementById("response-box");
 
-        const promptEl = document.getElementById("prompt");
-        const responseBox = document.getElementById("response-box");
+      const responseQueue = [];
+      let processing = false;
 
-        ws.onmessage = (event) => {
-            console.log("Received WebSocket message:", event.data);
+      async function processResponseQueue() {
+        if (processing) return;
+        processing = true;
 
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(event.data, "text/html");
-          const incomingEl = doc.body.firstElementChild;
-          if (!incomingEl) {
-              console.warn("Received empty or invalid HTML:", event.data);
-              return;
-          }
+        while (responseQueue.length > 0) {
+          const el = responseQueue.shift();
 
-          console.log("Received tag:", incomingEl.tagName);
+          responseBox.appendChild(el);
+          responseBox.scrollTop = responseBox.scrollHeight;
 
-          if (!incomingEl) {
-              console.warn("Received empty or invalid HTML:", event.data);
-              return;
-          }
-          if (incomingEl.tagName === "FORM") {
-            promptEl.innerHTML = "";
-            promptEl.appendChild(incomingEl);
-            // Attach *new* submit handler to the dynamically injected form!
-            const form = document.getElementById("prompt-form");
-            form.addEventListener("submit", (e) => {
-              e.preventDefault();
-              const formData = new FormData(form);
-              const data = {};
-              for (const [key, value] of formData.entries()) {
-                data[key] = value;
-              }
-              ws.send(JSON.stringify({ type: "prompt_submission", data }));
-            });
-          } else {
-            const container = document.createElement("div");
-            container.appendChild(incomingEl);
-            responseBox.appendChild(container);
-            responseBox.scrollTop = responseBox.scrollHeight;
-          }
-        };
-      });
+          await new Promise(resolve => setTimeout(resolve, 800));
+        }
+
+        processing = false;
+      }
+
+      ws.onmessage = (event) => {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(event.data, "text/html");
+        const incomingEl = doc.body.firstElementChild;
+        if (!incomingEl) return;
+
+        if (incomingEl.tagName === "FORM") {
+          // IMMEDIATE rendering for prompt forms
+          promptEl.innerHTML = "";
+          promptEl.appendChild(incomingEl);
+
+          const form = document.getElementById("prompt-form");
+          form.addEventListener("submit", (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+            const data = {};
+            for (const [key, value] of formData.entries()) {
+              data[key] = value;
+            }
+            ws.send(JSON.stringify({ type: "prompt_submission", data }));
+          });
+        } else {
+          // Enqueue *only* non-form responses
+          responseQueue.push(incomingEl);
+          processResponseQueue();
+        }
+      };
+    });
   </script>
+
 
   <style>
     body, .dark\:bg-neutral-dark {
@@ -104,7 +112,8 @@
     .fade-in {
       opacity: 0;
       transform: translateY(10px);
-      animation: fadeSlideIn 0.6s ease forwards;
+      animation: fadeSlideIn 1.2s ease forwards;
+      animation-delay: 0.2s;
     }
     @keyframes fadeSlideIn {
       to {
@@ -124,8 +133,8 @@
       <div id="welcome-message" class="w-[90%] px-8 pb-8 flex items-center text-primary dark:text-primary-dark border-b border-secondary">
         {{ welcome_html | safe }}
       </div>
-      <div id="response-box" class="h-[90%] w-full overflow-y-auto flex flex-col items-end mb-12"></div>
-      <div id="prompt" class="shadow-md rounded-xl w-[90%] px-8 py-6 border border-secondary"></div>
+      <div id="response-box" class="h-[90%] w-full overflow-y-auto flex flex-col items-end mb-12 "></div>
+      <div id="prompt" class="shadow-md rounded-xl w-[90%] px-8 py-6 border border-secondary "></div>
     </div>
   </div>
 
