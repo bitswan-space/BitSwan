@@ -68,6 +68,29 @@
     document.addEventListener("DOMContentLoaded", () => {
       const params = new URLSearchParams(window.location.search);
       const token = params.get("chat_id");
+
+      if (token) {
+        document.querySelectorAll('aside nav a').forEach((a) => {
+          if (a.dataset.chatId === token) {
+            a.classList.add(
+              'bg-gray-400',
+              'text-primary',
+              'dark:bg-zinc-800',
+              'dark:text-primary-dark',
+              'font-semibold'
+            );
+          } else {
+            a.classList.remove(
+              'bg-gray-400',
+              'text-primary',
+              'dark:bg-zinc-800',
+              'dark:text-primary-dark',
+              'font-semibold'
+            );
+          }
+        });
+      }
+
       const ws = new WebSocket(`ws://${window.location.host}/ws?chat_id=${encodeURIComponent(token)}`);
 
       ws.onopen = () => {
