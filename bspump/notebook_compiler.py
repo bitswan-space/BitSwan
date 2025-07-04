@@ -13,8 +13,10 @@ def contains_function_call(ast_tree, function_name):
                 return True
     return False
 
+
 def clean_webchat_flow_code(steps) -> list[str]:
     return [step.strip() for step in steps if step.strip()]
+
 
 def indent_code(lines: list[str]) -> list[str]:
     multiline_quote_string = None
@@ -103,12 +105,15 @@ class NotebookCompiler:
 
                 if self._current_flow_name is not None:
                     cleaned_lines = [
-                        line for line in clean_code.split('\n')
+                        line
+                        for line in clean_code.split("\n")
                         if line.strip() != "" and not line.strip().startswith("#")
                     ]
                     if cleaned_lines:
                         cleaned_code = "\n".join(cleaned_lines)
-                        self._webchat_flows[self._current_flow_name] += "\n".join(indent_code(cleaned_code.split("\n"))) + "\n\n"
+                        self._webchat_flows[self._current_flow_name] += (
+                            "\n".join(indent_code(cleaned_code.split("\n"))) + "\n\n"
+                        )
                     return
 
                 if not self._in_autopipeline:
@@ -150,14 +155,14 @@ async def processor_internal(inject, event):
             for flow_name, steps in self._webchat_flows.items():
                 print(steps)
                 flow_func_code = (
-                        f"@create_webchat_flow('/{flow_name.replace('-', '_')}')\n"
-                        + f"async def {flow_name.replace('-', '_')}(event):\n"
-                        + f"{steps}\n"
+                    f"@create_webchat_flow('/{flow_name.replace('-', '_')}')\n"
+                    + f"async def {flow_name.replace('-', '_')}(event):\n"
+                    + f"{steps}\n"
                 )
-                #print(flow_func_code)
+                # print(flow_func_code)
                 f.write(flow_func_code)
 
-         # Print the contents of the written file
+        # Print the contents of the written file
         with open(out_path, "r") as f:
-         print(f"\n--- Contents of {out_path} ---\n")
-         print(f.read())
+            print(f"\n--- Contents of {out_path} ---\n")
+            print(f.read())
