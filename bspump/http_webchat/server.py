@@ -70,7 +70,6 @@ async def websocket_handler(request):
     try:
         async for msg in ws:
             if msg.type == aiohttp.WSMsgType.TEXT:
-                print(f"Received message from client: {msg.data}")
                 try:
                     import json
                     data = json.loads(msg.data)
@@ -78,7 +77,6 @@ async def websocket_handler(request):
                     data = {}
 
                 if data.get("type") == "ready":
-                    print(f"WebSocket client ready for chat_id={chat_id}")
                     ws._is_ready = True
                     CHATS[chat_id]["ready_event"].set()
 
@@ -96,7 +94,6 @@ async def websocket_handler(request):
         print(f"WebSocket exception: {e}")
     finally:
         WEBSOCKETS[chat_id].discard(ws)
-        print(f"WebSocket disconnected: chat_id={chat_id}, remaining connections: {len(WEBSOCKETS.get(chat_id, []))}")
 
     return ws
 
@@ -124,9 +121,7 @@ async def set_prompt(form_inputs: list, bearer_token: str) -> dict:
     chat_data = CHATS[chat_id]
 
     # Wait until the WebSocket is ready (someone sent the "ready" message)
-    print(f"Waiting for WebSocket client to be ready for chat_id={chat_id}...")
     await chat_data["ready_event"].wait()
-    print(f"WebSocket ready for chat_id={chat_id}, sending prompt.")
 
     future = asyncio.get_event_loop().create_future()
     prompt_html = WebChatPromptForm(form_inputs).get_html(
@@ -137,7 +132,6 @@ async def set_prompt(form_inputs: list, bearer_token: str) -> dict:
     chat_data["_pending_prompt_future"] = future
 
     websockets = WEBSOCKETS.get(chat_id, set())
-    print("websockets", websockets)
     for ws in websockets.copy():
         try:
             print(f"Sending prompt to WebSocket: {ws}")
@@ -172,9 +166,7 @@ async def tell_user(response_text, bearer_token):
     chat_data = CHATS[chat_id]
 
     # Wait for WebSocket client to be ready
-    print(f"Waiting for WebSocket client to be ready for chat_id={chat_id}...")
     await chat_data["ready_event"].wait()
-    print(f"WebSocket ready for chat_id={chat_id}, sending response.")
 
     websockets = WEBSOCKETS.get(chat_id, set())
     chat_data["chat_history"].append({"response": response_text})
@@ -214,8 +206,7 @@ async def redirect(flow_name: str, event):
     flow_func = WEBCHAT_FLOW_REGISTRY.get(flow_name)
     if not flow_func:
         raise ValueError(f"Flow '{flow_name}' not registered")
-    template_env = WebChatTemplateEnv().get_jinja_env()
-    flow_steps = await flow_func(event)
+    await flow_func(event)
 
 def create_webchat_flow(name: str):
     def decorator(func):
@@ -360,11 +351,17 @@ class WebChatSource(WebChatRouteSource):
         welcome_html = self.welcome_window.get_html(template_env)
         context = {
             "welcome_html": welcome_html,
-            "bearer_token": bearer_token
+            "bearer_token": bearer_token,
+            "chats": [
+                {
+                    "chat_id": chat_id,
+                    "token": generate_bearer_token(chat_id)
+                }
+                for chat_id in CHATS.keys()
+            ]
         }
 
         await self.pipeline.process({"bearer_token": bearer_token})
-
         return aiohttp_jinja2.render_template("index.html", request, context)
 
     # nahodne chat_id, generovat token a poslem do serve_index
@@ -380,16 +377,23 @@ class WebChatSource(WebChatRouteSource):
         token = request.query.get("chat_id")
         chat_id = None
 
-        if token:
-            try:
-                payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-                chat_id = payload.get("chat_id")
-            except (jwt.ExpiredSignatureError, jwt.InvalidTokenError) as e:
-                print(f"Invalid or expired token: {e}")
-                token = None
-                chat_id = None
+        # If no token at all in the URL => always create new chat
+        if not token:
+            print('aaaaaaaaaaaaa')
+            # Create new chat session and redirect with token
+            chat_id = str(uuid.uuid4())
+            token = generate_bearer_token(chat_id)
+            print(f"Generated NEW token for new chat_id={chat_id}: {token}")
+            location = f"/?chat_id={token}"
+            raise aiohttp.web.HTTPFound(location)
 
-        if not chat_id:
+        # If token is present, validate it
+        try:
+            payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+            chat_id = payload.get("chat_id")
+        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError) as e:
+            print(f"Invalid or expired token: {e}")
+            # invalid token, create new chat and redirect
             chat_id = str(uuid.uuid4())
             token = generate_bearer_token(chat_id)
             print(f"Generated NEW token for new chat_id={chat_id}: {token}")
