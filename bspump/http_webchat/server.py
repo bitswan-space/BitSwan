@@ -415,7 +415,7 @@ class WebChatSource(WebChatRouteSource):
             "current_prompt_html": current_prompt_html,
             "chat_history_html": chat_history_html,
             "chats": [
-                {"chat_id": chat_id, "token": bearer_token} for chat_id in CHATS.keys()
+                {"chat_id": chat_id, "token": CHATS[chat_id]["bearer_token"]} for chat_id in CHATS.keys()
             ],
         }
 
@@ -461,6 +461,7 @@ class WebChatSource(WebChatRouteSource):
                 "current_prompt": None,
                 "ready_event": asyncio.Event(),
                 "started": False,
+                "bearer_token": token,
             }
             print(f"Initialized chat store for chat_id={chat_id}")
         else:
