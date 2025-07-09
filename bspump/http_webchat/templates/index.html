@@ -164,12 +164,12 @@
   <img src="/static/Bitswan logo white.svg" class="hidden dark:block fixed top-4 right-4 w-44 h-auto">
 
   {% include "components/side-bar.html" %}
-  <div class="p-8 w-[50%] max-w-screen-lg h-[90%] flex flex-col relative">
+  <div class="p-8 w-[60%] max-w-screen-lg h-[90%] flex flex-col relative">
     <div class="flex-grow overflow-y-auto flex flex-col items-end pr-2">
-      <div id="welcome-message" class="w-[90%] px-8 pb-8 flex items-center text-primary dark:text-primary-dark border-b border-secondary">
+      <div id="welcome-message" class="w-[83%] px-8 pb-8 flex text-primary dark:text-primary-dark border-b border-secondary mr-5">
         {{ welcome_html | safe }}
       </div>
-      <div id="response-box" class="h-[90%] w-full overflow-y-auto flex flex-col items-end mb-12 ">
+      <div id="response-box" class="h-[85%] w-[85%] overflow-y-auto flex flex-col mb-12">
         {{ chat_history_html | safe }}
       </div>
       <div id="prompt" class="shadow-md rounded-xl w-[90%] px-8 py-6 border border-secondary ">
