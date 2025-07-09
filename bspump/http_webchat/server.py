@@ -181,6 +181,21 @@ async def set_prompt(form_inputs: list, bearer_token: str) -> dict:
             print(f"WebSocket error for chat_token={chat_id}: {e}")
 
     chat_data["chat_history"].append({"prompt": submitted_data})
+
+    # Send the user's submission back as a WebChatResponse
+    response_obj = WebChatResponse(input_html=f"The submitted data: {submitted_data}", user_response=True)
+    response_html = response_obj.get_html(
+        template_env=WebChatTemplateEnv().get_jinja_env()
+    )
+    chat_data["chat_history"].append({"prompt_response": submitted_data})
+    for ws in websockets.copy():
+        try:
+            print(f"Sending user input as WebChatResponse to WebSocket: {ws}")
+            await ws.send_str(response_html)
+        except Exception as e:
+            WEBSOCKETS[chat_id].discard(ws)
+            print(f"WebSocket error for chat_token={chat_id}: {e}")
+
     return submitted_data
 
 
@@ -401,6 +416,10 @@ class WebChatSource(WebChatRouteSource):
         for item in chat_data["chat_history"]:
             if "response" in item:
                 html = WebChatResponse(input_html=item["response"]).get_html(
+                    template_env=template_env
+                )
+            elif "prompt_response" in item:
+                html = WebChatResponse(input_html=item["prompt_response"], user_response=True).get_html(
                     template_env=template_env
                 )
             else:

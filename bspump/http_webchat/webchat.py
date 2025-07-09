@@ -73,7 +73,6 @@ class FormInput:
         self.required = required
 
 
-# this returns the final html for the prompt, and then I want to render this instead of prompt
 class WebChatPromptForm:
     def __init__(self, form_inputs: List[FormInput], awaiting_text: str = None):
         """
@@ -106,7 +105,7 @@ class WebChatWelcomeWindow:
         """
         self.welcome_text = welcome_text or ""
 
-    def get_context(self, template_env: Environment) -> dict:
+    def get_context(self) -> dict:
         context = {
             "welcome_text": self.welcome_text,
         }
@@ -114,44 +113,34 @@ class WebChatWelcomeWindow:
 
     def get_html(self, template_env: Environment) -> str:
         template = template_env.get_template("components/welcome-message-box.html")
-        return template.render(self.get_context(template_env))
+        return template.render(self.get_context())
 
 
 class WebChatResponse:
     def __init__(
         self,
         input_html: str,
-        prompt_form: WebChatPromptForm = None,
-        api_endpoint: str = None,
+        user_response: bool = False
     ):
         """
-        Class for creating one response
+        Class for creatin one response
         :param input_html: could be just string or html string
         :param prompt_form: html of the prompt that is rendered with the window
-        :param api_endpoint: endpoint string if the response should make a api request
         """
         self.input_html = input_html or ""
-        self.prompt_form = prompt_form
-        self.api_endpoint = api_endpoint
+        self.user_response = user_response
 
-    def get_context(self, template_env: Environment) -> dict:
+    def get_context(self) -> dict:
         return {
             "response_text": self.input_html,
-            "prompt_html": self.prompt_form.get_html(template_env)
-            if self.prompt_form
-            else "",
-            "api_endpoint": self.api_endpoint if self.api_endpoint else "",
-            "has_prompt": bool(self.prompt_form),
         }
 
     def get_html(self, template_env: Environment) -> str:
-        if self.api_endpoint:
-            template = template_env.get_template(
-                "components/web-chat-response-with-request.html"
-            )
+        if self.user_response:
+            template = template_env.get_template("components/user-response.html")
         else:
             template = template_env.get_template("components/web-chat-response.html")
-        return template.render(self.get_context(template_env))
+        return template.render(self.get_context())
 
 
 class WebChatResponseSequence:
