@@ -1,8 +1,15 @@
-<aside class="fixed top-0 left-0 h-screen w-64 bg-[#E6E6E6] dark:bg-[#2D2D2D] shadow-lg overflow-y-auto z-20">
+<aside id="sidebar" class="fixed top-0 left-0 h-screen w-64 bg-[#E6E6E6] dark:bg-[#2D2D2D] shadow-lg overflow-y-auto z-20 transition-transform duration-300">
     <div class="mt-4 ml-4 flex flex-col items-start space-y-4">
-        <div>
-            <img src="/static/Bitswan logo.svg" class="dark:hidden h-6">
-            <img src="/static/Bitswan logo white.svg" class="hidden dark:block h-6">
+         <div class="flex items-center justify-between w-full">
+              <div>
+                <img src="/static/Bitswan logo.svg" class="dark:hidden h-6">
+                <img src="/static/Bitswan logo white.svg" class="hidden dark:block h-6">
+              </div>
+
+              <button id="close-sidebar" class="text-xl text-primary dark:text-primary-dark hover:opacity-80 pr-2 text-bold">
+                <img src="/static/close dark.svg" class="dark:hidden">
+                <img src="/static/close white.svg" class="hidden dark:block">
+              </button>
         </div>
 
          <div class="flex flex-col space-y-4">
@@ -33,19 +40,27 @@
     </nav>
 
     <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const searchInput = document.getElementById('chat-search');
-      const chatLinks = document.querySelectorAll('#chat-list a');
+        document.addEventListener('DOMContentLoaded', () => {
+          const sidebar = document.getElementById('sidebar');
+          const closeBtn = document.getElementById('close-sidebar');
+          const searchInput = document.getElementById('chat-search');
+          const chatLinks = document.querySelectorAll('#chat-list a');
 
-      searchInput.addEventListener('input', () => {
-        const term = searchInput.value.toLowerCase();
+          // Close sidebar
+          closeBtn.addEventListener('click', () => {
+            sidebar.classList.add('-translate-x-full');
+          });
 
-        chatLinks.forEach(link => {
-          const text = link.textContent.toLowerCase();
-          link.style.display = text.includes(term) ? '' : 'none';
+          // Existing search filtering
+          searchInput.addEventListener('input', () => {
+            const term = searchInput.value.toLowerCase();
+            chatLinks.forEach(link => {
+              const text = link.textContent.toLowerCase();
+              link.style.display = text.includes(term) ? '' : 'none';
+            });
+          });
         });
-      });
-    });
     </script>
+
 </aside>
 

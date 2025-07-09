@@ -42,7 +42,6 @@
   <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.js" crossorigin="anonymous"></script>
 
   <script>
-
     function attachPromptFormHandler(ws) {
       const form = document.getElementById("prompt-form");
       if (!form) {
@@ -66,6 +65,24 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
+      const sidebar = document.getElementById('sidebar');
+      const openSidebar = document.getElementById('open-sidebar');
+      const closeBtn = document.getElementById('close-sidebar');
+
+      if (openSidebar && sidebar) {
+        openSidebar.addEventListener('click', () => {
+          sidebar.classList.remove('-translate-x-full');
+          openSidebar.classList.add('hidden');
+        });
+      }
+
+      if (closeBtn && sidebar && openSidebar) {
+        closeBtn.addEventListener('click', () => {
+          sidebar.classList.add('-translate-x-full');
+          openSidebar.classList.remove('hidden');
+        });
+      }
+
       const params = new URLSearchParams(window.location.search);
       const token = params.get("chat_id");
 
@@ -157,11 +174,24 @@
         transform: translateY(0);
       }
     }
+    .-translate-x-full {
+      transform: translateX(-100%);
+    }
+
   </style>
 </head>
 <body class="bg-neutral dark:bg-neutral-dark flex justify-center items-center h-screen relative">
   <img src="/static/Bitswan logo.svg" class="dark:hidden fixed top-4 right-4 w-44 h-auto">
   <img src="/static/Bitswan logo white.svg" class="hidden dark:block fixed top-4 right-4 w-44 h-auto">
+
+  <button
+    id="open-sidebar"
+    class="hidden fixed top-4 left-4 z-30 px-3 py-2 hover:opacity-80"
+  >
+    <img src="/static/menu dark.svg" class="dark:hidden">
+    <img src="/static/menu white.svg" class="hidden dark:block">
+  </button>
+
 
   {% include "components/side-bar.html" %}
   <div class="p-8 w-[60%] max-w-screen-lg h-[90%] flex flex-col relative">
