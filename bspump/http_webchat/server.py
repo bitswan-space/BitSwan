@@ -160,7 +160,6 @@ async def set_prompt(form_inputs: list, bearer_token: str) -> dict:
     websockets = WEBSOCKETS.get(chat_id, set())
     for ws in websockets.copy():
         try:
-            print(f"Sending prompt to WebSocket: {ws}")
             await ws.send_str(prompt_html)
         except Exception as e:
             WEBSOCKETS[chat_id].discard(ws)
@@ -174,7 +173,6 @@ async def set_prompt(form_inputs: list, bearer_token: str) -> dict:
 
     for ws in websockets.copy():
         try:
-            print(f"Sending awaiting prompt to WebSocket: {ws}")
             await ws.send_str(awaiting_html)
         except Exception as e:
             WEBSOCKETS[chat_id].discard(ws)
@@ -190,7 +188,6 @@ async def set_prompt(form_inputs: list, bearer_token: str) -> dict:
     chat_data["chat_history"].append({"prompt_response": submitted_data})
     for ws in websockets.copy():
         try:
-            print(f"Sending user input as WebChatResponse to WebSocket: {ws}")
             await ws.send_str(response_html)
         except Exception as e:
             WEBSOCKETS[chat_id].discard(ws)
@@ -273,7 +270,6 @@ class WebChatServerConnection(Connection):
     def __init__(self, app, id=None, config=None):
         super().__init__(app, id=id, config=config)
 
-        # http://0.0.0.0:8080/?chat_id=1
         self.aiohttp_app = aiohttp.web.Application(
             client_max_size=int(self.Config["max_body_size_bytes"])
         )
@@ -289,6 +285,8 @@ class WebChatServerConnection(Connection):
                 router.add_route("*", route, handler)
         router.add_get("/ws", websocket_handler)
         router.add_get("/api/proxy", general_proxy)
+        router.add_get("/new-chat", new_chat_handler)
+
         self.aiohttp_app.router.add_static(
             "/static", os.path.join(self.base_dir, "static")
         )
@@ -379,6 +377,17 @@ def generate_bearer_token(chat_id: str) -> str:
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
+async def new_chat_handler(request):
+    chat_id = generate_session_id()
+    token = generate_bearer_token(chat_id)
+    CHATS[chat_id] = {
+        "chat_history": [],
+        "current_prompt": None,
+        "ready_event": asyncio.Event(),
+        "started": False,
+        "bearer_token": token,
+    }
+    raise aiohttp.web.HTTPFound(f"/?chat_id={token}")
 
 class WebChatSource(WebChatRouteSource):
     def __init__(
