@@ -1,6 +1,5 @@
 import asyncio
 import re
-from typing import AsyncGenerator
 import logging
 
 import aiohttp.web
@@ -10,7 +9,6 @@ import os
 import uuid
 import jwt
 import datetime
-from jinja2 import Environment
 from dotenv import load_dotenv
 
 from bspump import Source, Connection, Sink
@@ -18,19 +16,9 @@ from bspump.http_webchat.webchat import (
     WebChatPromptForm,
     WebChatTemplateEnv,
     WebChatResponse,
-    WebChatWelcomeWindow,
     PromptFormBaseField,
 )
 
-"""
-CHATS = {
-    "chat_id_1": {
-        "chat_history": [],
-        "current_prompt": None,
-    },
-    ...
-}
-"""
 load_dotenv()
 L = logging.getLogger(__name__)
 CHATS = {}
@@ -45,15 +33,25 @@ if not JWT_SECRET:
     raise RuntimeError("JWT_SECRET is not set in the environment!")
 
 
+def generate_session_id():
+    return str(uuid.uuid4())
+
+
+def generate_bearer_token(chat_id: str) -> str:
+    payload = {
+        "chat_id": chat_id,
+        "exp": datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=1),
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+
 def decode_chat_token(token: str) -> str:
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         return payload["chat_id"]
     except jwt.ExpiredSignatureError:
-        # token expired
         raise
     except jwt.InvalidTokenError:
-        # invalid token
         raise
 
 
@@ -88,19 +86,6 @@ async def websocket_handler(request):
                     ws._is_ready = True
                     CHATS[chat_id]["ready_event"].set()
 
-                    """
-                    for item in CHATS[chat_id]["chat_history"]:
-                        if "response" in item:
-                            response_html = WebChatResponse(input_html=item["response"]).get_html(
-                                template_env=WebChatTemplateEnv().get_jinja_env()
-                            )
-                            await ws.send_str(response_html)
-
-                    current_prompt = CHATS[chat_id].get("current_prompt")
-                    if current_prompt:
-                        await ws.send_str(current_prompt)
-                        
-                    """
                 elif data.get("type") == "prompt_submission":
                     submitted_data = data.get("data")
                     pending = CHATS[chat_id].get("_pending_prompt_future")
@@ -117,10 +102,6 @@ async def websocket_handler(request):
         WEBSOCKETS[chat_id].discard(ws)
 
     return ws
-
-
-def generate_session_id():
-    return str(uuid.uuid4())
 
 
 async def general_proxy(request):
@@ -146,7 +127,7 @@ async def set_prompt(fields: list[PromptFormBaseField], bearer_token: str) -> di
     chat_id = payload["chat_id"]
     chat_data = CHATS[chat_id]
 
-    # Wait until the WebSocket is ready (someone sent the "ready" message)
+    # Wait until the WebSocket is ready = someone sent the "ready" message
     await chat_data["ready_event"].wait()
 
     future = asyncio.get_event_loop().create_future()
@@ -180,7 +161,6 @@ async def set_prompt(fields: list[PromptFormBaseField], bearer_token: str) -> di
 
     chat_data["chat_history"].append({"prompt": submitted_data})
 
-    # Send the user's submission back as a WebChatResponse
     response_obj = WebChatResponse(
         input_html=f"The submitted data: {submitted_data}", user_response=True
     )
@@ -217,34 +197,6 @@ async def tell_user(response_text, bearer_token):
             )
         except Exception:
             websockets.discard(ws)
-
-
-async def parse_response_strings(
-    flow_steps: list[str], template_env: Environment
-) -> AsyncGenerator[str, None]:
-    context = {
-        "WebChatResponse": WebChatResponse,
-        "WebChatWelcomeWindow": WebChatWelcomeWindow,
-        "WebChatPromptForm": WebChatPromptForm,
-        "set_prompt": set_prompt,
-        "tell_user": tell_user,
-    }
-    local_vars = {}
-
-    for step in flow_steps:
-        try:
-            if "await" in step or "return" in step:
-                exec_code = "async def __temp_func():\n" + "\n".join(
-                    f"    {line}" for line in step.splitlines()
-                )
-                exec(exec_code, context, local_vars)
-                await local_vars["__temp_func"]()
-            else:
-                result = eval(step, context, local_vars)
-                if isinstance(result, (WebChatResponse, WebChatWelcomeWindow)):
-                    yield result.get_html(template_env)
-        except Exception as e:
-            print(f"Error executing step:\n{step}\n{e}")
 
 
 async def redirect(flow_name: str, event):
@@ -371,14 +323,6 @@ class WebChatRouteSource(Source):
             return aiohttp.web.Response(status=500)
 
 
-def generate_bearer_token(chat_id: str) -> str:
-    payload = {
-        "chat_id": chat_id,
-        "exp": datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=1),
-    }
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
-
-
 async def new_chat_handler(request):
     chat_id = generate_session_id()
     token = generate_bearer_token(chat_id)
@@ -423,7 +367,6 @@ class WebChatSource(WebChatRouteSource):
         welcome_html = self.welcome_window.get_html(template_env)
 
         chat_data = CHATS[decode_chat_token(bearer_token)]
-        # Generate chat history HTML as one big chunk
         chat_history_html = ""
         for item in chat_data["chat_history"]:
             if "response" in item:
@@ -464,23 +407,18 @@ class WebChatSource(WebChatRouteSource):
             return aiohttp.web.Response(status=405)
 
         token = request.query.get("chat_id")
-        chat_id = None
-
         if not token:
-            # Create new chat session and redirect with token
             chat_id = str(uuid.uuid4())
             token = generate_bearer_token(chat_id)
             print(f"Generated NEW token for new chat_id={chat_id}: {token}")
             location = f"/?chat_id={token}"
             raise aiohttp.web.HTTPFound(location)
 
-        # If token is present, validate it
         try:
             payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
             chat_id = payload.get("chat_id")
         except (jwt.ExpiredSignatureError, jwt.InvalidTokenError) as e:
             print(f"Invalid or expired token: {e}")
-            # invalid token, create new chat and redirect
             chat_id = str(uuid.uuid4())
             token = generate_bearer_token(chat_id)
             print(f"Generated NEW token for new chat_id={chat_id}: {token}")

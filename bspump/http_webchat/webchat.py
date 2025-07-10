@@ -2,7 +2,6 @@ import base64
 import json
 import time
 from io import BytesIO
-from typing import List
 from urllib.request import Request
 
 import aiohttp_jinja2
@@ -248,10 +247,6 @@ class RawJSONField(PromptFormField):
 
 class WebChatTemplateEnv:
     def __init__(self, extra_template_dir: str = None):
-        """
-        Creates template environment on user side that will be then used for creating other components
-        :param extra_template_dir: path to template directory, could be none, because user can specify the templates as strings
-        """
         self.extra_template_dir = extra_template_dir
         self.base_dir = os.path.dirname(os.path.abspath(__file__))
         self.template_env = self.create_template_env()
@@ -277,19 +272,11 @@ class WebChatTemplateEnv:
         return template_env
 
     def get_jinja_env(self) -> Environment:
-        """
-        :return: Environment variable
-        """
         return self.template_env
 
 
 class WebChatPromptForm:
     def __init__(self, fields: [PromptFormBaseField], awaiting_text: str = None):
-        """
-        Class for defining the form.
-        :param form_inputs: list of individual input fields
-        :param awaiting_text: optional awaiting message to render instead of inputs
-        """
         self.fields = fields
         self.awaiting_text = awaiting_text
 
@@ -309,11 +296,6 @@ class WebChatPromptForm:
 
 class WebChatWelcomeWindow:
     def __init__(self, welcome_text: str):
-        """
-        Class for defining the first window that is rendered and is visible all the time
-        :param welcome_text: text or html string that should be rendered
-        :param prompt_form: html of the prompt that is rendered with the window
-        """
         self.welcome_text = welcome_text or ""
 
     def get_context(self) -> dict:
@@ -329,11 +311,6 @@ class WebChatWelcomeWindow:
 
 class WebChatResponse:
     def __init__(self, input_html: str, user_response: bool = False):
-        """
-        Class for creatin one response
-        :param input_html: could be just string or html string
-        :param prompt_form: html of the prompt that is rendered with the window
-        """
         self.input_html = input_html or ""
         self.user_response = user_response
 
@@ -348,25 +325,3 @@ class WebChatResponse:
         else:
             template = template_env.get_template("components/web-chat-response.html")
         return template.render(self.get_context())
-
-
-class WebChatResponseSequence:
-    def __init__(self, responses: List[WebChatResponse]):
-        """
-        Class that defines and renders sequence of responses
-        :param responses: list of instances of class WebChatResponse
-        """
-        self.responses = responses
-
-    def get_html(self, template_env: Environment) -> str:
-        rendered_responses = [
-            response.get_html(template_env) for response in self.responses
-        ]
-        js_safe_responses = json.dumps(rendered_responses)
-        context = {
-            "responses": js_safe_responses,
-        }
-        template = template_env.get_template(
-            "components/web-chat-sequence-response.html"
-        )
-        return template.render(context)
