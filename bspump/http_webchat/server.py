@@ -20,7 +20,6 @@ from bspump.http_webchat.webchat import (
     WebChatResponse,
     WebChatWelcomeWindow,
     PromptFormBaseField,
-
 )
 
 """
@@ -182,7 +181,9 @@ async def set_prompt(fields: list[PromptFormBaseField], bearer_token: str) -> di
     chat_data["chat_history"].append({"prompt": submitted_data})
 
     # Send the user's submission back as a WebChatResponse
-    response_obj = WebChatResponse(input_html=f"The submitted data: {submitted_data}", user_response=True)
+    response_obj = WebChatResponse(
+        input_html=f"The submitted data: {submitted_data}", user_response=True
+    )
     response_html = response_obj.get_html(
         template_env=WebChatTemplateEnv().get_jinja_env()
     )
@@ -377,6 +378,7 @@ def generate_bearer_token(chat_id: str) -> str:
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
+
 async def new_chat_handler(request):
     chat_id = generate_session_id()
     token = generate_bearer_token(chat_id)
@@ -388,6 +390,7 @@ async def new_chat_handler(request):
         "bearer_token": token,
     }
     raise aiohttp.web.HTTPFound(f"/?chat_id={token}")
+
 
 class WebChatSource(WebChatRouteSource):
     def __init__(
@@ -428,9 +431,9 @@ class WebChatSource(WebChatRouteSource):
                     template_env=template_env
                 )
             elif "prompt_response" in item:
-                html = WebChatResponse(input_html=item["prompt_response"], user_response=True).get_html(
-                    template_env=template_env
-                )
+                html = WebChatResponse(
+                    input_html=item["prompt_response"], user_response=True
+                ).get_html(template_env=template_env)
             else:
                 continue
             chat_history_html += html
@@ -443,7 +446,8 @@ class WebChatSource(WebChatRouteSource):
             "current_prompt_html": current_prompt_html,
             "chat_history_html": chat_history_html,
             "chats": [
-                {"chat_id": chat_id, "token": CHATS[chat_id]["bearer_token"]} for chat_id in CHATS.keys()
+                {"chat_id": chat_id, "token": CHATS[chat_id]["bearer_token"]}
+                for chat_id in CHATS.keys()
             ],
         }
 
@@ -492,8 +496,6 @@ class WebChatSource(WebChatRouteSource):
                 "bearer_token": token,
             }
             print(f"Initialized chat store for chat_id={chat_id}")
-        else:
-            print(CHATS[chat_id]["chat_history"], CHATS[chat_id]["current_prompt"])
         return await self.serve_index(request, bearer_token=token)
 
 
