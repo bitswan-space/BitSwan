@@ -1,6 +1,9 @@
+import base64
 import json
 import time
+from io import BytesIO
 from typing import List
+from urllib.request import Request
 
 import aiohttp_jinja2
 import jinja2
@@ -11,6 +14,216 @@ from jinja2 import Environment
 
 app = aiohttp.web.Application()
 
+class PromptFormBaseField:
+    def __init__(self, name, **kwargs):
+        self.name = name
+        self.hidden: bool = kwargs.get("hidden", False)
+        self.required: bool = kwargs.get("required", False if self.hidden else True)
+        self.display: str = kwargs.get("display", self.name)
+        self.description: str = kwargs.get("description", "")
+        self.default = kwargs.get("default", "")
+
+    def html(self, defaults) -> str:
+        pass
+
+    def get_params(self) -> dict:
+        pass
+
+    def restructure_data(self, dfrom, dto):
+        pass
+
+    def clean(self, data, request: Request = None):
+        pass
+
+
+class PromptFormField(PromptFormBaseField):
+    def __init__(self, name, **kwargs):
+        super().__init__(name, **kwargs)
+        if "___" in name:
+            raise ValueError("Field name cannot contain '___'")
+        su = super()
+        su.__init__(name, **kwargs)
+        self.readonly: bool = kwargs.get("readonly", False)
+        self.default = kwargs.get("default", "")
+        self.field_name: str = f"{self.name}"
+        self.default_classes = kwargs.get(
+            "default_css_classes",
+            "text-primary border border-secondary text-sm px-4 py-1 rounded-md font-mono w-full max-w-[150px] mx-2",
+        )
+        if self.readonly:
+            self.default_classes = kwargs.get(
+                "default_css_classes",
+                "text-primary border border-secondary text-sm px-4 py-1 rounded-md font-mono w-full max-w-[150px] mx-2 opacity-50 cursor-not-allowed",
+            )
+
+    @property
+    def default_input_props(self):
+        if self.readonly:
+            readonly = "readonly"
+        else:
+            readonly = ""
+
+        if self.required:
+            required = 'required aria-required="true"'
+        else:
+            required = ""
+        return f'name="{self.field_name}" id="{self.field_name}" {readonly} {required}'
+
+    def restructure_data(self, dfrom, dto):
+        dto[self.name] = dfrom.get(self.field_name, self.default)
+
+    def clean(self, data, request: Request | None = None):
+        pass
+
+    def get_html(self, template_env, default=""):
+        if not default:
+            default = self.default
+
+        template = template_env.get_template("components/field.html")
+        return template.render(
+            field_name=self.field_name,
+            display=self.display,
+            default_classes=self.default_classes,
+            hidden=self.hidden,
+            inner_html=self.inner_html(template_env, default, self.readonly, self.field_name),
+        )
+
+    def get_params(self) -> dict:
+        return {"type": type(self).__name__, "description": self.description}
+
+
+class CheckboxField(PromptFormField):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.default = self.default or False
+
+    def inner_html(self, template_env=None, default="", readonly=False, field_name=None):
+        readonly_attr = "disabled" if readonly else ""
+
+        template = template_env.get_template("components/input-field.html")
+        return template.render(
+            default=default,
+            readonly=readonly,
+            default_classes=self.default_classes,
+            default_input_props=self.default_input_props,
+            readonly_attr=readonly_attr,
+            field_name=field_name,
+            field_type="checkbox",
+        )
+
+    def clean(self, data, request: Request | None = None):
+        if type(data.get(self.name)) == str:
+            data[self.name] = data.get(self.name, False) == "on"
+
+class ChoiceField(PromptFormField):
+    def __init__(self, name, choices, **kwargs):
+        super().__init__(name, **kwargs)
+        self.choices = choices
+
+    def inner_html(self, template_env=None, default="", readonly=False, field_name=None):
+        template = template_env.get_template("components/choice-field.html")
+        return template.render(
+            default=default,
+            choices=self.choices,
+            default_classes=self.default_classes,
+            default_input_props=self.default_input_props,
+        )
+
+class FileField(PromptFormField):
+    """
+    The value ends up being the bytes of the uploaded file.
+    """
+
+    def inner_html(self, template_env=None, default="", readonly=False, field_name=None):
+        template = template_env.get_template("components/input-field.html")
+        return template.render(
+            default_input_props=self.default_input_props,
+            default_classes=self.default_classes,
+            field_name=field_name,
+            field_type="file",
+        )
+
+    def clean(self, data, request: Request | None = None):
+        if request.content_type == "application/json":
+            decoded_data = base64.b64decode(data.get(self.name, ""))
+            data[self.name] = BytesIO(decoded_data)
+        else:
+            # in case of not submitting any file
+            if data[self.name] == b"":
+                data[self.name] = BytesIO(b"")
+            else:
+                data[self.name] = data[self.name].file
+
+class FloatField(PromptFormField):
+    def inner_html(self, template_env=None, default=0, readonly=False, field_name=None):
+        if not default:
+            default = 0.0
+
+        template = template_env.get_template("components/input-field.html")
+        return template.render(
+            default=default,
+            default_input_props=self.default_input_props,
+            default_classes=self.default_classes,
+            field_name=field_name,
+            field_type="number",
+        )
+
+    def clean(self, data, request: Request | None = None):
+        if type(data.get(self.name)) == str:
+            data[self.name] = float(data.get(self.name, 0))
+
+class IntField(PromptFormField):
+    def inner_html(self, template_env=None, default=0, readonly=False, field_name=None):
+        if not default:
+            default = 0
+
+        template = template_env.get_template("components/input-field.html")
+        return template.render(
+            default=default,
+            default_input_props=self.default_input_props,
+            default_classes=self.default_classes,
+            field_name=field_name,
+            field_type="number",
+        )
+
+    def clean(self, data, request: Request | None = None):
+        if type(data.get(self.name)) == str:
+            data[self.name] = int(data.get(self.name, 0))
+
+class TextField(PromptFormField):
+    def inner_html(self, template_env=None, default="", readonly=False, field_name=None):
+        template = template_env.get_template("components/input-field.html")
+        return template.render(
+            default=default,
+            default_classes=self.default_classes,
+            default_input_props=self.default_input_props,
+            field_name=field_name,
+            field_type="text",
+        )
+
+class DateField(PromptFormField):
+    def inner_html(self, template_env=None, default="", readonly=False, field_name=None):
+        template = template_env.get_template("components/input-field.html")
+        return template.render(
+            default=default,
+            default_classes=self.default_classes,
+            default_input_props=self.default_input_props,
+            field_name=field_name,
+            field_type="date",
+        )
+
+class RawJSONField(PromptFormField):
+    def inner_html(self, template_env=None, default="", readonly=False):
+        template = template_env.get_template("components/raw-json_field.html")
+        return template.render(
+            default=default,
+            default_input_props=self.default_input_props,
+            default_classes=self.default_classes,
+        )
+
+    def clean(self, data, request: Request | None = None):
+        if type(data.get(self.name)) == str:
+            data[self.name] = json.loads(data.get(self.name, "{}"))
 
 class WebChatTemplateEnv:
     def __init__(self, extra_template_dir: str = None):
@@ -48,52 +261,29 @@ class WebChatTemplateEnv:
         """
         return self.template_env
 
-
-class FormInput:
-    def __init__(
-        self,
-        label: str,
-        name: str,
-        input_type: str,
-        step: float | int = None,
-        required=False,
-    ):
-        """
-        Class for defining one input field
-        :param label: Text next to input window
-        :param name: Identifier of input
-        :param input_type: html input type
-        :param step: can be floating point number or integer
-        :param required: html input required parameter
-        """
-        self.label = label
-        self.name = name
-        self.input_type = input_type
-        self.step = step
-        self.required = required
-
-
 class WebChatPromptForm:
-    def __init__(self, form_inputs: List[FormInput], awaiting_text: str = None):
+    def __init__(self, fields: [PromptFormBaseField], awaiting_text: str = None):
         """
         Class for defining the form.
         :param form_inputs: list of individual input fields
         :param awaiting_text: optional awaiting message to render instead of inputs
         """
-        self.form_inputs = form_inputs
+        self.fields = fields
         self.awaiting_text = awaiting_text
 
-    def get_context(self) -> dict:
+    def get_context(self, template_env: Environment) -> dict:
+        rendered_inputs = [
+            field.get_html(template_env) for field in self.fields
+        ]
         context = {
-            "form_inputs": self.form_inputs,
+            "form_inputs": rendered_inputs,
             "awaiting_text": self.awaiting_text,
             "form_id": f"prompt-form-{int(time.time() * 1000)}",
         }
         return context
-
     def get_html(self, template_env: Environment) -> str:
         template = template_env.get_template("components/prompt-form.html")
-        return template.render(self.get_context())
+        return template.render(self.get_context(template_env))
 
 
 class WebChatWelcomeWindow:

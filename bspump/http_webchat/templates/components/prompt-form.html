@@ -13,19 +13,9 @@
         />
       </div>
     {% else %}
-      {% for input in form_inputs %}
-          <div class="flex items-center">
-            <label for="{{ input.name }}" class="text-primary dark:text-primary-dark text-sm font-semibold w-[120px]">{{ input.label }}</label>
-            <input
-              type="{{ input.input_type }}"
-              id="{{ input.name }}"
-              name="{{ input.name }}"
-              class="text-primary border border-secondary text-sm px-4 py-1 rounded-md font-mono w-full max-w-[150px] mx-2"
-              {% if input.step is not none %} step="{{ input.step }}" {% endif %}
-              {% if input.required %} required {% endif %}
-            />
-          </div>
-    {% endfor %}
+      {% for input_html in form_inputs %}
+          {{ input_html | safe }}
+      {% endfor %}
     {% endif %}
   </div>
 

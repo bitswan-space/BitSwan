@@ -19,7 +19,8 @@ from bspump.http_webchat.webchat import (
     WebChatTemplateEnv,
     WebChatResponse,
     WebChatWelcomeWindow,
-    FormInput,
+    PromptFormBaseField,
+
 )
 
 """
@@ -141,7 +142,7 @@ async def general_proxy(request):
         return aiohttp.web.Response(status=500, text=f"Proxy error: {str(e)}")
 
 
-async def set_prompt(form_inputs: list, bearer_token: str) -> dict:
+async def set_prompt(fields: list[PromptFormBaseField], bearer_token: str) -> dict:
     payload = jwt.decode(bearer_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
     chat_id = payload["chat_id"]
     chat_data = CHATS[chat_id]
@@ -150,7 +151,7 @@ async def set_prompt(form_inputs: list, bearer_token: str) -> dict:
     await chat_data["ready_event"].wait()
 
     future = asyncio.get_event_loop().create_future()
-    prompt_html = WebChatPromptForm(form_inputs).get_html(
+    prompt_html = WebChatPromptForm(fields).get_html(
         template_env=WebChatTemplateEnv().get_jinja_env()
     )
 
@@ -224,7 +225,6 @@ async def parse_response_strings(
         "WebChatResponse": WebChatResponse,
         "WebChatWelcomeWindow": WebChatWelcomeWindow,
         "WebChatPromptForm": WebChatPromptForm,
-        "FormInput": FormInput,
         "set_prompt": set_prompt,
         "tell_user": tell_user,
     }
