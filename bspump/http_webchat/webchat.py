@@ -14,6 +14,7 @@ from jinja2 import Environment
 
 app = aiohttp.web.Application()
 
+
 class PromptFormBaseField:
     def __init__(self, name, **kwargs):
         self.name = name
@@ -85,7 +86,9 @@ class PromptFormField(PromptFormBaseField):
             display=self.display,
             default_classes=self.default_classes,
             hidden=self.hidden,
-            inner_html=self.inner_html(template_env, default, self.readonly, self.field_name),
+            inner_html=self.inner_html(
+                template_env, default, self.readonly, self.field_name
+            ),
         )
 
     def get_params(self) -> dict:
@@ -97,7 +100,9 @@ class CheckboxField(PromptFormField):
         super().__init__(*args, **kwargs)
         self.default = self.default or False
 
-    def inner_html(self, template_env=None, default="", readonly=False, field_name=None):
+    def inner_html(
+        self, template_env=None, default="", readonly=False, field_name=None
+    ):
         readonly_attr = "disabled" if readonly else ""
 
         template = template_env.get_template("components/input-field.html")
@@ -115,12 +120,15 @@ class CheckboxField(PromptFormField):
         if type(data.get(self.name)) == str:
             data[self.name] = data.get(self.name, False) == "on"
 
+
 class ChoiceField(PromptFormField):
     def __init__(self, name, choices, **kwargs):
         super().__init__(name, **kwargs)
         self.choices = choices
 
-    def inner_html(self, template_env=None, default="", readonly=False, field_name=None):
+    def inner_html(
+        self, template_env=None, default="", readonly=False, field_name=None
+    ):
         template = template_env.get_template("components/choice-field.html")
         return template.render(
             default=default,
@@ -129,12 +137,15 @@ class ChoiceField(PromptFormField):
             default_input_props=self.default_input_props,
         )
 
+
 class FileField(PromptFormField):
     """
     The value ends up being the bytes of the uploaded file.
     """
 
-    def inner_html(self, template_env=None, default="", readonly=False, field_name=None):
+    def inner_html(
+        self, template_env=None, default="", readonly=False, field_name=None
+    ):
         template = template_env.get_template("components/input-field.html")
         return template.render(
             default_input_props=self.default_input_props,
@@ -154,6 +165,7 @@ class FileField(PromptFormField):
             else:
                 data[self.name] = data[self.name].file
 
+
 class FloatField(PromptFormField):
     def inner_html(self, template_env=None, default=0, readonly=False, field_name=None):
         if not default:
@@ -171,6 +183,7 @@ class FloatField(PromptFormField):
     def clean(self, data, request: Request | None = None):
         if type(data.get(self.name)) == str:
             data[self.name] = float(data.get(self.name, 0))
+
 
 class IntField(PromptFormField):
     def inner_html(self, template_env=None, default=0, readonly=False, field_name=None):
@@ -190,8 +203,11 @@ class IntField(PromptFormField):
         if type(data.get(self.name)) == str:
             data[self.name] = int(data.get(self.name, 0))
 
+
 class TextField(PromptFormField):
-    def inner_html(self, template_env=None, default="", readonly=False, field_name=None):
+    def inner_html(
+        self, template_env=None, default="", readonly=False, field_name=None
+    ):
         template = template_env.get_template("components/input-field.html")
         return template.render(
             default=default,
@@ -201,8 +217,11 @@ class TextField(PromptFormField):
             field_type="text",
         )
 
+
 class DateField(PromptFormField):
-    def inner_html(self, template_env=None, default="", readonly=False, field_name=None):
+    def inner_html(
+        self, template_env=None, default="", readonly=False, field_name=None
+    ):
         template = template_env.get_template("components/input-field.html")
         return template.render(
             default=default,
@@ -211,6 +230,7 @@ class DateField(PromptFormField):
             field_name=field_name,
             field_type="date",
         )
+
 
 class RawJSONField(PromptFormField):
     def inner_html(self, template_env=None, default="", readonly=False):
@@ -224,6 +244,7 @@ class RawJSONField(PromptFormField):
     def clean(self, data, request: Request | None = None):
         if type(data.get(self.name)) == str:
             data[self.name] = json.loads(data.get(self.name, "{}"))
+
 
 class WebChatTemplateEnv:
     def __init__(self, extra_template_dir: str = None):
@@ -261,6 +282,7 @@ class WebChatTemplateEnv:
         """
         return self.template_env
 
+
 class WebChatPromptForm:
     def __init__(self, fields: [PromptFormBaseField], awaiting_text: str = None):
         """
@@ -272,15 +294,14 @@ class WebChatPromptForm:
         self.awaiting_text = awaiting_text
 
     def get_context(self, template_env: Environment) -> dict:
-        rendered_inputs = [
-            field.get_html(template_env) for field in self.fields
-        ]
+        rendered_inputs = [field.get_html(template_env) for field in self.fields]
         context = {
             "form_inputs": rendered_inputs,
             "awaiting_text": self.awaiting_text,
             "form_id": f"prompt-form-{int(time.time() * 1000)}",
         }
         return context
+
     def get_html(self, template_env: Environment) -> str:
         template = template_env.get_template("components/prompt-form.html")
         return template.render(self.get_context(template_env))
@@ -307,11 +328,7 @@ class WebChatWelcomeWindow:
 
 
 class WebChatResponse:
-    def __init__(
-        self,
-        input_html: str,
-        user_response: bool = False
-    ):
+    def __init__(self, input_html: str, user_response: bool = False):
         """
         Class for creatin one response
         :param input_html: could be just string or html string
