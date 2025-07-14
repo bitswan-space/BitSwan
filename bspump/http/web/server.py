@@ -22,7 +22,10 @@ from .components import (
     Button,  # noqa: F401
     DateField,  # noqa: F401
     DateTimeField,  # noqa: F401
+    EditableTableComponent
 )
+
+from .components.registry import get_field_class, get_all_field_classes
 
 
 from .template_env import env
@@ -462,6 +465,93 @@ class JWTWebFormSource(ProtectedWebFormSource):
 
         return await self.clean_and_process(request, data)
 
+
+class DynamicWebFormSource(WebFormSource):
+    """
+    WebFormSource that can dynamically add fields to the form
+    based on a configuration provided in a URL query parameter.
+    """
+
+    URL_TEMPLATE_KEY = "dynamic_fields___template"
+
+    def __init__(
+        self,
+        app,
+        pipeline,
+        connection="DefaultWebServerConnection",
+        route="/",
+        fields: list[BaseField] | Callable[[Request], list[BaseField]] = lambda r: [],
+        id=None,
+        config=None,
+        form_intro="",
+    ):
+        self.static_fields = fields
+        self.dynamic_template = []
+
+        super().__init__(
+            app,
+            pipeline,
+            connection=connection,
+            route=route,
+            fields=self.generate_combined_fields,
+            id=id,
+            config=config,
+            form_intro=form_intro,
+        )
+
+    def generate_combined_fields(self, request: Request) -> list[BaseField]:
+        """Generate fields by combining static fields with URL template fields."""
+        # Parse URL template
+        template_str = request.query.get(self.URL_TEMPLATE_KEY)
+        if template_str:
+            try:
+                self.dynamic_template = json.loads(template_str)
+                if not isinstance(self.dynamic_template, list):
+                    self.dynamic_template = []
+            except json.JSONDecodeError:
+                self.dynamic_template = []
+        else:
+            self.dynamic_template = []
+
+        # Start with static fields
+        fields = []
+        if callable(self.static_fields):
+            fields.extend(self.static_fields(request))
+        elif isinstance(self.static_fields, list):
+            fields.extend(self.static_fields)
+
+        # Add dynamic fields
+        for field_config in self.dynamic_template:
+            field = self.create_field_from_config(field_config)
+            if field:
+                fields.append(field)
+
+        return fields
+
+    def create_field_from_config(self, config: dict) -> BaseField | None:
+        """Create a field from configuration dict."""
+        name = config.get("name")
+        if not name:
+            return None
+
+        field_type = config.get("type", "TextField")
+        display = config.get("display", name)
+        required = config.get("required", False) in [True, "on", "true"]
+        default = config.get("default", "")
+
+        field_class = get_field_class(field_type)
+
+        if field_type == "ChoiceField":
+            choices = [c.strip() for c in config.get("choices", "").split(',') if c.strip()]
+            return field_class(name, choices=choices, display=display, required=required, default=default)
+        else:
+            return field_class(name, display=display, required=required, default=default)
+
+    async def handle_post(self, request: Request):
+        self.fields = self.generate_combined_fields(request)
+
+        return await super().handle_post(request)
+    
 
 class WebSink(Sink):
     """

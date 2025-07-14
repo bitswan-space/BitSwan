@@ -1,0 +1,191 @@
+<div class="flex justify-center mt-4 {% if hidden %}hidden{% endif %}">
+    <div class="sm:col-span-4 w-full max-w-4xl">
+        <label for="{{ field_name }}" class="block text-base font-bold text-cyan-950 mb-4">{{ display }}</label>
+        
+        <div class="bg-slate-50 border-2 border-slate-200 rounded-lg p-4">
+            <!-- Table Header -->
+            <div class="mb-4">
+                <h3 class="text-lg font-semibold text-gray-800 mb-2">Define Table Fields</h3>
+                <p class="text-sm text-gray-600">Add and configure fields for your dynamic table</p>
+            </div>
+            
+            <!-- Field Definition Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full border border-gray-300 rounded-lg" id="{{ field_name }}_table">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="border border-gray-300 px-3 py-2 text-left font-semibold">Field Name</th>
+                            <th class="border border-gray-300 px-3 py-2 text-left font-semibold">Display Name</th>
+                            <th class="border border-gray-300 px-3 py-2 text-left font-semibold">Field Type</th>
+                            <th class="border border-gray-300 px-3 py-2 text-left font-semibold">Required</th>
+                            <th class="border border-gray-300 px-3 py-2 text-left font-semibold">Options</th>
+                            <th class="border border-gray-300 px-3 py-2 text-left font-semibold">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="{{ field_name }}_tbody">
+                        <!-- Dynamic rows will be added here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Add Field Button -->
+            <div class="mt-4">
+                <button type="button" 
+                        onclick="addTableField('{{ field_name }}')"
+                        class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg">
+                    Add Field
+                </button>
+            </div>
+            
+            <!-- Hidden input to store the JSON data -->
+            <input type="hidden" 
+                   name="{{ field_name }}" 
+                   id="{{ field_name }}_data" 
+                   value="{{ default if default else '[]' }}">
+        </div>
+    </div>
+</div>
+
+<script>
+// Global counter for unique field IDs
+let fieldCounter = 0;
+
+function addTableField(tableName) {
+    const tbody = document.getElementById(tableName + '_tbody');
+    const row = document.createElement('tr');
+    const rowId = 'field_' + (++fieldCounter);
+    
+    row.innerHTML = `
+        <td class="border border-gray-300 px-2 py-1">
+            <input type="text" 
+                   class="w-full p-1 border border-gray-300 rounded text-sm" 
+                   placeholder="field_name"
+                   onchange="updateTableData('${tableName}')">
+        </td>
+        <td class="border border-gray-300 px-2 py-1">
+            <input type="text" 
+                   class="w-full p-1 border border-gray-300 rounded text-sm" 
+                   placeholder="Display Name"
+                   onchange="updateTableData('${tableName}')">
+        </td>
+        <td class="border border-gray-300 px-2 py-1">
+            <select class="w-full p-1 border border-gray-300 rounded text-sm" 
+                    onchange="toggleChoicesField(this); updateTableData('${tableName}')">
+                {% for field_type in available_field_types %}
+                <option value="{{ field_type }}">{{ field_type }}</option>
+                {% endfor %}
+            </select>
+        </td>
+        <td class="border border-gray-300 px-2 py-1 text-center">
+            <input type="checkbox" 
+                   class="accent-cyan-600" 
+                   checked
+                   onchange="updateTableData('${tableName}')">
+        </td>
+        <td class="border border-gray-300 px-2 py-1">
+            <input type="text" 
+                   class="w-full p-1 border border-gray-300 rounded text-sm choices-field" 
+                   placeholder="Option1,Option2,Option3"
+                   style="display:none;"
+                   onchange="updateTableData('${tableName}')">
+        </td>
+        <td class="border border-gray-300 px-2 py-1 text-center">
+            <button type="button" 
+                    onclick="removeTableField(this, '${tableName}')"
+                    class="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded text-sm">
+                Remove
+            </button>
+        </td>
+    `;
+    
+    tbody.appendChild(row);
+    updateTableData(tableName);
+}
+
+function removeTableField(button, tableName) {
+    button.closest('tr').remove();
+    updateTableData(tableName);
+}
+
+function toggleChoicesField(selectElement) {
+    const choicesField = selectElement.closest('tr').querySelector('.choices-field');
+    if (selectElement.value === 'ChoiceField') {
+        choicesField.style.display = 'block';
+        choicesField.required = true;
+    } else {
+        choicesField.style.display = 'none';
+        choicesField.required = false;
+        choicesField.value = '';
+    }
+}
+
+function updateTableData(tableName) {
+    const tbody = document.getElementById(tableName + '_tbody');
+    const dataInput = document.getElementById(tableName + '_data');
+    const rows = tbody.querySelectorAll('tr');
+    
+    const fields = [];
+    
+    rows.forEach(row => {
+        const inputs = row.querySelectorAll('input, select');
+        if (inputs.length >= 5) {
+            const fieldName = inputs[0].value.trim();
+            const displayName = inputs[1].value.trim();
+            const fieldType = inputs[2].value;
+            const required = inputs[3].checked;
+            const choices = inputs[4].value.trim();
+            
+            if (fieldName && displayName) {
+                const field = {
+                    name: fieldName,
+                    display: displayName,
+                    type: fieldType,
+                    required: required
+                };
+                
+                if (fieldType === 'ChoiceField' && choices) {
+                    field.choices = choices.split(',').map(c => c.trim()).filter(c => c);
+                }
+                
+                fields.push(field);
+            }
+        }
+    });
+    
+    dataInput.value = JSON.stringify(fields);
+}
+
+// Initialize with default data if provided
+document.addEventListener('DOMContentLoaded', function() {
+    const tables = document.querySelectorAll('[id$="_data"]');
+    tables.forEach(input => {
+        const tableName = input.id.replace('_data', '');
+        try {
+            const defaultData = JSON.parse(input.value || '[]');
+            if (defaultData.length > 0) {
+                defaultData.forEach(field => {
+                    addTableField(tableName);
+                    const tbody = document.getElementById(tableName + '_tbody');
+                    const lastRow = tbody.lastElementChild;
+                    const inputs = lastRow.querySelectorAll('input, select');
+                    
+                    if (inputs.length >= 5) {
+                        inputs[0].value = field.name || '';
+                        inputs[1].value = field.display || '';
+                        inputs[2].value = field.type || 'TextField';
+                        inputs[3].checked = field.required !== false;
+                        
+                        if (field.type === 'ChoiceField' && field.choices) {
+                            inputs[4].value = field.choices.join(', ');
+                            inputs[4].style.display = 'block';
+                        }
+                    }
+                });
+                updateTableData(tableName);
+            }
+        } catch (e) {
+            console.error('Error parsing default table data:', e);
+        }
+    });
+});
+</script>

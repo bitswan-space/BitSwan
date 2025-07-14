@@ -11,7 +11,8 @@ from .raw_json import RawJSONField
 from .button import Button
 from .date_field import DateField
 from .datetime_field import DateTimeField
-
+from .editable_table import EditableTableComponent
+from .registry import FIELD_REGISTRY, get_field_class, get_all_field_classes
 __all__ = [
     "BaseField",
     "Field",
@@ -26,4 +27,8 @@ __all__ = [
     "Button",
     "DateField",
     "DateTimeField",
+    "EditableTableComponent",
+    "FIELD_REGISTRY",
+    "get_field_class",
+    "get_all_field_classes"
 ]
