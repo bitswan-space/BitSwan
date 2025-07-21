@@ -30,7 +30,7 @@ $ bitswan notebook examples/WebForms/main.ipynb
 When developing web endpoints it can be helpful to instruct the pipeline to automatically restart if the source code changes.
 
 ```
-$ bitswan notebook examples/WebForms/main.ipynb --watch
+$ bitswan-notebook examples/WebForms/main.ipynb --watch
 ```
 
 Running Tests
