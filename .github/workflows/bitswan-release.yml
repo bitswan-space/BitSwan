@@ -34,11 +34,11 @@ jobs:
           echo "version=${CALVER_VERSION}" >> $GITHUB_OUTPUT
           echo "Generated CalVer version: ${CALVER_VERSION}"
 
-      - name: Update version in __version__.py
+      - name: Update version file
         run: |
-          # Update the version in bspump/__version__.py
-          sed -i "s/__version__ = .*/__version__ = \"${{ steps.calver.outputs.version }}\"/" bspump/__version__.py
-          cat bspump/__version__.py
+          # Update the version file with the CalVer version
+          sed -i "s/__version__ = \".*\"/__version__ = \"${{ steps.calver.outputs.version }}\"/" bspump/__version__.py
+          echo "Updated version file with: ${{ steps.calver.outputs.version }}"
 
       - name: Build package
         run: python -m build
@@ -79,7 +79,6 @@ jobs:
           body: |
             ## CalVer Release v${{ steps.calver.outputs.version }}
             
-            **Release Date:** $(date +%Y-%m-%d)
             **Build Number:** ${{ github.run_number }}
             **Commit:** ${{ github.sha }}
             

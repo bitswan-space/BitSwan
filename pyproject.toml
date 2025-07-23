@@ -87,8 +87,9 @@ include = [
 ]
 
 [tool.hatch.version]
-source = "versioningit"
-default-version = "0.0.0"
+source = "regex"
+path = "bspump/__version__.py"
+pattern = '__version__ = "(?P<version>[^"]+)"'
 
 [project.urls]
 homepage = "https://github.com/bitswan-space/BitSwan"
