@@ -30,7 +30,7 @@ jobs:
         bitswan-notebook --test examples/Testing/AutoPipeline/main.ipynb
 
 
-    - name: Run linter
+    - name: Run linter and formatter
       run: |
-        black --check bspump
         ruff check bspump
+        ruff format --check bspump

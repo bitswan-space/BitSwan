@@ -59,7 +59,6 @@ dev = [
     "pytest",
     "pytest-asyncio",
     "ruff",
-    "black==23.1.0",
     "watchdog==6.0.0"
 ]
 pyjq-support = [
@@ -72,6 +71,23 @@ bitswan-notebook = "bspump.main:main"
 
 [tool.ruff]
 lint.ignore = ["E501", "E402", "E721", "E712"]
+
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
+# Enable auto-formatting of code examples in docstrings. Markdown,
+# reStructuredText code/literal blocks and doctests are all supported.
+docstring-code-format = true
 
 [build-system]
 requires = ["hatchling","versioningit"]
