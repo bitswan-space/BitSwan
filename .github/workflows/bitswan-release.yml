@@ -2,8 +2,8 @@ name: Release Workflow (PyPI, GitHub Release)
 
 on:
   push:
-    tags:
-      - "*"
+    branches:
+      - master
 
 jobs:
   build-and-upload-pypi:
@@ -21,6 +21,24 @@ jobs:
 
       - name: Install build tools
         run: pip install build twine
+
+      - name: Generate CalVer version
+        id: calver
+        run: |
+          # Get current date in YYYY.MM.DD format
+          DATE_VERSION=$(date +%Y.%m.%d)
+          # Get GitHub run number
+          BUILD_NUMBER=${{ github.run_number }}
+          # Combine for final version
+          CALVER_VERSION="${DATE_VERSION}.${BUILD_NUMBER}"
+          echo "version=${CALVER_VERSION}" >> $GITHUB_OUTPUT
+          echo "Generated CalVer version: ${CALVER_VERSION}"
+
+      - name: Update version in __version__.py
+        run: |
+          # Update the version in bspump/__version__.py
+          sed -i "s/__version__ = .*/__version__ = \"${{ steps.calver.outputs.version }}\"/" bspump/__version__.py
+          cat bspump/__version__.py
 
       - name: Build package
         run: python -m build
@@ -41,14 +59,31 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Generate CalVer version
+        id: calver
+        run: |
+          # Get current date in YYYY.MM.DD format
+          DATE_VERSION=$(date +%Y.%m.%d)
+          # Get GitHub run number
+          BUILD_NUMBER=${{ github.run_number }}
+          # Combine for final version
+          CALVER_VERSION="${DATE_VERSION}.${BUILD_NUMBER}"
+          echo "version=${CALVER_VERSION}" >> $GITHUB_OUTPUT
+          echo "Generated CalVer version: ${CALVER_VERSION}"
+
       - name: Create GitHub Release
         uses: actions/create-release@v1
         with:
-          tag_name: ${{ github.ref_name }}
-          release_name: "Release ${{ github.ref_name }}"
+          tag_name: "v${{ steps.calver.outputs.version }}"
+          release_name: "Release v${{ steps.calver.outputs.version }}"
           body: |
-            ## Changelog
-            - Automated release triggered by tag `${{ github.ref_name }}`.
+            ## CalVer Release v${{ steps.calver.outputs.version }}
+            
+            **Release Date:** $(date +%Y-%m-%d)
+            **Build Number:** ${{ github.run_number }}
+            **Commit:** ${{ github.sha }}
+            
+            This is an automated release triggered by a push to master.
           draft: false
           prerelease: false
         env:
