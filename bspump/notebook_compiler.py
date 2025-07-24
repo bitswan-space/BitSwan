@@ -1,5 +1,6 @@
 import ast
 import re
+import markdown
 
 config = None
 __bitswan_dev = False
@@ -22,7 +23,6 @@ def indent_code(lines: list[str]) -> list[str]:
     multiline_quote_string = None
     indent_lines = []
     lines_out = []
-    # First we mark which lines to indent
     for i, line in enumerate(lines):
         if not multiline_quote_string and line.strip(" ") != "":
             indent_lines.append(i)
@@ -33,7 +33,6 @@ def indent_code(lines: list[str]) -> list[str]:
             multiline_quote_string = '"""'
         if line.count("'''") % 2 == 1:
             multiline_quote_string = "'''"
-    # Then we indent them.
     for i in range(len(lines)):
         _indent = "    " if i in indent_lines else ""
         lines_out.append(_indent + lines[i])
@@ -50,6 +49,7 @@ def sanitize_flow_name(flow_name: str) -> str:
 
 class NotebookCompiler:
     _in_autopipeline = False
+    _in_webchat_context = False
     _cell_number: int = 0
     _cell_processor_contents: dict[int, str] = {}
     _webchat_flows: dict[str, str] = {}
@@ -126,22 +126,32 @@ class NotebookCompiler:
                     ast.parse(clean_code), "auto_pipeline"
                 ):
                     self._in_autopipeline = True
+                    if "WebChatSource":
+                        self._in_webchat_context = True
 
         elif cell["cell_type"] == "markdown":
-            if self._current_flow_name is not None:
-                markdown_content = cell["source"]
-                if isinstance(markdown_content, list):
-                    markdown_content = "".join(markdown_content)
-                markdown_content = markdown_content.strip()
-                if markdown_content:
-                    escaped_md = markdown_content.replace('"""', '\\"\\"\\"')
-                    response_code = f'    await tell_user(f"""{escaped_md}""", event[\'bearer_token\'])\n'
+            markdown_content = cell["source"]
+            if isinstance(markdown_content, list):
+                markdown_content = "".join(markdown_content)
+            markdown_content = markdown_content.strip()
+            if markdown_content:
+                if self._current_flow_name is not None or (self._in_autopipeline and self._in_webchat_context):
+                    html_content = markdown.markdown(markdown_content, extensions=['fenced_code', 'tables', 'codehilite'])
+                    # Escape quotes for f-string
+                    escaped_html = html_content.replace('"', '\\"').replace("'", "\\'")
+                    response_code = f'    await tell_user(f"""{escaped_html}""", event[\'bearer_token\'], is_html=True)\n'
+                    
                     if self._current_flow_name is not None:
+                        # Add to webchat flow
                         self._webchat_flows[self._current_flow_name] += response_code
+                    elif self._in_autopipeline and self._in_webchat_context:
+                        # Add to processor content for auto_pipeline in webchat context
+                        self._cell_processor_contents[self._cell_number] = response_code
 
     def compile_notebook(self, ntb, out_path="tmp.py"):
         self._cell_number = 0
         self._in_autopipeline = False
+        self._in_webchat_context = False
         self._cell_processor_contents = {}
         with open(out_path, "w") as f:
             for cell in ntb["cells"]:
@@ -153,16 +163,9 @@ async def processor_internal(inject, event):
 """
             f.write(step_func_code)
             for flow_name, steps in self._webchat_flows.items():
-                print(steps)
                 flow_func_code = (
                     f"@create_webchat_flow('/{flow_name.replace('-', '_')}')\n"
                     + f"async def {flow_name.replace('-', '_')}(event):\n"
                     + f"{steps}\n"
                 )
-                # print(flow_func_code)
                 f.write(flow_func_code)
-
-        # Print the contents of the written file
-        with open(out_path, "r") as f:
-            print(f"\n--- Contents of {out_path} ---\n")
-            print(f.read())
