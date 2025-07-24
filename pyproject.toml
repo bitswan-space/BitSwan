@@ -51,7 +51,8 @@ dependencies = [
         "idna>=3.7",
         "cryptography>=44.0.1",
         "importlib-resources",
-        "aiohttp_jinja2"
+        "aiohttp_jinja2",
+        "markdown>=3.5.0"
 ]
 
 [project.optional-dependencies]
