@@ -1,0 +1,50 @@
+from aiohttp.web import Request
+from bspump.http.web.components import BaseField
+from bspump.http.web.template_env import env
+import json
+
+
+class TableComponent(BaseField):
+    """
+    A component that displays data in a table format with configurable columns.
+    Supports adding new rows with editable fields and various input types.
+    """
+    
+    def __init__(self, name, data_provider=None, columns=None, editable=False, **kwargs):
+        super().__init__(name, **kwargs)
+        self.field_name = f"f___{self.name}"
+        self.data_provider = data_provider  
+        self.columns = columns or []  
+        self.editable = editable  
+        
+    def html(self, default=""):
+        data = []
+        if self.data_provider:
+            try:
+                data = self.data_provider()
+            except Exception as e:
+                data = [{"error": f"Failed to load data: {str(e)}"}]
+        
+        template = env.get_template("table.html")
+        return template.render(
+            name=self.name,
+            field_name=self.field_name,
+            display=self.display,
+            columns=self.columns,
+            data=data,
+            hidden=self.hidden,
+            editable=self.editable,
+            default=default
+        )
+    
+    def restructure_data(self, dfrom, dto):
+        table_data = dfrom.get(self.field_name, "[]")
+        try:
+            dto[self.name] = json.loads(table_data)
+        except (json.JSONDecodeError, TypeError):
+            dto[self.name] = []
+        
+    def clean(self, data, request: Request = None):
+        pass
+    
+ 
