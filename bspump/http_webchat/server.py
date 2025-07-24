@@ -178,8 +178,8 @@ async def set_prompt(fields: list[PromptFormBaseField], bearer_token: str) -> di
     return submitted_data
 
 
-async def tell_user(response_text, bearer_token):
-    response = WebChatResponse(input_html=response_text)
+async def tell_user(response_text, bearer_token, is_html: bool = False):
+    response = WebChatResponse(input_html=response_text, is_html=is_html)
     payload = jwt.decode(bearer_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
     chat_id = payload["chat_id"]
     chat_data = CHATS[chat_id]
@@ -188,7 +188,7 @@ async def tell_user(response_text, bearer_token):
     await chat_data["ready_event"].wait()
 
     websockets = WEBSOCKETS.get(chat_id, set())
-    chat_data["chat_history"].append({"response": response_text})
+    chat_data["chat_history"].append({"response": response_text, "is_html": is_html})
 
     for ws in list(websockets):
         try:
@@ -370,7 +370,8 @@ class WebChatSource(WebChatRouteSource):
         chat_history_html = ""
         for item in chat_data["chat_history"]:
             if "response" in item:
-                html = WebChatResponse(input_html=item["response"]).get_html(
+                is_html = item.get("is_html", False)
+                html = WebChatResponse(input_html=item["response"], is_html=is_html).get_html(
                     template_env=template_env
                 )
             elif "prompt_response" in item:
