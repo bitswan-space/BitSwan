@@ -9,14 +9,16 @@ class TableComponent(BaseField):
     A component that displays data in a table format with configurable columns.
     Supports adding new rows with editable fields and various input types.
     """
-    
-    def __init__(self, name, data_provider=None, columns=None, editable=False, **kwargs):
+
+    def __init__(
+        self, name, data_provider=None, columns=None, editable=False, **kwargs
+    ):
         super().__init__(name, **kwargs)
         self.field_name = f"f___{self.name}"
-        self.data_provider = data_provider  
-        self.columns = columns or []  
-        self.editable = editable  
-        
+        self.data_provider = data_provider
+        self.columns = columns or []
+        self.editable = editable
+
     def html(self, default=""):
         data = []
         if self.data_provider:
@@ -24,7 +26,7 @@ class TableComponent(BaseField):
                 data = self.data_provider()
             except Exception as e:
                 data = [{"error": f"Failed to load data: {str(e)}"}]
-        
+
         template = env.get_template("table.html")
         return template.render(
             name=self.name,
@@ -34,17 +36,15 @@ class TableComponent(BaseField):
             data=data,
             hidden=self.hidden,
             editable=self.editable,
-            default=default
+            default=default,
         )
-    
+
     def restructure_data(self, dfrom, dto):
         table_data = dfrom.get(self.field_name, "[]")
         try:
             dto[self.name] = json.loads(table_data)
         except (json.JSONDecodeError, TypeError):
             dto[self.name] = []
-        
+
     def clean(self, data, request: Request = None):
         pass
-    
- 
