@@ -8,6 +8,14 @@ class TableComponent(BaseField):
     """
     A component that displays data in a table format with configurable columns.
     Supports adding new rows with editable fields and various input types.
+    Example of defining columns:
+    cols = [
+        {"key": "email", "display": "Email Address", "input_type": "email", "required": True},
+        {"key": "first_name", "display": "First Name", "input_type": "text", "required": False},
+        {"key": "last_name", "display": "Last Name", "input_type": "text", "required": False},
+        {"key": "phone", "display": "Phone Number", "input_type": "text", "required": True},
+        {"key": "notes", "display": "Notes", "input_type": "textarea", "required": False},
+    ]
     """
 
     def __init__(
