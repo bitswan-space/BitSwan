@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import re
 import logging
 
@@ -121,83 +122,84 @@ async def general_proxy(request):
     except Exception as e:
         return aiohttp.web.Response(status=500, text=f"Proxy error: {str(e)}")
 
+class WebChatFlow:
+    def __init__(self, event):
+        self.bearer_token = event["bearer_token"]
 
-async def set_prompt(fields: list[PromptFormBaseField], bearer_token: str) -> dict:
-    payload = jwt.decode(bearer_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-    chat_id = payload["chat_id"]
-    chat_data = CHATS[chat_id]
+    async def set_prompt(self, fields: list[PromptFormBaseField]) -> dict:
+        payload = jwt.decode(self.bearer_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        chat_id = payload["chat_id"]
+        chat_data = CHATS[chat_id]
 
-    # Wait until the WebSocket is ready = someone sent the "ready" message
-    await chat_data["ready_event"].wait()
+        # Wait until the WebSocket is ready = someone sent the "ready" message
+        await chat_data["ready_event"].wait()
 
-    future = asyncio.get_event_loop().create_future()
-    prompt_html = WebChatPromptForm(fields).get_html(
-        template_env=WebChatTemplateEnv().get_jinja_env()
-    )
+        future = asyncio.get_event_loop().create_future()
+        prompt_html = WebChatPromptForm(fields).get_html(
+            template_env=WebChatTemplateEnv().get_jinja_env()
+        )
 
-    chat_data["current_prompt"] = prompt_html
-    chat_data["_pending_prompt_future"] = future
+        chat_data["current_prompt"] = prompt_html
+        chat_data["_pending_prompt_future"] = future
 
-    websockets = WEBSOCKETS.get(chat_id, set())
-    for ws in websockets.copy():
-        try:
-            await ws.send_str(prompt_html)
-        except Exception as e:
-            WEBSOCKETS[chat_id].discard(ws)
-            print(f"WebSocket error for chat_token={chat_id}: {e}")
+        websockets = WEBSOCKETS.get(chat_id, set())
+        for ws in websockets.copy():
+            try:
+                await ws.send_str(prompt_html)
+            except Exception as e:
+                WEBSOCKETS[chat_id].discard(ws)
+                print(f"WebSocket error for chat_token={chat_id}: {e}")
 
-    submitted_data = await future
-    awaiting_html = WebChatPromptForm(
-        [], awaiting_text="Awaiting prompt from server..."
-    ).get_html(template_env=WebChatTemplateEnv().get_jinja_env())
-    chat_data["current_prompt"] = awaiting_html
+        submitted_data = await future
+        awaiting_html = WebChatPromptForm(
+            [], awaiting_text="Awaiting prompt from server..."
+        ).get_html(template_env=WebChatTemplateEnv().get_jinja_env())
+        chat_data["current_prompt"] = awaiting_html
 
-    for ws in websockets.copy():
-        try:
-            await ws.send_str(awaiting_html)
-        except Exception as e:
-            WEBSOCKETS[chat_id].discard(ws)
-            print(f"WebSocket error for chat_token={chat_id}: {e}")
+        for ws in websockets.copy():
+            try:
+                await ws.send_str(awaiting_html)
+            except Exception as e:
+                WEBSOCKETS[chat_id].discard(ws)
+                print(f"WebSocket error for chat_token={chat_id}: {e}")
 
-    chat_data["chat_history"].append({"prompt": submitted_data})
+        chat_data["chat_history"].append({"prompt": submitted_data})
 
-    response_obj = WebChatResponse(
-        input_html=f"The submitted data: {submitted_data}", user_response=True
-    )
-    response_html = response_obj.get_html(
-        template_env=WebChatTemplateEnv().get_jinja_env()
-    )
-    chat_data["chat_history"].append({"prompt_response": submitted_data})
-    for ws in websockets.copy():
-        try:
-            await ws.send_str(response_html)
-        except Exception as e:
-            WEBSOCKETS[chat_id].discard(ws)
-            print(f"WebSocket error for chat_token={chat_id}: {e}")
+        response_obj = WebChatResponse(
+            input_html=f"The submitted data: {submitted_data}", user_response=True
+        )
+        response_html = response_obj.get_html(
+            template_env=WebChatTemplateEnv().get_jinja_env()
+        )
+        chat_data["chat_history"].append({"prompt_response": submitted_data})
+        for ws in websockets.copy():
+            try:
+                await ws.send_str(response_html)
+            except Exception as e:
+                WEBSOCKETS[chat_id].discard(ws)
+                print(f"WebSocket error for chat_token={chat_id}: {e}")
 
-    return submitted_data
+        return submitted_data
 
+    async def tell_user(self, response_text, is_html: bool = False):
+        response = WebChatResponse(input_html=response_text, is_html=is_html)
+        payload = jwt.decode(self.bearer_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        chat_id = payload["chat_id"]
+        chat_data = CHATS[chat_id]
 
-async def tell_user(response_text, bearer_token, is_html: bool = False):
-    response = WebChatResponse(input_html=response_text, is_html=is_html)
-    payload = jwt.decode(bearer_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-    chat_id = payload["chat_id"]
-    chat_data = CHATS[chat_id]
+        # Wait for WebSocket client to be ready
+        await chat_data["ready_event"].wait()
 
-    # Wait for WebSocket client to be ready
-    await chat_data["ready_event"].wait()
+        websockets = WEBSOCKETS.get(chat_id, set())
+        chat_data["chat_history"].append({"response": response_text, "is_html": is_html})
 
-    websockets = WEBSOCKETS.get(chat_id, set())
-    chat_data["chat_history"].append({"response": response_text, "is_html": is_html})
-
-    for ws in list(websockets):
-        try:
-            await ws.send_str(
-                response.get_html(template_env=WebChatTemplateEnv().get_jinja_env())
-            )
-        except Exception:
-            websockets.discard(ws)
-
+        for ws in list(websockets):
+            try:
+                await ws.send_str(
+                    response.get_html(template_env=WebChatTemplateEnv().get_jinja_env())
+                )
+            except Exception:
+                websockets.discard(ws)
 
 async def redirect(flow_name: str, event):
     flow_func = WEBCHAT_FLOW_REGISTRY.get(flow_name)
@@ -205,14 +207,37 @@ async def redirect(flow_name: str, event):
         raise ValueError(f"Flow '{flow_name}' not registered")
     await flow_func(event)
 
-
-def create_webchat_flow(name: str):
+def _create_webchat_flow(name: str):
     def decorator(func):
-        WEBCHAT_FLOW_REGISTRY[name] = func
+        # Create a wrapper function that handles the event parameter
+        async def wrapper(event):
+            # Create the chat object
+            chat = WebChatFlow(event)
+            # Call the original function with the chat object
+            return await func(chat)
+        
+        WEBCHAT_FLOW_REGISTRY[name] = wrapper
         return func
 
     return decorator
 
+def create_webchat_flow():
+    frame = inspect.currentframe().f_back
+    caller_locals = frame.f_locals
+    
+    # Try to get event from the wrapper function's locals
+    if 'event' in caller_locals:
+        event = caller_locals['event']
+    else:
+        # Look in the parent frame (the wrapper function)
+        parent_frame = frame.f_back
+        if parent_frame and 'event' in parent_frame.f_locals:
+            event = parent_frame.f_locals['event']
+        else:
+            raise RuntimeError("Could not find event parameter")
+    
+    chat = WebChatFlow(event)
+    return chat
 
 class WebChatServerConnection(Connection):
     ConfigDefaults = {
