@@ -102,7 +102,7 @@ class OpsGenieAlertProvider(AlertHTTPProviderABC):
         "tags": "",
     }
 
-    def __init__(self, config_section_name, *args):
+    def __init__(self, config_section_name, *args, **kwargs):
         super().__init__(config_section_name=config_section_name)
         self.APIKey = self.Config["api_key"]
         self.Tags = re.split(r"[,\s]+", self.Config["tags"], re.MULTILINE)
