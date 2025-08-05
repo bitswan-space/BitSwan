@@ -1,118 +1,37 @@
-# .github/workflows/commit-to-another-repo.yml
-name: Commit Changes to Another Repository
+name: Deploy MkDocs Documentation via FTPS
 
 on:
   push:
     branches: [ main, mkdocs ]
 
 jobs:
-  commit-to-external-repo:
+  build_and_deploy:
     runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout source repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # Fetch full history for better commit info
-    
-    - name: Setup Git configuration
-      run: |
-        git config --global user.name "GitHub Actions Bot"
-        git config --global user.email "actions@github.com"
-    
-    - name: Prepare files to commit
-      run: |
-        # Create a directory with files to be committed to target repo
-        mkdir -p ./files-to-commit
-        
-        # Example: Copy specific files or generate new content
-        # Modify this section based on your needs
-        cp README.md ./files-to-commit/
-        cp -r docs/ ./files-to-commit/ 2>/dev/null || true
-        
-        # Example: Generate a status file with current timestamp
-        echo "Last updated: $(date)" > ./files-to-commit/last-update.txt
-        echo "Source commit: ${{ github.sha }}" >> ./files-to-commit/last-update.txt
-        echo "Triggered by: ${{ github.event_name }}" >> ./files-to-commit/last-update.txt
-    
-    - name: Checkout target repository
-      uses: actions/checkout@v4
-      with:
-        repository: bitswan-space/bitswan-space.github.io  # Replace with target repo
-        token: ${{ secrets.TARGET_REPO_TOKEN }}  # Personal Access Token with repo permissions
-        path: target-repo
-        fetch-depth: 0
-    
-    - name: Copy files to target repository
-      run: |
-        # Copy files from source to target repo
-        cp -r ./files-to-commit/* ./target-repo/
-        
-        # Optional: Copy to specific subdirectory in target repo
-        # mkdir -p ./target-repo/sync-folder
-        # cp -r ./files-to-commit/* ./target-repo/sync-folder/
-    
-    - name: Commit and push changes
-      run: |
-        cd target-repo
-        
-        # Check if there are any changes
-        if [ -n "$(git status --porcelain)" ]; then
-          # Stage all changes
-          git add .
-          
-          # Create commit message with context
-          COMMIT_MSG="Auto-sync from ${{ github.repository }}
-          
-          Source commit: ${{ github.sha }}
-          Source branch: ${{ github.ref_name }}
-          Triggered by: ${{ github.event_name }}
-          Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          
-          # Commit changes
-          git commit -m "$COMMIT_MSG"
-          
-          # Push to target repository
-          git push origin main  # Change 'main' to target branch if different
-          
-          echo "✅ Changes committed and pushed to target repository"
-        else
-          echo "ℹ️ No changes to commit"
-        fi
 
-  # Optional: Add a job to create/update a pull request instead of direct commit
-  create-pull-request:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
-    
     steps:
-    - name: Checkout source repository
-      uses: actions/checkout@v4
-    
-    - name: Prepare files
-      run: |
-        mkdir -p ./files-to-commit
-        cp README.md ./files-to-commit/
-        echo "Updated from PR #${{ github.event.pull_request.number }}" > ./files-to-commit/pr-info.txt
-    
-    - name: Create Pull Request in target repo
-      uses: peter-evans/create-pull-request@v5
-      with:
-        token: ${{ secrets.TARGET_REPO_TOKEN }}
-        path: target-repo
-        repository: YOUR_USERNAME/TARGET_REPOSITORY_NAME
-        branch: auto-sync-${{ github.run_id }}
-        title: "Auto-sync from ${{ github.repository }}"
-        body: |
-          This PR was automatically created to sync changes from [${{ github.repository }}](${{ github.server_url }}/${{ github.repository }}).
-          
-          **Source Details:**
-          - Commit: ${{ github.sha }}
-          - Branch: ${{ github.ref_name }}
-          - PR: #${{ github.event.pull_request.number }}
-          
-          **Changes:**
-          - Updated documentation and files
-          
-          /auto-merge
-        commit-message: "Auto-sync from ${{ github.repository }} (PR #${{ github.event.pull_request.number }})"
+      - name: Checkout repository # Step 1: Get your code from GitHub
+        uses: actions/checkout@v4
+
+      - name: Set up Python # Step 2: Install Python, required for MkDocs
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10' # Use a specific version like '3.9' or '3.10'
+
+      - name: Install MkDocs and dependencies # Step 3: Install MkDocs and your chosen theme/plugins
+        run: pip install mkdocs mkdocs-material
+
+      - name: Build MkDocs site # Step 4: Generate the static HTML/CSS/JS files
+        run: mkdocs build
+
+      - name: Deploy MkDocs to Server via FTPS # Step 5: Upload the built site using FTP/FTPS
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.0
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USER }}
+          password: ${{ secrets.FTP_PASS }}
+          port: 21
+          protocol: ftps
+          local-dir: site/
+          server-dir: /
+          delete: true # This option deletes files on the server that are not present in your local-dir.
+          insecure: true
