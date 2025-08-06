@@ -37,7 +37,7 @@ jobs:
           password: ${{ secrets.FTP_PASS }}
           port: 21
           protocol: ftps
-          local-dir: site/
+          local-dir: ./doc/site/
           server-dir: /
           delete: true # This option deletes files on the server that are not present in your local-dir.
           insecure: true
