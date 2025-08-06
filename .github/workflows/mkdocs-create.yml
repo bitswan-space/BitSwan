@@ -22,7 +22,13 @@ jobs:
           python-version: '3.10' # Use a specific version like '3.9' or '3.10'
 
       - name: Install MkDocs and dependencies # Step 3: Install MkDocs and your chosen theme/plugins
-        run: pip install mkdocs mkdocs-material mkdocstrings mkdocstrings-python pymdown-extensions
+        run: |
+          apt-get update
+          apt-get -y install unixodbc-dev
+          git config --global --add safe.directory /__w/BitSwan/BitSwan
+          pip3 install --upgrade cython
+          pip3 install .[dev]
+          pip3 install mkdocs mkdocs-material mkdocstrings mkdocstrings-python pymdown-extensions
 
       - name: Build MkDocs site # Step 4: Generate the static HTML/CSS/JS files
         run: mkdocs build
