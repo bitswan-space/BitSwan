@@ -108,15 +108,11 @@ class AnomalyStorage(Configurable, collections.OrderedDict):
 
         url = self.Connection.get_url() + "{}/_search".format(self.Index)
         async with self.Connection.get_session() as session:
-            async with session.post(
-                url, json=query, headers={"Content-Type": "application/json"}
-            ) as response:
+            async with session.post(url, json=query, headers={"Content-Type": "application/json"}) as response:
                 if response.status != 200:
                     data = await response.text()
                     L.error(
-                        "Failed to fetch data from ElasticSearch: {} from {}\n{}".format(
-                            response.status, url, data
-                        )
+                        "Failed to fetch data from ElasticSearch: {} from {}\n{}".format(response.status, url, data)
                     )
                     return
                 msg = await response.json()

@@ -12,7 +12,6 @@ L = logging.getLogger(__name__)
 
 
 class WebSocketFactory(object):
-
     """
     wsfactory = asab.web.WebSocketFactory(self)
     websvc.WebApp.router.add_get('/api/ws', wsfactory)
@@ -30,9 +29,7 @@ class WebSocketFactory(object):
 
     """
 
-    def __init__(
-        self, app, *, timeout=10.0, protocols=(), compress=True, max_msg_size=4194304
-    ):
+    def __init__(self, app, *, timeout=10.0, protocols=(), compress=True, max_msg_size=4194304):
         self.App = app
         self.Counter = 0
         self.WebSockets = {}
@@ -47,34 +44,28 @@ class WebSocketFactory(object):
 
     async def _on_app_stop(self, message_type, counter):
         # Clean up during application exit
-        await self.close_all(
-            code=aiohttp.WSCloseCode.GOING_AWAY, message="Server shutdown"
-        )
+        await self.close_all(code=aiohttp.WSCloseCode.GOING_AWAY, message="Server shutdown")
 
     async def close_all(self, *, code=aiohttp.WSCloseCode.OK, message=b""):
         """
         Close all websockets
         """
         await asyncio.gather(
-            *[ws.close(code=code, message=message) for ws in self.WebSockets.values()],
-            return_exceptions=True
+            *[ws.close(code=code, message=message) for ws in self.WebSockets.values()], return_exceptions=True
         )
 
     async def ping_all(self):
         """
         Ping all connected websockets
         """
-        await asyncio.gather(
-            *[ws.ping() for ws in self.WebSockets.values()], return_exceptions=True
-        )
+        await asyncio.gather(*[ws.ping() for ws in self.WebSockets.values()], return_exceptions=True)
 
     async def send_str_all(self, data, compress=None):
         """
         Send string to all connected websockets
         """
         await asyncio.gather(
-            *[ws.send_str(data, compress=compress) for ws in self.WebSockets.values()],
-            return_exceptions=True
+            *[ws.send_str(data, compress=compress) for ws in self.WebSockets.values()], return_exceptions=True
         )
 
     async def send_json_all(self, data, compress=None):
@@ -82,8 +73,7 @@ class WebSocketFactory(object):
         Send json to all connected websockets
         """
         await asyncio.gather(
-            *[ws.send_json(data, compress=compress) for ws in self.WebSockets.values()],
-            return_exceptions=True
+            *[ws.send_json(data, compress=compress) for ws in self.WebSockets.values()], return_exceptions=True
         )
 
     def get(self, wsid):

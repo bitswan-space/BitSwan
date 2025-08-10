@@ -72,9 +72,7 @@ class ApiService(Service):
 
         # if creation time for att_id is not present then add
         if "_c" not in att:
-            att["_c"] = (
-                datetime.datetime.utcnow().isoformat() + "Z"
-            )  # This is OK, no tzinfo needed
+            att["_c"] = datetime.datetime.utcnow().isoformat() + "Z"  # This is OK, no tzinfo needed
 
         # add to microservice json/dict section attention_required
         self._do_zookeeper_adv_data()
@@ -114,16 +112,12 @@ class ApiService(Service):
 
         # TODO: Logging level configurable via config file
         self.APILogHandler = WebApiLoggingHandler(self.App, level=logging.NOTSET)
-        self.format = logging.Formatter(
-            "%%(asctime)s %%(levelname)s %%(name)s %%(struct_data)s%%(message)s"
-        )
+        self.format = logging.Formatter("%%(asctime)s %%(levelname)s %%(name)s %%(struct_data)s%%(message)s")
         self.APILogHandler.setFormatter(self.format)
         self.Logging = logging.getLogger()
         self.Logging.addHandler(self.APILogHandler)
 
-        self.WebHandler = APIWebHandler(
-            self, self.WebContainer.WebApp, self.APILogHandler
-        )
+        self.WebHandler = APIWebHandler(self, self.WebContainer.WebApp, self.APILogHandler)
 
         self.DocWebHandler = DocWebHandler(self, self.App, self.WebContainer)
 
@@ -132,9 +126,7 @@ class ApiService(Service):
         if metrics_svc is not None:
             from ..metrics.web_handler import MetricWebHandler
 
-            self.MetricWebHandler = MetricWebHandler(
-                metrics_svc, self.WebContainer.WebApp
-            )
+            self.MetricWebHandler = MetricWebHandler(metrics_svc, self.WebContainer.WebApp)
 
         self.App.PubSub.subscribe("WebContainer.started!", self._on_webcontainer_start)
 
@@ -172,9 +164,7 @@ class ApiService(Service):
         # initialize service discovery
         self.DiscoveryService = DiscoveryService(self.App, self.ZkContainer)
 
-        self.App.PubSub.subscribe(
-            "ZooKeeperContainer.state/CONNECTED!", self._on_zkcontainer_start
-        )
+        self.App.PubSub.subscribe("ZooKeeperContainer.state/CONNECTED!", self._on_zkcontainer_start)
         self._do_zookeeper_adv_data()
 
     def _do_zookeeper_adv_data(self):
@@ -187,10 +177,7 @@ class ApiService(Service):
         adv_data = {
             "host": self.App.HostName,
             "appclass": self.App.__class__.__name__,
-            "launch_time": datetime.datetime.utcfromtimestamp(
-                self.App.LaunchTime
-            ).isoformat()
-            + "Z",
+            "launch_time": datetime.datetime.utcfromtimestamp(self.App.LaunchTime).isoformat() + "Z",
             "process_id": os.getpid(),
         }
 

@@ -30,13 +30,10 @@ class DiscoveryService(Service):
         service.
         """
         return [
-            "http://{}:{}".format(servername, port)
-            for servername, port in await self._locate(instance_id, service_id)
+            "http://{}:{}".format(servername, port) for servername, port in await self._locate(instance_id, service_id)
         ]
 
-    async def _locate(
-        self, instance_id: str = None, service_id: str = None
-    ) -> typing.List[typing.Tuple]:
+    async def _locate(self, instance_id: str = None, service_id: str = None) -> typing.List[typing.Tuple]:
         """
         Locates service instances based on their instance ID or service ID.
 
@@ -47,9 +44,7 @@ class DiscoveryService(Service):
         :return: a list of tuples containing the server name and port number of the located service(s).
         """
         if instance_id is None and service_id is None:
-            L.warning(
-                "Please provide instance_id, service_id, or appclass to locate the service(s)."
-            )
+            L.warning("Please provide instance_id, service_id, or appclass to locate the service(s).")
             return
 
         instances = await self.get_advertised_instances()
@@ -76,11 +71,7 @@ class DiscoveryService(Service):
                     ip = i[0]
                     port = i[1]
                 except KeyError:
-                    L.error(
-                        "Unexpected format of 'web' section in advertised data: '{}'".format(
-                            web
-                        )
-                    )
+                    L.error("Unexpected format of 'web' section in advertised data: '{}'".format(web))
                     return
                 if ip not in ("0.0.0.0", "::"):
                     continue
@@ -104,17 +95,11 @@ class DiscoveryService(Service):
         base_path = self.ZooKeeperContainer.Path + path
         items = await self.ZooKeeperContainer.ZooKeeper.get_children(base_path)
         if items is None:
-            L.error(
-                "Missing '{}/run' folder in ZooKeeper.".format(
-                    self.ZooKeeperContainer.Path
-                )
-            )
+            L.error("Missing '{}/run' folder in ZooKeeper.".format(self.ZooKeeperContainer.Path))
             return
 
         for item in items:
-            item_data = await self.ZooKeeperContainer.ZooKeeper.get_data(
-                base_path + "/" + item
-            )
+            item_data = await self.ZooKeeperContainer.ZooKeeper.get_data(base_path + "/" + item)
             yield item, item_data
 
     def session(self):
@@ -126,9 +111,7 @@ class DiscoveryService(Service):
                 async with session.get("http://my_application_1.instance_id.asab/asab/v1/config") as resp:
                         ...
         """
-        return aiohttp.ClientSession(
-            connector=aiohttp.TCPConnector(resolver=DiscoveryResolver(self))
-        )
+        return aiohttp.ClientSession(connector=aiohttp.TCPConnector(resolver=DiscoveryResolver(self)))
 
 
 class DiscoveryResolver(aiohttp.DefaultResolver):
@@ -158,15 +141,11 @@ class DiscoveryResolver(aiohttp.DefaultResolver):
         # Make sure the format of the hostname is right
         if len(url_split) != 3:
             raise NotDiscoveredError(
-                "Invalid format of the hostname '{}'. Use e.g. `asab-config.service_id.asab` instead.".format(
-                    hostname
-                )
+                "Invalid format of the hostname '{}'. Use e.g. `asab-config.service_id.asab` instead.".format(hostname)
             )
 
         hosts = []
-        located_instances = await self.DiscoveryService._locate(
-            **{url_split[1]: url_split[0]}
-        )
+        located_instances = await self.DiscoveryService._locate(**{url_split[1]: url_split[0]})
         if located_instances is None or len(located_instances) == 0:
             raise NotDiscoveredError("Failed to discover '{}'.".format(hostname))
         for i in located_instances:

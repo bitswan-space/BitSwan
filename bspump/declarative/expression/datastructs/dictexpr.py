@@ -53,7 +53,7 @@ class DICT(Expression):
         arg_add=None,
         arg_update=None,
         arg_mandatory=None,
-        arg_flatten=None
+        arg_flatten=None,
     ):
         super().__init__(app)
 
@@ -97,18 +97,14 @@ class DICT(Expression):
         else:
             assert isinstance(self.ArgFlatten, dict)
             self.Flatten = dict()
-            self._set_value_or_expression_to_attribute(
-                self.ArgFlatten, self.Flatten, "Flatten"
-            )
+            self._set_value_or_expression_to_attribute(self.ArgFlatten, self.Flatten, "Flatten")
 
         if self.ArgModify is None:
             self.Modify = None
         else:
             assert isinstance(self.ArgModify, dict)
             self.Modify = dict()
-            self._set_value_or_expression_to_attribute(
-                self.ArgModify, self.Modify, "Modify"
-            )
+            self._set_value_or_expression_to_attribute(self.ArgModify, self.Modify, "Modify")
 
         if self.ArgAdd is None:
             self.Add = None
@@ -123,10 +119,7 @@ class DICT(Expression):
             if isinstance(value, Expression):
                 _to[key] = value
             else:
-                assert (
-                    isinstance(value, (int, str, bytes, bool, tuple, list))
-                    or value is None
-                )
+                assert isinstance(value, (int, str, bytes, bool, tuple, list)) or value is None
                 value = VALUE(self.App, value=value)
                 _to[key] = value
 
@@ -196,9 +189,7 @@ class DICT(Expression):
                     if mandatory_field not in with_dict:
                         # TODO: Remove eventually when there are more occurrences among other expressions as well
                         L.warning(
-                            "Mandatory field '{}' not present in dictionary. Returning None.".format(
-                                mandatory_field
-                            )
+                            "Mandatory field '{}' not present in dictionary. Returning None.".format(mandatory_field)
                         )
                         return None
 

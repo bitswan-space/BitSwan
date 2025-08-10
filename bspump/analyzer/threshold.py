@@ -154,9 +154,7 @@ class ThresholdAnalyzer(TimeWindowAnalyzer):
         # Warming up the matrix to avoid procedures on not fully filled matrix and resizing warming_up dimension
         # to avoid ValueError when checking the conditions of exceedance/subceedance/range.
         self.WarmingUpLimit = self.TimeWindow.Columns - 1
-        warming_up = np.resize(
-            self.TimeWindow.WarmingUpCount <= self.WarmingUpLimit, data.shape
-        )
+        warming_up = np.resize(self.TimeWindow.WarmingUpCount <= self.WarmingUpLimit, data.shape)
 
         # Exceedance
         if self.Lower == float("-inf") and self.Upper != float("inf"):

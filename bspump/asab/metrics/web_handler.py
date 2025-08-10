@@ -101,27 +101,15 @@ def watch_table(metric_records: list, filter, tags):
             continue
         if len(i["fieldset"][0].get("values", {})) == 0:
             continue
-        metric_name_len = (
-            max(
-                [
-                    len(str(value_name))
-                    for value_name in i["fieldset"][0].get("values").keys()
-                ]
-            )
-            + 10
-        )
+        metric_name_len = max([len(str(value_name)) for value_name in i["fieldset"][0].get("values").keys()]) + 10
         if metric_name_len > v_name_len:
             v_name_len = metric_name_len
 
     timestamp_len = 30
-    t_name_len = max(
-        [len(str(field["tags"])) for i in metric_records for field in i["fieldset"]]
-    )
+    t_name_len = max([len(str(field["tags"])) for i in metric_records for field in i["fieldset"]])
 
     if tags:
-        separator = "-" * (
-            m_name_len + v_name_len + t_name_len + timestamp_len + 30 + 2
-        )
+        separator = "-" * (m_name_len + v_name_len + t_name_len + timestamp_len + 30 + 2)
     else:
         separator = "-" * (m_name_len + v_name_len + timestamp_len + 30 + 2)
 
@@ -242,17 +230,19 @@ def build_line(
 ):
     if upperbound is not None:
         if tags:
-            line = "{:<{m_name_len}} | {:<{t_name_len}} | {:<{v_name_len}} | {:<7} | {:<25} | {:<{timestamp_len}}".format(
-                name,
-                t_string,
-                value_name,
-                upperbound,
-                value,
-                timestamp,
-                v_name_len=v_name_len - 10,
-                m_name_len=m_name_len,
-                t_name_len=t_name_len,
-                timestamp_len=timestamp_len,
+            line = (
+                "{:<{m_name_len}} | {:<{t_name_len}} | {:<{v_name_len}} | {:<7} | {:<25} | {:<{timestamp_len}}".format(
+                    name,
+                    t_string,
+                    value_name,
+                    upperbound,
+                    value,
+                    timestamp,
+                    v_name_len=v_name_len - 10,
+                    m_name_len=m_name_len,
+                    t_name_len=t_name_len,
+                    timestamp_len=timestamp_len,
+                )
             )
         else:
             line = "{:<{m_name_len}} | {:<{v_name_len}} | {:<7} | {:<25} | {:<{timestamp_len}}".format(

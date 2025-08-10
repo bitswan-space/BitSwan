@@ -76,9 +76,7 @@ class SegmentBuilder(object):
                     else:
                         # Read JSON file
                         definition = json.load(file)
-                    if definition.get("lookup") is not None or definition.get(
-                        "class", ""
-                    ).endswith("Lookup"):
+                    if definition.get("lookup") is not None or definition.get("class", "").endswith("Lookup"):
                         self.DefinitionsLookups.append(definition)
                     else:
                         self.DefinitionsProcessors.append(definition)
@@ -110,9 +108,7 @@ class SegmentBuilder(object):
         # Then create other processors
         for definition in self.DefinitionsProcessors:
             pipeline = svc.locate(definition["pipeline_id"])
-            processor = self.construct_processor(
-                app, pipeline, self._map_processor(definition)
-            )
+            processor = self.construct_processor(app, pipeline, self._map_processor(definition))
             if processor is not None:
                 insert_before = definition.get("insert_before")
                 if insert_before is not None:
@@ -146,9 +142,7 @@ class SegmentBuilder(object):
             reset=pipeline.ResetProfiler,
         )
         if isinstance(processor, bspump.analyzer.Analyzer):
-            pipeline.ProfilerCounter[
-                "analyzer_" + processor.Id
-            ] = pipeline.MetricsService.create_counter(
+            pipeline.ProfilerCounter["analyzer_" + processor.Id] = pipeline.MetricsService.create_counter(
                 "bspump.pipeline.profiler",
                 tags={
                     "analyzer": processor.Id,

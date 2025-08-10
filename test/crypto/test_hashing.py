@@ -124,9 +124,7 @@ class TestSHA1HashingProcessor(bspump.unittest.ProcessorTestCase):
 
         output = self.execute(events)
         self.assertEqual(len(output[0][1]), 20)
-        self.assertEqual(
-            output[0][1], b"@\x87\x98K\xa8u\xf9\x7f(\xd1\xa8=\x11\x9bcKT\xab\x1e\xe2"
-        )
+        self.assertEqual(output[0][1], b"@\x87\x98K\xa8u\xf9\x7f(\xd1\xa8=\x11\x9bcKT\xab\x1e\xe2")
 
 
 class TestMD5HashingProcessor(bspump.unittest.ProcessorTestCase):
@@ -193,6 +191,4 @@ class TestMD5ContextHashingProcessor(bspump.unittest.ProcessorTestCase):
 
         output = self.execute(events)
         self.assertEqual(len(output[0][0]["hash"]), 16)
-        self.assertEqual(
-            output[0][0]["hash"], b"\xdb^R\x1f\xe0rP\xeb|o\x01\xda\xd9\xe4#\xfd"
-        )
+        self.assertEqual(output[0][0]["hash"], b"\xdb^R\x1f\xe0rP\xeb|o\x01\xda\xd9\xe4#\xfd")

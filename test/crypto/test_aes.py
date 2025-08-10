@@ -27,9 +27,7 @@ class TestEncryptAESProcessor(bspump.unittest.ProcessorTestCase):
 
         output = self.execute(events)
         self.assertEqual(len(output[0][1]), 16)
-        self.assertEqual(
-            output[0][1], b"3\xeaj\xb6\xc4S\xc2\x8a\xef]\xf6\xfc\t\xc1\xd2\x02"
-        )
+        self.assertEqual(output[0][1], b"3\xeaj\xb6\xc4S\xc2\x8a\xef]\xf6\xfc\t\xc1\xd2\x02")
 
 
 class TestDecryptAESProcessor(bspump.unittest.ProcessorTestCase):

@@ -32,5 +32,5 @@ jobs:
 
     - name: Run linter
       run: |
-        black --check bspump
+        black --check --diff --color --line-length 120 --target-version py313 bspump
         ruff check bspump

@@ -52,9 +52,7 @@ class AzureStorageLibraryProvider(LibraryProviderABC):
         elif self.CacheDir == "true":
             self.CacheDir = os.path.join(
                 tempfile.gettempdir(),
-                "asab.library.azure.{}".format(
-                    hashlib.sha256(path.encode("utf-8")).hexdigest()
-                ),
+                "asab.library.azure.{}".format(hashlib.sha256(path.encode("utf-8")).hexdigest()),
             )
 
         # Ensure that the case directory exists
@@ -104,9 +102,7 @@ class AzureStorageLibraryProvider(LibraryProviderABC):
             for i in range(len(path) - 1):
                 newmodel = curmodel.sub.get(path[i])
                 if newmodel is None:
-                    curmodel.sub[path[i]] = newmodel = AzureDirectory(
-                        name="/" + "/".join(path[: i + 1]), sub=dict()
-                    )
+                    curmodel.sub[path[i]] = newmodel = AzureDirectory(name="/" + "/".join(path[: i + 1]), sub=dict())
 
                 curmodel = newmodel
 
@@ -122,11 +118,7 @@ class AzureStorageLibraryProvider(LibraryProviderABC):
 
     async def list(self, path: str) -> list:
         if self.Model is None:
-            L.warning(
-                "Azure Storage library provider is not ready. Cannot list {}".format(
-                    path
-                )
-            )
+            L.warning("Azure Storage library provider is not ready. Cannot list {}".format(path))
             raise RuntimeError("Not ready")
 
         assert path[:1] == "/"
@@ -211,14 +203,10 @@ class AzureStorageLibraryProvider(LibraryProviderABC):
                         # ... that's to avoid storing the whole (and possibly large) file in the memory
                         output = tempfile.TemporaryFile()
 
-                    async for chunk in resp.content.iter_chunked(
-                        16 * io.DEFAULT_BUFFER_SIZE
-                    ):
+                    async for chunk in resp.content.iter_chunked(16 * io.DEFAULT_BUFFER_SIZE):
                         output.write(chunk)
 
-                elif (
-                    resp.status == 304 and self.CacheDir is not None
-                ):  # 304 is Not Modified
+                elif resp.status == 304 and self.CacheDir is not None:  # 304 is Not Modified
                     # The file should be read from cache
                     output = open(cachefname, "r+b")
 

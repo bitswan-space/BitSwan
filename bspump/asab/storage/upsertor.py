@@ -151,17 +151,13 @@ class UpsertorABC(abc.ABC):
             if response.status // 100 != 2:
                 text = response.read()
                 L.error(
-                    "Webhook endpoint responded with {}: {}".format(
-                        response.status, text
-                    ),
+                    "Webhook endpoint responded with {}: {}".format(response.status, text),
                     struct_data={"uri": uri},
                 )
                 return
             self.WebhookResponseData = json.load(response)
         except ConnectionRefusedError:
-            L.error(
-                "Webhook call failed: Connection refused.", struct_data={"uri": uri}
-            )
+            L.error("Webhook call failed: Connection refused.", struct_data={"uri": uri})
             return
         except json.decoder.JSONDecodeError as e:
             L.error(

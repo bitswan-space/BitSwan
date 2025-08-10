@@ -6,9 +6,7 @@ import kazoo.exceptions
 
 #
 
-L = logging.getLogger(
-    __name__.rsplit(".", 1)[0]
-)  # We want just "asab.zookeeper" in error messages
+L = logging.getLogger(__name__.rsplit(".", 1)[0])  # We want just "asab.zookeeper" in error messages
 
 #
 
@@ -44,9 +42,7 @@ class KazooWrapper(object):
 
     async def get_children(self, path):
         try:
-            children = await self.ProactorService.execute(
-                self.Client.get_children, path
-            )
+            children = await self.ProactorService.execute(self.Client.get_children, path)
         except kazoo.exceptions.NoNodeError:
             # This is a silent error, it is indicated by None in the return
             return None
@@ -65,29 +61,19 @@ class KazooWrapper(object):
         try:
             ret = await self.ProactorService.execute(self.Client.set, path, data)
         except kazoo.exceptions.NoNodeError:
-            L.warning(
-                "Failed to write the data. Reason: Node '{}' does not exist.".format(
-                    path
-                )
-            )
+            L.warning("Failed to write the data. Reason: Node '{}' does not exist.".format(path))
             return None
         return ret
 
     async def delete(self, path, version=-1, recursive=False):
         try:
-            ret = await self.ProactorService.execute(
-                self.Client.delete, path, version, recursive
-            )
+            ret = await self.ProactorService.execute(self.Client.delete, path, version, recursive)
         except kazoo.exceptions.NoNodeError:
-            L.warning(
-                "Failed to delete node. Reason: Node '{}' does not exist.".format(path)
-            )
+            L.warning("Failed to delete node. Reason: Node '{}' does not exist.".format(path))
             return None
         return ret
 
-    async def create(
-        self, path, value, sequence=False, ephemeral=False, makepath=False
-    ):
+    async def create(self, path, value, sequence=False, ephemeral=False, makepath=False):
         def do():
             return self.Client.create(
                 path,

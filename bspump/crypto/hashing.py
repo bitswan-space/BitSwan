@@ -45,9 +45,7 @@ class HashingBaseProcessor(Processor):
             self.Algorithm = hashes.BLAKE2s(digest_size)
         else:
             L.error("Unknown hashing algorithm '{}'".format(self.Config["algorithm"]))
-            raise RuntimeError(
-                "Unknown hashing algorithm '{}'".format(self.Config["algorithm"])
-            )
+            raise RuntimeError("Unknown hashing algorithm '{}'".format(self.Config["algorithm"]))
 
 
 class HashingProcessor(HashingBaseProcessor):

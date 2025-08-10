@@ -21,7 +21,6 @@ L = logging.getLogger(__name__)
 
 
 class ZooKeeperLibraryProvider(LibraryProviderABC):
-
     """
 
     Configuration variant:
@@ -123,9 +122,7 @@ class ZooKeeperLibraryProvider(LibraryProviderABC):
 
         # Initialize ZooKeeper client
         zksvc = self.App.get_service("asab.ZooKeeperService")
-        self.ZookeeperContainer = ZooKeeperContainer(
-            zksvc, config_section_name=config_section_name, z_path=z_url
-        )
+        self.ZookeeperContainer = ZooKeeperContainer(zksvc, config_section_name=config_section_name, z_path=z_url)
         self.Zookeeper = self.ZookeeperContainer.ZooKeeper
 
         if config_section_name == "zookeeper":
@@ -134,20 +131,11 @@ class ZooKeeperLibraryProvider(LibraryProviderABC):
             self.FullPath += url_pieces.netloc
 
         # Handle `zk://` configuration
-        if (
-            z_url is None
-            and url_pieces.netloc == ""
-            and url_pieces.path == ""
-            and self.ZookeeperContainer.Path != ""
-        ):
+        if z_url is None and url_pieces.netloc == "" and url_pieces.path == "" and self.ZookeeperContainer.Path != "":
             self.BasePath = "/" + self.ZookeeperContainer.Path
 
         # Handle `zk://./path` configuration
-        if (
-            z_url is None
-            and url_pieces.netloc == "."
-            and self.ZookeeperContainer.Path != ""
-        ):
+        if z_url is None and url_pieces.netloc == "." and self.ZookeeperContainer.Path != "":
             self.BasePath = "/" + self.ZookeeperContainer.Path + self.BasePath
 
         self.FullPath += self.BasePath
@@ -156,13 +144,9 @@ class ZooKeeperLibraryProvider(LibraryProviderABC):
         self.Version = None  # Will be read when a library become ready
         self.VersionWatch = None
 
-        self.App.PubSub.subscribe(
-            "ZooKeeperContainer.state/CONNECTED!", self._on_zk_connected
-        )
+        self.App.PubSub.subscribe("ZooKeeperContainer.state/CONNECTED!", self._on_zk_connected)
         self.App.PubSub.subscribe("ZooKeeperContainer.state/LOST!", self._on_zk_lost)
-        self.App.PubSub.subscribe(
-            "ZooKeeperContainer.state/SUSPENDED!", self._on_zk_lost
-        )
+        self.App.PubSub.subscribe("ZooKeeperContainer.state/SUSPENDED!", self._on_zk_lost)
         self.App.PubSub.subscribe("Application.tick/60!", self._get_version_counter)
 
         # This will check a library for changes in subscribed folders even without version counter change.
@@ -189,13 +173,9 @@ class ZooKeeperLibraryProvider(LibraryProviderABC):
             self.App.Loop.call_soon_threadsafe(self._check_version_counter, version)
 
         def install_watcher():
-            return kazoo.recipe.watchers.DataWatch(
-                self.Zookeeper.Client, self.VersionNodePath, on_version_changed
-            )
+            return kazoo.recipe.watchers.DataWatch(self.Zookeeper.Client, self.VersionNodePath, on_version_changed)
 
-        self.VersionWatch = await self.Zookeeper.ProactorService.execute(
-            install_watcher
-        )
+        self.VersionWatch = await self.Zookeeper.ProactorService.execute(install_watcher)
 
         await self._set_ready()
 
@@ -235,14 +215,8 @@ class ZooKeeperLibraryProvider(LibraryProviderABC):
 
     async def read(self, path: str) -> typing.IO:
         if self.Zookeeper is None:
-            L.warning(
-                "Zookeeper Client has not been established (yet). Cannot read {}".format(
-                    path
-                )
-            )
-            raise RuntimeError(
-                "Zookeeper Client has not been established (yet). Not ready."
-            )
+            L.warning("Zookeeper Client has not been established (yet). Cannot read {}".format(path))
+            raise RuntimeError("Zookeeper Client has not been established (yet). Not ready.")
 
         node_path = self.build_path(path)
 
@@ -263,14 +237,8 @@ class ZooKeeperLibraryProvider(LibraryProviderABC):
 
     async def list(self, path: str) -> list:
         if self.Zookeeper is None:
-            L.warning(
-                "Zookeeper Client has not been established (yet). Cannot list {}".format(
-                    path
-                )
-            )
-            raise RuntimeError(
-                "Zookeeper Client has not been established (yet). Not ready."
-            )
+            L.warning("Zookeeper Client has not been established (yet). Cannot list {}".format(path))
+            raise RuntimeError("Zookeeper Client has not been established (yet). Not ready.")
 
         node_path = self.build_path(path)
 
@@ -281,15 +249,11 @@ class ZooKeeperLibraryProvider(LibraryProviderABC):
         items = []
         for node in nodes:
             # Remove any component that starts with '.'
-            startswithdot = functools.reduce(
-                lambda x, y: x or y.startswith("."), node.split(os.path.sep), False
-            )
+            startswithdot = functools.reduce(lambda x, y: x or y.startswith("."), node.split(os.path.sep), False)
             if startswithdot:
                 continue
 
-            if (
-                "." in node
-            ):  # We detect files in zookeeper by presence of the dot in the filename,
+            if "." in node:  # We detect files in zookeeper by presence of the dot in the filename,
                 fname = path + node
                 ftype = "item"
             else:
@@ -349,9 +313,7 @@ class ZooKeeperLibraryProvider(LibraryProviderABC):
                 else:
                     child_path = "/{}".format(child)
                 zstat = self.Zookeeper.Client.exists(child_path)
-                digest.update(
-                    "{}\n{}\n".format(child_path, zstat.version).encode("utf-8")
-                )
+                digest.update("{}\n{}\n".format(child_path, zstat.version).encode("utf-8"))
                 recursive_traversal(child_path, digest)
 
         digest = hashlib.sha1()

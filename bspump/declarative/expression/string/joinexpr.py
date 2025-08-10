@@ -70,9 +70,5 @@ class JOIN(Expression):
             return self.Char.join(arr)
 
         except Exception as e:
-            L.exception(
-                "The following exception ocurred in !JOIN expression [delimiter: {}]".format(
-                    self.Char
-                )
-            )
+            L.exception("The following exception ocurred in !JOIN expression [delimiter: {}]".format(self.Char))
             raise DeclarationError(original_exception=e, location=self.get_location())

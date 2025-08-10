@@ -16,9 +16,7 @@ class LookupProviderABC(abc.ABC, asab.Configurable):
         Description:
 
         """
-        self.Id = "lookupprovider:{}".format(
-            id if id is not None else self.__class__.__name__
-        )
+        self.Id = "lookupprovider:{}".format(id if id is not None else self.__class__.__name__)
         super().__init__(config_section_name=self.Id, config=config)
         self.Lookup = lookup
         self.App = lookup.App

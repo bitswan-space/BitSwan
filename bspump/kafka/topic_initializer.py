@@ -48,9 +48,7 @@ _TOPIC_CONFIG_OPTIONS = {
 
 
 def _is_kafka_component(component):
-    if isinstance(component, bspump.kafka.KafkaSource) or isinstance(
-        component, bspump.kafka.KafkaSink
-    ):
+    if isinstance(component, bspump.kafka.KafkaSource) or isinstance(component, bspump.kafka.KafkaSink):
         return True
     return False
 
@@ -76,9 +74,7 @@ class KafkaTopicInitializer(asab.Configurable):
         "replication_factor_default": 1,
     }
 
-    def __init__(
-        self, app, connection, id: typing.Optional[str] = None, config: dict = None
-    ):
+    def __init__(self, app, connection, id: typing.Optional[str] = None, config: dict = None):
         """
         Initializes the parameters passed to the class.
 
@@ -116,18 +112,9 @@ class KafkaTopicInitializer(asab.Configurable):
 
     def _get_bootstrap_servers(self, app, connection):
         svc = app.get_service("bspump.PumpService")
-        self.BootstrapServers = (
-            svc.Connections[connection].Config["bootstrap_servers"].strip()
-        )
+        self.BootstrapServers = svc.Connections[connection].Config["bootstrap_servers"].strip()
 
-    def include_topics(
-        self,
-        *,
-        topic_config=None,
-        kafka_component=None,
-        pipeline=None,
-        config_file=None
-    ):
+    def include_topics(self, *, topic_config=None, kafka_component=None, pipeline=None, config_file=None):
         """
         Includes topic from config file or dict object. It can also scan Pipeline and get topics from Source or Sink.
 
@@ -199,19 +186,13 @@ class KafkaTopicInitializer(asab.Configurable):
                 L.warning("Topic attribute 'name' is deprecated; use 'topic' instead.")
                 topic["topic"] = topic.pop("name")
             if "config" not in topic and "topic_configs" in topic:  # BACK-COMPAT
-                L.warning(
-                    "Topic attribute 'topic_configs' is deprecated; use 'config' instead."
-                )
+                L.warning("Topic attribute 'topic_configs' is deprecated; use 'config' instead.")
                 topic["config"] = topic.pop("topic_configs")
             if "num_partitions" not in topic:
                 topic["num_partitions"] = int(self.Config.get("num_partitions_default"))
             if "replication_factor" not in topic:
-                topic["replication_factor"] = int(
-                    self.Config.get("replication_factor_default")
-                )
-            self.RequiredTopics[topic["topic"]] = confluent_kafka.admin.NewTopic(
-                **topic
-            )
+                topic["replication_factor"] = int(self.Config.get("replication_factor_default"))
+            self.RequiredTopics[topic["topic"]] = confluent_kafka.admin.NewTopic(**topic)
 
     def include_topics_from_config(self, config_object):
         """
@@ -265,9 +246,7 @@ class KafkaTopicInitializer(asab.Configurable):
         Initializes new topics and logs a warning.
 
         """
-        L.warning(
-            "`check_and_initialize()` is obsoleted, use `initialize_topics()` instead"
-        )
+        L.warning("`check_and_initialize()` is obsoleted, use `initialize_topics()` instead")
         self.initialize_topics()
 
     def initialize_topics(self):
@@ -288,11 +267,7 @@ class KafkaTopicInitializer(asab.Configurable):
                 return
 
         # Filter out the topics that already exist
-        missing_topics = [
-            topic
-            for topic in self.RequiredTopics.values()
-            if topic.topic not in self.ExistingTopics
-        ]
+        missing_topics = [topic for topic in self.RequiredTopics.values() if topic.topic not in self.ExistingTopics]
 
         if len(missing_topics) == 0:
             L.info("No missing Kafka topics to be initialized.")
@@ -315,9 +290,7 @@ class KafkaTopicInitializer(asab.Configurable):
             L.log(
                 asab.LOG_NOTICE,
                 "Kafka topics created",
-                struct_data={
-                    "topics": ", ".join(topic.topic for topic in missing_topics)
-                },
+                struct_data={"topics": ", ".join(topic.topic for topic in missing_topics)},
             )
 
         except Exception as e:

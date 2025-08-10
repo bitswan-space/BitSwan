@@ -56,11 +56,7 @@ class TaskService(Service):
 
         total_tasks = len(self.PendingTasks) + self.NewTasks.qsize()
         if total_tasks > 0:
-            L.warning(
-                "{}+{} pending and incomplete tasks".format(
-                    len(self.PendingTasks), self.NewTasks.qsize()
-                )
-            )
+            L.warning("{}+{} pending and incomplete tasks".format(len(self.PendingTasks), self.NewTasks.qsize()))
 
     def _main_task_exited(self, ctx):
         if self.Main is None:
@@ -126,9 +122,7 @@ class TaskService(Service):
                 self.PendingTasks.add(task)
 
             else:
-                done, self.PendingTasks = await asyncio.wait(
-                    self.PendingTasks, timeout=1.0
-                )
+                done, self.PendingTasks = await asyncio.wait(self.PendingTasks, timeout=1.0)
                 for task in done:
                     await task
                     self.App.PubSub.publish("TaskService.task_done!", task)

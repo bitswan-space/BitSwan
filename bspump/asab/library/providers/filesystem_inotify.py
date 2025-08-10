@@ -29,14 +29,7 @@ IN_ISDIR = 0x40000000  #: event occurred against dir
 IN_ONESHOT = 0x80000000  #: only send event once
 
 IN_ALL_EVENTS = (
-    IN_MODIFY
-    | IN_MOVED_FROM
-    | IN_MOVED_TO
-    | IN_CREATE
-    | IN_DELETE
-    | IN_DELETE_SELF
-    | IN_MOVE_SELF
-    | IN_Q_OVERFLOW
+    IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO | IN_CREATE | IN_DELETE | IN_DELETE_SELF | IN_MOVE_SELF | IN_Q_OVERFLOW
 )
 
 # inotify function prototypes

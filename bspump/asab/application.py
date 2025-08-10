@@ -235,18 +235,14 @@ class Application(metaclass=Singleton):
             conflict_handler=conflict_handler,
             add_help=add_help,
         )
-        parser.add_argument(
-            "-c", "--config", help="specify a path to a configuration file"
-        )
+        parser.add_argument("-c", "--config", help="specify a path to a configuration file")
         parser.add_argument(
             "-v",
             "--verbose",
             action="store_true",
             help="print more information (enable debug output)",
         )
-        parser.add_argument(
-            "-s", "--syslog", action="store_true", help="enable logging to a syslog"
-        )
+        parser.add_argument("-s", "--syslog", action="store_true", help="enable logging to a syslog")
         parser.add_argument("-l", "--log-file", help="specify a path to a log file")
         parser.add_argument(
             "-w",
@@ -391,9 +387,7 @@ class Application(metaclass=Singleton):
         try:
             self.DaemonContext.open()
         except lockfile.AlreadyLocked as e:
-            print(
-                "Cannot create a PID file '{}':".format(pidfilepath), e, file=sys.stderr
-            )
+            print("Cannot create a PID file '{}':".format(pidfilepath), e, file=sys.stderr)
             sys.exit(1)
 
     def daemon_kill(self):
@@ -674,9 +668,7 @@ class Application(metaclass=Singleton):
             futures.add(asyncio.ensure_future(service.finalize(self)))
 
         while len(futures) > 0:
-            done, futures = await asyncio.wait(
-                futures, return_when=asyncio.FIRST_EXCEPTION
-            )
+            done, futures = await asyncio.wait(futures, return_when=asyncio.FIRST_EXCEPTION)
             for fut in done:
                 fut.result()
 
@@ -686,9 +678,7 @@ class Application(metaclass=Singleton):
             futures.add(asyncio.ensure_future(module.finalize(self)))
 
         while len(futures) > 0:
-            done, futures = await asyncio.wait(
-                futures, return_when=asyncio.FIRST_EXCEPTION
-            )
+            done, futures = await asyncio.wait(futures, return_when=asyncio.FIRST_EXCEPTION)
             for fut in done:
                 fut.result()
 
@@ -712,9 +702,7 @@ class Application(metaclass=Singleton):
             await asyncio.sleep(1)
 
         else:
-            L.warning(
-                "Exiting but {} async task(s) are still waiting".format(tasks_awaiting)
-            )
+            L.warning("Exiting but {} async task(s) are still waiting".format(tasks_awaiting))
 
     async def _ensure_initialization(self):
         """
@@ -775,12 +763,8 @@ class Application(metaclass=Singleton):
         Returns:
                 (next_housekeeping_time, next_time_limit, next_housekeeping_id)
         """
-        config_house_time = datetime.datetime.strptime(
-            Config["housekeeping"]["at"], "%H:%M"
-        )  # default: 03:00
-        config_time_limit = datetime.datetime.strptime(
-            Config["housekeeping"]["limit"], "%H:%M"
-        )  # default: 05:00
+        config_house_time = datetime.datetime.strptime(Config["housekeeping"]["at"], "%H:%M")  # default: 03:00
+        config_time_limit = datetime.datetime.strptime(Config["housekeeping"]["limit"], "%H:%M")  # default: 05:00
 
         now = datetime.datetime.now(datetime.timezone.utc)
 
@@ -822,12 +806,8 @@ class Application(metaclass=Singleton):
                 L.warning(
                     "Housekeeping has not been executed: It is past the time limit.",
                     struct_data={
-                        "housekeeping_time": self.HousekeepingTime.strftime(
-                            "%Y-%m-%d %H:%M:%S"
-                        ),
-                        "time_limit": self.HousekeepingTimeLimit.strftime(
-                            "%Y-%m-%d %H:%M:%S"
-                        ),
+                        "housekeeping_time": self.HousekeepingTime.strftime("%Y-%m-%d %H:%M:%S"),
+                        "time_limit": self.HousekeepingTimeLimit.strftime("%Y-%m-%d %H:%M:%S"),
                         "housekeeping_id": self.HousekeepingId,
                     },
                 )
@@ -840,12 +820,8 @@ class Application(metaclass=Singleton):
                 LOG_NOTICE,
                 "Setting time for the next housekeeping.",
                 struct_data={
-                    "next_housekeeping_time": self.HousekeepingTime.strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    ),
-                    "next_time_limit": self.HousekeepingTimeLimit.strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    ),
+                    "next_housekeeping_time": self.HousekeepingTime.strftime("%Y-%m-%d %H:%M:%S"),
+                    "next_time_limit": self.HousekeepingTimeLimit.strftime("%Y-%m-%d %H:%M:%S"),
                     "next_housekeeping_id": self.HousekeepingId,
                 },
             )
@@ -853,9 +829,7 @@ class Application(metaclass=Singleton):
             if len(self.HousekeepingMissedEvents) > 0:
                 L.warning(
                     "One or more Housekeeping events have not been executed.",
-                    struct_data={
-                        "missed_housekeeping_events": self.HousekeepingMissedEvents
-                    },
+                    struct_data={"missed_housekeeping_events": self.HousekeepingMissedEvents},
                 )
 
 

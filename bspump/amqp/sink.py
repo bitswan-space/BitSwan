@@ -28,12 +28,8 @@ class AMQPSink(Sink):
 
         app.PubSub.subscribe_all(self)
 
-        self._connection.PubSub.subscribe(
-            "AMQPConnection.open!", self._on_connection_open
-        )
-        self._connection.PubSub.subscribe(
-            "AMQPConnection.close!", self._on_connection_close
-        )
+        self._connection.PubSub.subscribe("AMQPConnection.open!", self._on_connection_open)
+        self._connection.PubSub.subscribe("AMQPConnection.close!", self._on_connection_close)
         if self._connection.ConnectionEvent.is_set():
             self._on_connection_open("simulated")
 

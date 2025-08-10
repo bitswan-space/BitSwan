@@ -33,9 +33,7 @@ class ITEM(Expression):
         "Default": ["*"],  # TODO: This ...
     }
 
-    def __init__(
-        self, app, *, arg_with=None, arg_item=None, arg_default=None, value=None
-    ):
+    def __init__(self, app, *, arg_with=None, arg_item=None, arg_default=None, value=None):
         super().__init__(app)
 
         self.OutletType = "^"  # Inlet type is to be set based on the parent advice

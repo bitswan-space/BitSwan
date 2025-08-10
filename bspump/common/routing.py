@@ -121,9 +121,7 @@ class InternalSource(Source):
             and (self.BackPressureLimit <= self.Queue.qsize())
         ):
             self.BackPressure = True
-            self.Pipeline.PubSub.publish(
-                "bspump.InternalSource.backpressure_on!", source=self
-            )
+            self.Pipeline.PubSub.publish("bspump.InternalSource.backpressure_on!", source=self)
 
     async def put_async(self, context, event, copy_context=False, copy_event=False):
         """
@@ -152,9 +150,7 @@ class InternalSource(Source):
             and (self.BackPressureLimit <= self.Queue.qsize())
         ):
             self.BackPressure = True
-            self.Pipeline.PubSub.publish(
-                "bspump.InternalSource.backpressure_on!", source=self
-            )
+            self.Pipeline.PubSub.publish("bspump.InternalSource.backpressure_on!", source=self)
 
     async def main(self):
         """
@@ -174,9 +170,7 @@ class InternalSource(Source):
                     and (self.BackPressureLimit > self.Queue.qsize())
                 ):
                     self.BackPressure = False
-                    self.Pipeline.PubSub.publish(
-                        "bspump.InternalSource.backpressure_off!", source=self
-                    )
+                    self.Pipeline.PubSub.publish("bspump.InternalSource.backpressure_off!", source=self)
 
                 await self.process(event, context={"ancestor": context})
 
@@ -184,11 +178,7 @@ class InternalSource(Source):
 
         except asyncio.CancelledError:
             if self.Queue.qsize() > 0:
-                L.warning(
-                    "'{}' stopped with {} events in a queue".format(
-                        self.locate_address(), self.Queue.qsize()
-                    )
-                )
+                L.warning("'{}' stopped with {} events in a queue".format(self.locate_address(), self.Queue.qsize()))
 
     def rest_get(self):
         """
@@ -243,12 +233,8 @@ class RouterMixIn(object):
 
         self.SourcesCache[source_id] = source
 
-        source.Pipeline.PubSub.subscribe(
-            "bspump.pipeline.not_ready!", self._on_target_pipeline_ready_change
-        )
-        source.Pipeline.PubSub.subscribe(
-            "bspump.pipeline.ready!", self._on_target_pipeline_ready_change
-        )
+        source.Pipeline.PubSub.subscribe("bspump.pipeline.not_ready!", self._on_target_pipeline_ready_change)
+        source.Pipeline.PubSub.subscribe("bspump.pipeline.ready!", self._on_target_pipeline_ready_change)
 
         # If target pipeline is not ready, throttle
         if not source.Pipeline.is_ready():
@@ -283,12 +269,8 @@ class RouterMixIn(object):
         except KeyError:
             return
 
-        source.Pipeline.PubSub.unsubscribe(
-            "bspump.pipeline.not_ready!", self._on_target_pipeline_ready_change
-        )
-        source.Pipeline.PubSub.unsubscribe(
-            "bspump.pipeline.ready!", self._on_target_pipeline_ready_change
-        )
+        source.Pipeline.PubSub.unsubscribe("bspump.pipeline.not_ready!", self._on_target_pipeline_ready_change)
+        source.Pipeline.PubSub.unsubscribe("bspump.pipeline.ready!", self._on_target_pipeline_ready_change)
 
         if not source.Pipeline.is_ready():
             self.Pipeline.throttle(source.Pipeline, enable=False)
@@ -346,9 +328,7 @@ class RouterMixIn(object):
             self.Pipeline.throttle(pipeline, enable=True)
         else:
             L.warning(
-                "Unknown event '{}' received in _on_target_pipeline_ready_change in '{}'".format(
-                    event_name, self
-                )
+                "Unknown event '{}' received in _on_target_pipeline_ready_change in '{}'".format(event_name, self)
             )
 
     def _on_internal_source_backpressure_ready_change(self, event_name, source):

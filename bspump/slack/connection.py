@@ -34,9 +34,7 @@ class SlackConnection(Connection):
         while len(pending) > 0:
             # By sending None via queue, we signalize end of life
             await self._output_queue.put(None)
-            done, pending = await asyncio.wait(
-                pending, return_when=asyncio.FIRST_COMPLETED
-            )
+            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
 
     def consume(self, slack_message):
         slack_message = json.dumps(slack_message)
@@ -53,9 +51,7 @@ class SlackConnection(Connection):
                     break
 
                 if self._output_queue.qsize() == self._output_queue_max_size - 1:
-                    self.PubSub.publish(
-                        "SlackConnection.unpause!", self, asynchronously=True
-                    )
+                    self.PubSub.publish("SlackConnection.unpause!", self, asynchronously=True)
 
                 async with session.post(
                     self.Url,
@@ -64,11 +60,7 @@ class SlackConnection(Connection):
                 ) as resp:
                     resp_body = await resp.text()
                     if resp.status != 200:
-                        L.error(
-                            "Failed to send Slack message status:{} body:{}".format(
-                                resp.status, resp_body
-                            )
-                        )
+                        L.error("Failed to send Slack message status:{} body:{}".format(resp.status, resp_body))
 
                         # Requeue the message, wait a bit and try again
                         self._output_queue.put_nowait(slack_message)

@@ -131,9 +131,7 @@ class ODBCConnection(Connection):
             kwargs["dsn"] = self._dsn
 
         try:
-            async with aioodbc.create_pool(
-                connect_timeout=self._connect_timeout, loop=self.Loop, **kwargs
-            ) as pool:
+            async with aioodbc.create_pool(connect_timeout=self._connect_timeout, loop=self.Loop, **kwargs) as pool:
                 self._conn_pool = pool
                 self.ConnectionEvent.set()
                 await self._loader()
@@ -165,9 +163,7 @@ class ODBCConnection(Connection):
                 break
 
             if self._output_queue.qsize() == self._output_queue_max_size - 1:
-                self.PubSub.publish(
-                    "ODBCConnection.unpause!", self, asynchronously=True
-                )
+                self.PubSub.publish("ODBCConnection.unpause!", self, asynchronously=True)
             async with self.acquire() as conn:
                 async with conn.cursor() as cur:
                     await cur.executemany(query, data)

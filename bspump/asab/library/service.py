@@ -88,9 +88,7 @@ class LibraryService(Service):
             try:
                 paths = Config.getmultiline("library", "providers")
             except configparser.NoOptionError:
-                L.critical(
-                    "'providers' option is not present in configuration section 'library'."
-                )
+                L.critical("'providers' option is not present in configuration section 'library'.")
                 raise SystemExit("Exit due to a critical configuration error.")
 
         # paths can be string if specified as argument
@@ -118,9 +116,7 @@ class LibraryService(Service):
 
             library_provider = ZooKeeperLibraryProvider(self, path, layer)
 
-        elif (
-            path.startswith("./") or path.startswith("/") or path.startswith("file://")
-        ):
+        elif path.startswith("./") or path.startswith("/") or path.startswith("file://"):
             from .providers.filesystem import FileSystemLibraryProvider
 
             library_provider = FileSystemLibraryProvider(self, path, layer)
@@ -160,9 +156,7 @@ class LibraryService(Service):
         if len(self.Libraries) == 0:
             return False
 
-        return functools.reduce(
-            lambda x, provider: provider.IsReady and x, self.Libraries, True
-        )
+        return functools.reduce(lambda x, provider: provider.IsReady and x, self.Libraries, True)
 
     async def _set_ready(self, provider):
         if len(self.Libraries) == 0:
@@ -178,9 +172,7 @@ class LibraryService(Service):
             L.log(LOG_NOTICE, "is NOT ready.", struct_data={"name": self.Name})
             self.App.PubSub.publish("Library.not_ready!", self)
 
-    async def read(
-        self, path: str, tenant: typing.Optional[str] = None
-    ) -> typing.Optional[typing.IO]:
+    async def read(self, path: str, tenant: typing.Optional[str] = None) -> typing.Optional[typing.IO]:
         """
         Read the content of the library item specified by `path`. This method can be used only after the Library is ready.
 
@@ -239,13 +231,9 @@ class LibraryService(Service):
         """
 
         # Directory path must start with '/'
-        assert (
-            path[:1] == "/"
-        ), "Directory path must start with a forward slash (/). For example: /library/Templates/"
+        assert path[:1] == "/", "Directory path must start with a forward slash (/). For example: /library/Templates/"
         # Directory path must end with '/'
-        assert (
-            path[-1:] == "/"
-        ), "Directory path must end with a forward slash (/). For example: /library/Templates/"
+        assert path[-1:] == "/", "Directory path must end with a forward slash (/). For example: /library/Templates/"
         # Directory path cannot contain '//'
         assert (
             "//" not in path
@@ -266,18 +254,14 @@ class LibraryService(Service):
                 if item.type != "dir":
                     continue
 
-                child_items = await self._list(
-                    item.name, tenant, providers=item.providers
-                )
+                child_items = await self._list(item.name, tenant, providers=item.providers)
                 items.extend(child_items)
                 recitems.extend(child_items)
         return items
 
     async def _list(self, path, tenant, providers):
         # Execute the list query in all providers in-parallel
-        result = await asyncio.gather(
-            *[library.list(path) for library in providers], return_exceptions=True
-        )
+        result = await asyncio.gather(*[library.list(path) for library in providers], return_exceptions=True)
 
         items = []
         uniq = dict()
@@ -413,13 +397,9 @@ class LibraryService(Service):
         """
 
         # Directory path must start with '/'
-        assert (
-            path[:1] == "/"
-        ), "Directory path must start with a forward slash (/). For example: /library/Templates/"
+        assert path[:1] == "/", "Directory path must start with a forward slash (/). For example: /library/Templates/"
         # Directory path must end with '/'
-        assert (
-            path[-1:] == "/"
-        ), "Directory path must end with a forward slash (/). For example: /library/Templates/"
+        assert path[-1:] == "/", "Directory path must end with a forward slash (/). For example: /library/Templates/"
         # Directory path cannot contain '//'
         assert (
             "//" not in path
@@ -488,9 +468,7 @@ class LibraryService(Service):
         if isinstance(paths, str):
             paths = [paths]
         for path in paths:
-            assert (
-                path[:1] == "/"
-            ), "Absolute path must be used when subscribing to the library changes"
+            assert path[:1] == "/", "Absolute path must be used when subscribing to the library changes"
 
             for provider in self.Libraries:
                 await provider.subscribe(path)

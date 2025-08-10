@@ -20,9 +20,7 @@ class GoogleDriveABCSink(Sink):
         self.Drive_service = None
         self._conn_future = None
         self.Connection = pipeline.locate_connection(app, connection)
-        self._output_queue = asyncio.Queue(
-            maxsize=self.Connection._output_queue_max_size + 1
-        )
+        self._output_queue = asyncio.Queue(maxsize=self.Connection._output_queue_max_size + 1)
 
         # Subscription
         app.PubSub.subscribe("Application.stop!", self._on_exit)

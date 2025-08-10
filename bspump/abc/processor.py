@@ -30,9 +30,7 @@ class ProcessorBase(asab.Configurable):
 
         """
         super().__init__(
-            "pipeline:{}:{}".format(
-                pipeline.Id, id if id is not None else self.__class__.__name__
-            ),
+            "pipeline:{}:{}".format(pipeline.Id, id if id is not None else self.__class__.__name__),
             config=config,
         )
 

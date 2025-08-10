@@ -132,16 +132,10 @@ class OpsGenieAlertProvider(AlertHTTPProviderABC):
                 create_alert["details"].update(a.data)
 
             async with aiohttp.ClientSession(headers=headers) as session:
-                async with session.post(
-                    self.URL + "/v2/alerts", json=create_alert
-                ) as resp:
+                async with session.post(self.URL + "/v2/alerts", json=create_alert) as resp:
                     if resp.status != 202:
                         text = await resp.text()
-                        L.warning(
-                            "Failed to create the alert ({}):\n'{}'".format(
-                                resp.status, text
-                            )
-                        )
+                        L.warning("Failed to create the alert ({}):\n'{}'".format(resp.status, text))
                     else:
                         await resp.text()
 
@@ -189,16 +183,10 @@ class PagerDutyAlertProvider(AlertHTTPProviderABC):
                 create_alert["payload"]["custom_details"].update(a.data)
 
             async with aiohttp.ClientSession(headers=headers) as session:
-                async with session.post(
-                    self.URL + "/v2/enqueue", json=create_alert
-                ) as resp:
+                async with session.post(self.URL + "/v2/enqueue", json=create_alert) as resp:
                     if resp.status != 202:
                         text = await resp.text()
-                        L.warning(
-                            "Failed to create the alert ({}):\n'{}'".format(
-                                resp.status, text
-                            )
-                        )
+                        L.warning("Failed to create the alert ({}):\n'{}'".format(resp.status, text))
                     else:
                         await resp.text()
 
@@ -213,9 +201,7 @@ class SentryAlertProvider(AlertAsyncProviderABC):
     async def _main(self):
         while True:
             a = await self.Queue.get()
-            self.SentryService.set_tags(
-                {"source": a.source, "class": a.alert_cls, "id": a.alert_id}
-            )
+            self.SentryService.set_tags({"source": a.source, "class": a.alert_cls, "id": a.alert_id})
             self.SentryService.capture_exception(a.exception)
 
     async def finalize(self, app):
@@ -240,9 +226,7 @@ class AlertService(Service):
                 L.warning("Unknwn alert provider: {}".format(section))
                 continue
 
-            self.Providers.append(
-                provider_cls(config_section_name=section, application=app)
-            )
+            self.Providers.append(provider_cls(config_section_name=section, application=app))
 
     async def initialize(self, app):
         await asyncio.gather(*[p.initialize(app) for p in self.Providers])

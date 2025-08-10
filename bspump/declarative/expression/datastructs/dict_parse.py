@@ -39,16 +39,7 @@ class DICT_PARSE(Expression):
         "Update": ["*"],  # TODO: This ...
     }
 
-    def __init__(
-        self,
-        app,
-        *,
-        arg_what,
-        arg_type=None,
-        arg_set=None,
-        arg_unset=None,
-        arg_update=None
-    ):
+    def __init__(self, app, *, arg_what, arg_type=None, arg_set=None, arg_unset=None, arg_update=None):
         super().__init__(app)
 
         self.Value = arg_what
@@ -88,10 +79,7 @@ class DICT_PARSE(Expression):
             if isinstance(value, Expression):
                 _to[key] = value
             else:
-                assert (
-                    isinstance(value, (int, str, bytes, bool, tuple, list))
-                    or value is None
-                )
+                assert isinstance(value, (int, str, bytes, bool, tuple, list)) or value is None
                 value = VALUE(self.App, value=value)
                 _to[key] = value
 

@@ -22,9 +22,7 @@ class TestContentFilter(bspump.unittest.ProcessorTestCase):
 
         output = self.execute(events)
 
-        self.assertEqual(
-            [event for context, event in output], [{"foo": "bar"}, {"fizz": "buzz"}]
-        )
+        self.assertEqual([event for context, event in output], [{"foo": "bar"}, {"fizz": "buzz"}])
 
     def test_content_filter_with_query(self):
         events = [
@@ -35,9 +33,7 @@ class TestContentFilter(bspump.unittest.ProcessorTestCase):
 
         output = self.execute(events)
 
-        self.assertEqual(
-            [event for context, event in output], [{"foo": "bar"}, {"fizz": "buzz"}]
-        )
+        self.assertEqual([event for context, event in output], [{"foo": "bar"}, {"fizz": "buzz"}])
 
     def test_custom_content_filter_with_query(self):
         events = [
@@ -55,6 +51,4 @@ class TestContentFilter(bspump.unittest.ProcessorTestCase):
             self.set_up_processor(bspump.filter.ContentFilter, query={"$foo": 2})
 
         with self.assertRaises(TypeError):
-            self.set_up_processor(
-                bspump.filter.ContentFilter, query={"foo": {"$in": None}}
-            )
+            self.set_up_processor(bspump.filter.ContentFilter, query={"foo": {"$in": None}})

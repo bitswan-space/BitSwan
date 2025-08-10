@@ -284,14 +284,10 @@ class AggregationCounter(Counter):
             self._actuals[name] = value
 
     def add(self, name, value):
-        raise NotImplementedError(
-            "Do not use add() method with AggregationCounter. Use set() instead."
-        )
+        raise NotImplementedError("Do not use add() method with AggregationCounter. Use set() instead.")
 
     def sub(self, name, value):
-        raise NotImplementedError(
-            "Do not use sub() method with AggregationCounter. Use set() instead."
-        )
+        raise NotImplementedError("Do not use sub() method with AggregationCounter. Use set() instead.")
 
 
 class Histogram(Metric):
@@ -511,14 +507,10 @@ class AggregationCounterWithDynamicTags(CounterWithDynamicTags):
         field["expires_at"] = self.App.time() + self.Expiration
 
     def add(self, name, value, tags):
-        raise NotImplementedError(
-            "Do not use add() method with AggregationCounter. Use set() instead."
-        )
+        raise NotImplementedError("Do not use add() method with AggregationCounter. Use set() instead.")
 
     def sub(self, name, value, tags):
-        raise NotImplementedError(
-            "Do not use sub() method with AggregationCounter. Use set() instead."
-        )
+        raise NotImplementedError("Do not use sub() method with AggregationCounter. Use set() instead.")
 
 
 class HistogramWithDynamicTags(MetricWithDynamicTags):

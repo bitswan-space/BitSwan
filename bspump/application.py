@@ -111,12 +111,8 @@ build: {} [{}]
             __version__, __build__, __build__[:7]
         )
         parser = super().create_argument_parser(prog=prog, description=description)
-        parser.add_argument(
-            "--test", action="store_true", help="Run pipeline/automation tests"
-        )
-        parser.add_argument(
-            "notebook", nargs="?", default=None, help="Jupyter notebook"
-        )
+        parser.add_argument("--test", action="store_true", help="Run pipeline/automation tests")
+        parser.add_argument("notebook", nargs="?", default=None, help="Jupyter notebook")
         # add watch argument that watches the notebooks for changes and restarts if needed
         parser.add_argument(
             "--watch",

@@ -19,9 +19,7 @@ def get_imported_files():
 
                 # Only include .py files (skip .pyc, .pyd, .so files)
                 if file_path.suffix == ".py":
-                    if "site-packages" not in str(
-                        file_path
-                    ) and "lib/python" not in str(file_path):
+                    if "site-packages" not in str(file_path) and "lib/python" not in str(file_path):
                         imported_files.add(str(file_path))
         except (AttributeError, TypeError):
             continue

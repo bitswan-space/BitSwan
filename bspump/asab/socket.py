@@ -2,7 +2,6 @@ from .abc.service import Service
 
 
 class StreamSocketServerService(Service):
-
     """
     Example of use:
 

@@ -25,33 +25,23 @@ class DocWebHandler(object):
         self.App = app
         self.WebContainer = web_container
         self.WebContainer.WebApp.router.add_get("/doc", self.doc)
-        self.WebContainer.WebApp.router.add_get(
-            "/oauth2-redirect.html", self.oauth2_redirect
-        )
+        self.WebContainer.WebApp.router.add_get("/oauth2-redirect.html", self.oauth2_redirect)
         self.WebContainer.WebApp.router.add_get("/asab/v1/openapi", self.openapi)
 
-        self.AuthorizationUrl = Config.get(
-            config_section_name, "authorization_url", fallback=None
-        )
+        self.AuthorizationUrl = Config.get(config_section_name, "authorization_url", fallback=None)
         self.TokenUrl = Config.get(config_section_name, "token_url", fallback=None)
         self.Scopes = Config.get(config_section_name, "scopes", fallback=None)
 
         self.Manifest = api_service.Manifest
 
-        self.DefaultRouteTag: str = Config["asab:doc"].get(
-            "default_route_tag"
-        )  # default: 'module_name'
+        self.DefaultRouteTag: str = Config["asab:doc"].get("default_route_tag")  # default: 'module_name'
         if self.DefaultRouteTag not in ["module_name", "class_name"]:
             raise ValueError(
                 "Unknown default_route_tag: {}. Choose between options "
                 "'module_name' and 'class_name'.".format(self.DefaultRouteTag)
             )
 
-        self.ServerUrls: str = (
-            Config.get(config_section_name, "server_urls", fallback="/")
-            .strip()
-            .split("\n")
-        )
+        self.ServerUrls: str = Config.get(config_section_name, "server_urls", fallback="/").strip().split("\n")
 
     def build_swagger_documentation(self) -> dict:
         """
@@ -95,11 +85,7 @@ class DocWebHandler(object):
 
             # Determine which routes are asab-based
             path: str = self.get_route_path(route)
-            if (
-                re.search("asab", path)
-                or re.search("/doc", path)
-                or re.search("/oauth2-redirect.html", path)
-            ):
+            if re.search("asab", path) or re.search("/doc", path) or re.search("/oauth2-redirect.html", path):
                 asab_routes.append(self.parse_route_data(route))
             else:
                 microservice_routes.append(self.parse_route_data(route))
@@ -173,9 +159,7 @@ class DocWebHandler(object):
 
         return {route_path: {method_name: method_dict}}
 
-    def get_docstring_yaml_dict(
-        self, docstring: typing.Optional[str]
-    ) -> typing.Optional[dict]:
+    def get_docstring_yaml_dict(self, docstring: typing.Optional[str]) -> typing.Optional[dict]:
         """Take the docstring of a function and return additional data if they exist."""
 
         parsed_yaml_docstring_dict: typing.Optional[dict] = None
@@ -189,11 +173,7 @@ class DocWebHandler(object):
                         docstring[dashes_index:], Loader=yaml.SafeLoader
                     )  # everything after --- goes to add_dict
                 except yaml.YAMLError as e:
-                    L.error(
-                        "Failed to parse '{}' doc string {}".format(
-                            self.App.__class__.__name__, e
-                        )
-                    )
+                    L.error("Failed to parse '{}' doc string {}".format(self.App.__class__.__name__, e))
         return parsed_yaml_docstring_dict
 
     def create_security_schemes(self) -> dict:
@@ -217,9 +197,9 @@ class DocWebHandler(object):
             }
             if self.Scopes:
                 for scope in self.Scopes.split(","):
-                    security_schemes_dict["oAuth"]["flows"]["authorizationCode"][
-                        "scopes"
-                    ].update({"scope": "{} scope.".format(scope.strip().capitalize())})
+                    security_schemes_dict["oAuth"]["flows"]["authorizationCode"]["scopes"].update(
+                        {"scope": "{} scope.".format(scope.strip().capitalize())}
+                    )
         return security_schemes_dict
 
     def get_version_from_manifest(self) -> dict:
@@ -293,9 +273,7 @@ def get_docstring_description(docstring: typing.Optional[str]) -> str:
     """Take the docstring of a function and parse it into description. Omit everything that comes after '---'."""
     if docstring is not None:
         docstring = inspect.cleandoc(docstring)
-        dashes_index = docstring.find(
-            "\n---\n"
-        )  # find the index of the first three dashes
+        dashes_index = docstring.find("\n---\n")  # find the index of the first three dashes
 
         # everything before --- goes to description
         if dashes_index >= 0:
@@ -326,9 +304,7 @@ def extract_path_parameters(route) -> list:
 
 def get_handler_name(route) -> str:
     if inspect.ismethod(route.handler):
-        handler_name = "{}.{}()".format(
-            route.handler.__self__.__class__.__name__, route.handler.__name__
-        )
+        handler_name = "{}.{}()".format(route.handler.__self__.__class__.__name__, route.handler.__name__)
     else:
         handler_name = "{}()".format(route.handler.__qualname__)
     return handler_name

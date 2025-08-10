@@ -14,9 +14,7 @@ _IdGenerator = itertools.count(1)
 
 
 class Expression(object):
-    Attributes = (
-        None  # Must be a list, if missing, then the Expression class is not complete
-    )
+    Attributes = None  # Must be a list, if missing, then the Expression class is not complete
 
     Category = "Others"
 
@@ -101,10 +99,7 @@ class SequenceExpression(Expression):
                 self.Items.append(i)
 
             else:
-                assert (
-                    isinstance(i, (int, str, float, bytes, bool, tuple, list, dict))
-                    or i is None
-                )
+                assert isinstance(i, (int, str, float, bytes, bool, tuple, list, dict)) or i is None
 
                 # So far used in the WHEN expression
                 if isinstance(i, dict):
@@ -115,9 +110,7 @@ class SequenceExpression(Expression):
                 self.Items.append(VALUE(app, value=i))
 
     def reduce(self, operator, context, event, *args, **kwargs):
-        iterator = [
-            evaluate(item, context, event, *args, **kwargs) for item in self.Items
-        ]
+        iterator = [evaluate(item, context, event, *args, **kwargs) for item in self.Items]
         return functools.reduce(operator, iterator)
 
     def walk(self, parent=None, key=None):

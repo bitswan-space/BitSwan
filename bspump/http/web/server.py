@@ -70,20 +70,14 @@ class WebServerConnection(Connection):
     def __init__(self, app, id=None, config=None):
         super().__init__(app, id=id, config=config)
 
-        self.aiohttp_app = aiohttp.web.Application(
-            client_max_size=int(self.Config["max_body_size_bytes"])
-        )
+        self.aiohttp_app = aiohttp.web.Application(client_max_size=int(self.Config["max_body_size_bytes"]))
         static_dir = str(files("bspump").joinpath("styles"))
         self.aiohttp_app.router.add_static("/styles/", static_dir, show_index=True)
 
         notebook_dir = os.path.dirname(app.Notebook)
-        scripts_dir = str(
-            pathlib.Path().resolve().joinpath(notebook_dir).joinpath("scripts")
-        )
+        scripts_dir = str(pathlib.Path().resolve().joinpath(notebook_dir).joinpath("scripts"))
         if pathlib.Path(scripts_dir).exists():
-            self.aiohttp_app.router.add_static(
-                "/scripts/", scripts_dir, show_index=True
-            )
+            self.aiohttp_app.router.add_static("/scripts/", scripts_dir, show_index=True)
         self.start_server()
 
     def start_server(self):
@@ -125,9 +119,7 @@ class WebRouteSource(Source):
         except KeyError:
             if connection == "DefaultWebServerConnection":
                 try:
-                    default_port = int(
-                        os.environ.get("DEFAULT_WEB_SERVER_CONNECTION_PORT") or "8080"
-                    )
+                    default_port = int(os.environ.get("DEFAULT_WEB_SERVER_CONNECTION_PORT") or "8080")
                 except ValueError:
                     default_port = 8080
                     L.warning(
@@ -293,9 +285,7 @@ class WebFormSource(WebRouteSource):
                         status=400,
                     )
                 else:
-                    return aiohttp.web.json_response(
-                        {"error": f"{field.name} is incorrectly formatted"}, status=400
-                    )
+                    return aiohttp.web.json_response({"error": f"{field.name} is incorrectly formatted"}, status=400)
         response_future = asyncio.Future()
         await self.process(
             {
@@ -360,9 +350,7 @@ class ProtectedWebFormSource(WebFormSource):
         async def response_fn():
             return await su.handle_request(request)
 
-        return await gate_response(
-            request, lambda secret: self.test_secret(secret), response_fn
-        )
+        return await gate_response(request, lambda secret: self.test_secret(secret), response_fn)
 
     def test_secret(self, secret):
         return secret == self.Config["secret"]
@@ -373,9 +361,7 @@ class ProtectedWebFormSource(WebFormSource):
         async def response_fn():
             return await su.handle_post(request)
 
-        return await gate_response(
-            request, lambda secret: self.test_secret(secret), response_fn
-        )
+        return await gate_response(request, lambda secret: self.test_secret(secret), response_fn)
 
 
 class JWTWebFormSource(ProtectedWebFormSource):
@@ -426,9 +412,7 @@ class JWTWebFormSource(ProtectedWebFormSource):
         defaults = su.extract_defaults(request)
         defaults = recursive_merge(
             defaults,
-            jwt.decode(
-                request.query["secret"], self.Config["jwt-secret"], algorithms=["HS256"]
-            ),
+            jwt.decode(request.query["secret"], self.Config["jwt-secret"], algorithms=["HS256"]),
         )
         return defaults
 
@@ -515,9 +499,7 @@ class JSONWebSink(Sink):
                 )
             )
         else:
-            event["response_future"].set_result(
-                aiohttp.web.json_response(event["response"], status=event["status"])
-            )
+            event["response_future"].set_result(aiohttp.web.json_response(event["response"], status=event["status"]))
 
     def process(self, context, event):
         """

@@ -59,9 +59,7 @@ class SmtpConnection(Connection):
         while len(pending) > 0:
             # By sending None via queue, we signalize end of life
             await self._output_queue.put(None)
-            done, pending = await asyncio.wait(
-                pending, return_when=asyncio.FIRST_COMPLETED
-            )
+            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
             if self.Smtp is not None:
                 self.Smtp.close()
 
@@ -74,9 +72,7 @@ class SmtpConnection(Connection):
     async def _loader(self):
         loop = self.Loop
 
-        self.Smtp = aiosmtplib.SMTP(
-            hostname=self.Server, port=self.Port, loop=loop, use_tls=self.UseTLS
-        )
+        self.Smtp = aiosmtplib.SMTP(hostname=self.Server, port=self.Port, loop=loop, use_tls=self.UseTLS)
 
         await self.Smtp.connect()
 
@@ -92,9 +88,7 @@ class SmtpConnection(Connection):
                 break
 
             if self._output_queue.qsize() == self._output_queue_max_size - 1:
-                self.PubSub.publish(
-                    "SMTPConnection.unpause!", self, asynchronously=True
-                )
+                self.PubSub.publish("SMTPConnection.unpause!", self, asynchronously=True)
 
             message = email.mime.text.MIMEText(message_text)
             message["From"] = self.From

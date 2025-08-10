@@ -31,9 +31,7 @@ class TableComponent(BaseField):
     ]
     """
 
-    def __init__(
-        self, name, data_provider=None, columns=None, editable=False, **kwargs
-    ):
+    def __init__(self, name, data_provider=None, columns=None, editable=False, **kwargs):
         super().__init__(name, **kwargs)
         self.field_name = f"f___{self.name}"
         self.data_provider = data_provider

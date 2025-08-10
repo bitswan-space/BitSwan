@@ -51,9 +51,7 @@ class StorageService(StorageServiceABC):
         super().__init__(app, service_name)
 
         self.Refresh = Config.get(config_section_name, "refresh", fallback="true")
-        self.ScrollTimeout = Config.get(
-            config_section_name, "scroll_timeout", fallback="1m"
-        )
+        self.ScrollTimeout = Config.get(config_section_name, "scroll_timeout", fallback="1m")
 
         # always check if there is a url in the old config section first
         url = Config.getmultiline(config_section_name, "elasticsearch_url", fallback="")
@@ -89,13 +87,9 @@ class StorageService(StorageServiceABC):
         if self.ServerUrls[0].startswith("https://"):
             # check if [asab:storage] section has data for SSL or default to the [elasticsearch] section
             if section_has_ssl_option(config_section_name):
-                self.SSLContextBuilder = SSLContextBuilder(
-                    config_section_name=config_section_name
-                )
+                self.SSLContextBuilder = SSLContextBuilder(config_section_name=config_section_name)
             else:
-                self.SSLContextBuilder = SSLContextBuilder(
-                    config_section_name="elasticsearch"
-                )
+                self.SSLContextBuilder = SSLContextBuilder(config_section_name="elasticsearch")
             self.SSLContext = self.SSLContextBuilder.build(ssl.PROTOCOL_TLS_CLIENT)
         else:
             self.SSLContext = None
@@ -132,11 +126,7 @@ class StorageService(StorageServiceABC):
                     if n == len(self.ServerUrls):
                         raise ConnectionError("Failed to connect to '{}'.".format(url))
                     else:
-                        L.warning(
-                            "Failed to connect to '{}', iterating to another node".format(
-                                url
-                            )
-                        )
+                        L.warning("Failed to connect to '{}', iterating to another node".format(url))
 
     async def is_connected(self) -> bool:
         """
@@ -161,9 +151,7 @@ class StorageService(StorageServiceABC):
                 return False
 
             else:
-                L.info(
-                    "Connected to ElasticSearch.", struct_data={"urls": self.ServerUrls}
-                )
+                L.info("Connected to ElasticSearch.", struct_data={"urls": self.ServerUrls})
                 return True
 
     async def get(self, index: str, obj_id: str, decrypt=None) -> dict:
@@ -185,9 +173,7 @@ class StorageService(StorageServiceABC):
                 The query result.
         """
         if decrypt is not None:
-            raise NotImplementedError(
-                "AES encryption for ElasticSearch not implemented"
-            )
+            raise NotImplementedError("AES encryption for ElasticSearch not implemented")
 
         async with self.request("GET", "{}/_doc/{}".format(index, obj_id)) as resp:
             if resp.status not in {200, 201}:
@@ -265,11 +251,7 @@ class StorageService(StorageServiceABC):
         """
         async with self.request("GET", "{}/_mapping".format(index)) as resp:
             if resp.status != 200:
-                raise ElasticError(
-                    "Unexpected response code: {}: '{}'".format(
-                        resp.status, await resp.text()
-                    )
-                )
+                raise ElasticError("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
             return await resp.json()
 
     async def get_index_template(self, template_name: str) -> dict:
@@ -281,15 +263,9 @@ class StorageService(StorageServiceABC):
         :raise Exception: Raised if connection to all server URLs fails.
         :return: ElasticSearch Index template.
         """
-        async with self.request(
-            "GET", "_index_template/{}?format=json".format(template_name)
-        ) as resp:
+        async with self.request("GET", "_index_template/{}?format=json".format(template_name)) as resp:
             if resp.status != 200:
-                raise ElasticError(
-                    "Unexpected response code: {}: '{}'".format(
-                        resp.status, await resp.text()
-                    )
-                )
+                raise ElasticError("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
             return await resp.json()
 
     async def put_index_template(self, template_name: str, template: dict) -> dict:
@@ -301,15 +277,9 @@ class StorageService(StorageServiceABC):
                 :return: JSON response.
                 :raise Exception: Raised if connection to all server URLs fails.
         """
-        async with self.request(
-            "PUT", "_index_template/{}".format(template_name), json=template
-        ) as resp:
+        async with self.request("PUT", "_index_template/{}".format(template_name), json=template) as resp:
             if resp.status != 200:
-                raise ElasticError(
-                    "Unexpected response code: {}: '{}'".format(
-                        resp.status, await resp.text()
-                    )
-                )
+                raise ElasticError("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
 
             return await resp.json()
 
@@ -325,9 +295,7 @@ class StorageService(StorageServiceABC):
         async with self.request("POST", "_reindex", json=data) as resp:
             if resp.status != 200:
                 raise AssertionError(
-                    "Unexpected response code when reindexing: {}, {}".format(
-                        resp.status, await resp.text()
-                    )
+                    "Unexpected response code when reindexing: {}, {}".format(resp.status, await resp.text())
                 )
 
             print("------> REINDEX ;=)")
@@ -360,15 +328,9 @@ class StorageService(StorageServiceABC):
         if body is None:
             body = {"query": {"bool": {"must": {"match_all": {}}}}}
 
-        async with self.request(
-            "GET", "{}/_search?size={}&from={}&version=true".format(index, size, _from)
-        ) as resp:
+        async with self.request("GET", "{}/_search?size={}&from={}&version=true".format(index, size, _from)) as resp:
             if resp.status != 200:
-                raise ElasticError(
-                    "Unexpected response code: {}: '{}'".format(
-                        resp.status, await resp.text()
-                    )
-                )
+                raise ElasticError("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
 
             return await resp.json()
 
@@ -383,11 +345,7 @@ class StorageService(StorageServiceABC):
 
         async with self.request("GET", "{}/_count".format(index)) as resp:
             if resp.status != 200:
-                raise ElasticError(
-                    "Unexpected response code: {}: '{}'".format(
-                        resp.status, await resp.text()
-                    )
-                )
+                raise ElasticError("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
 
             return await resp.json()
 
@@ -400,16 +358,10 @@ class StorageService(StorageServiceABC):
 
         async with self.request(
             "GET",
-            "_cat/indices/{}?format=json".format(
-                search_string if search_string is not None else "*"
-            ),
+            "_cat/indices/{}?format=json".format(search_string if search_string is not None else "*"),
         ) as resp:
             if resp.status != 200:
-                raise ElasticError(
-                    "Unexpected response code: {}: '{}'".format(
-                        resp.status, await resp.text()
-                    )
-                )
+                raise ElasticError("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
             return await resp.json()
 
     async def empty_index(self, index, settings=None):
@@ -423,11 +375,7 @@ class StorageService(StorageServiceABC):
 
         async with self.request("PUT", index, json=settings) as resp:
             if resp.status != 200:
-                raise ElasticError(
-                    "Unexpected response code: {}: '{}'".format(
-                        resp.status, await resp.text()
-                    )
-                )
+                raise ElasticError("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
             return await resp.json()
 
     async def put_policy(self, policy_name, settings=None):
@@ -438,15 +386,9 @@ class StorageService(StorageServiceABC):
         if settings is None:
             settings = {}
 
-        async with self.request(
-            "PUT", "_ilm/policy/{}".format(policy_name), json=settings
-        ) as resp:
+        async with self.request("PUT", "_ilm/policy/{}".format(policy_name), json=settings) as resp:
             if resp.status != 200:
-                raise ElasticError(
-                    "Unexpected response code: {}: '{}'".format(
-                        resp.status, await resp.text()
-                    )
-                )
+                raise ElasticError("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
 
             return await resp.json()
 
@@ -458,11 +400,7 @@ class StorageService(StorageServiceABC):
         """
         async with self.request("GET", "_ilm/policy") as resp:
             if resp.status != 200:
-                raise ElasticError(
-                    "Unexpected response code: {}: '{}'".format(
-                        resp.status, await resp.text()
-                    )
-                )
+                raise ElasticError("Unexpected response code: {}: '{}'".format(resp.status, await resp.text()))
 
             return await resp.json()
 
@@ -519,9 +457,7 @@ class ElasticSearchUpsertor(UpsertorABC):
             json=upsert_data,
         ) as resp:
             if resp.status not in {200, 201}:
-                raise ConnectionError(
-                    "Unexpected response code: {}".format(resp.status)
-                )
+                raise ConnectionError("Unexpected response code: {}".format(resp.status))
             else:
                 resp_json = await resp.json()
                 self.ObjId = resp_json["_id"]
@@ -538,15 +474,11 @@ class ElasticSearchUpsertor(UpsertorABC):
 
         async with self.Storage.request(
             "POST",
-            "{}/_update/{}?refresh={}".format(
-                self.Collection, self.ObjId, self.Storage.Refresh
-            ),
+            "{}/_update/{}?refresh={}".format(self.Collection, self.ObjId, self.Storage.Refresh),
             json=upsert_data,
         ) as resp:
             if resp.status not in {200, 201}:
-                raise ConnectionError(
-                    "Unexpected response code: {}".format(resp.status)
-                )
+                raise ConnectionError("Unexpected response code: {}".format(resp.status))
             else:
                 resp_json = await resp.json()
                 assert (
@@ -568,8 +500,7 @@ def get_url_list(urls):
         scheme, netloc, path = parse_url(url)
 
         server_urls += [
-            urllib.parse.urlunparse((scheme, netloc, path, None, None, None))
-            for netloc in netloc.split(",")
+            urllib.parse.urlunparse((scheme, netloc, path, None, None, None)) for netloc in netloc.split(",")
         ]
 
     return server_urls
@@ -586,15 +517,8 @@ def parse_url(url):
 
 def build_headers(username, password, api_key):
     # Check configurations
-    if (
-        username != ""
-        and username is not None
-        and api_key != ""
-        and api_key is not None
-    ):
-        raise ValueError(
-            "Both username and API key can't be specified. Please choose one option."
-        )
+    if username != "" and username is not None and api_key != "" and api_key is not None:
+        raise ValueError("Both username and API key can't be specified. Please choose one option.")
 
     headers = {
         "Content-Type": "application/json",

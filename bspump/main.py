@@ -32,9 +32,7 @@ def indent_code(lines: list[str]) -> list[str]:
         if '"""' in line or "'''" in line:
             if not multiline:
                 double_quotes = '"""' in line
-            elif (double_quotes and "'''" in line) or (
-                not double_quotes and '"""' in line
-            ):
+            elif (double_quotes and "'''" in line) or (not double_quotes and '"""' in line):
                 continue
             multiline = not multiline
             continue
@@ -53,18 +51,12 @@ class NotebookCompiler:
         if cell["cell_type"] == "code":
             source = cell["source"]
             if len(source) > 0 and "#ignore" not in source[0]:
-                code = (
-                    "".join(cell["source"])
-                    if isinstance(cell["source"], list)
-                    else cell["source"]
-                )
+                code = "".join(cell["source"]) if isinstance(cell["source"], list) else cell["source"]
 
                 clean_code = (
                     "\n".join(
                         [
-                            re.sub(r"^\t+(?=\S)", "", line)
-                            if not line.startswith("!")
-                            else ""
+                            re.sub(r"^\t+(?=\S)", "", line) if not line.startswith("!") else ""
                             for line in code.split("\n")
                         ]
                     ).strip("\n")
@@ -79,9 +71,7 @@ class NotebookCompiler:
                     self._cell_processor_contents[self._cell_number] = (
                         "\n".join(indent_code(clean_code.split("\n"))) + "\n\n"
                     )
-                if not self._in_autopipeline and contains_function_call(
-                    ast.parse(clean_code), "auto_pipeline"
-                ):
+                if not self._in_autopipeline and contains_function_call(ast.parse(clean_code), "auto_pipeline"):
                     self._in_autopipeline = True
 
     def compile_notebook(self, ntb, out_path="tmp.py"):
@@ -110,18 +100,14 @@ def main():
         if os.path.exists(app.Notebook):
             with open(app.Notebook) as nb:
                 notebook = json.load(nb)
-                compiler.compile_notebook(
-                    notebook, out_path=f"{tmpdirname}/autopipeline_tmp.py"
-                )
+                compiler.compile_notebook(notebook, out_path=f"{tmpdirname}/autopipeline_tmp.py")
                 sys.path.insert(0, tmpdirname)
                 tmp_module = __import__("autopipeline_tmp")  # noqa: F841
         else:
             exit(f"Notebook {app.Notebook} not found")
 
         if bspump.jupyter.bitswan_auto_pipeline.get("sink") is not None:
-            register_sink(  # noqa: F405
-                bspump.jupyter.bitswan_auto_pipeline.get("sink")
-            )  # noqa: F405
+            register_sink(bspump.jupyter.bitswan_auto_pipeline.get("sink"))  # noqa: F405  # noqa: F405
             end_pipeline()  # noqa: F405
 
         app.init_componets()

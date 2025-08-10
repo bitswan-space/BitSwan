@@ -63,9 +63,7 @@ class AvroSink(Sink):
         if self.RolloverMechanism == "chunks":
             if self.EventsPerFile % self.ChunkSize != 0:
                 self.ChunksPerFile = int(round(self.EventsPerFile / self.ChunkSize))
-                L.warning(
-                    "events_per_file % events_per_chunk needs to be zero. events_per_file was rounded"
-                )
+                L.warning("events_per_file % events_per_chunk needs to be zero. events_per_file was rounded")
             elif self.EventsPerFile < self.ChunkSize:
                 self.ChunksPerFile = 1
                 L.warning(
@@ -75,9 +73,7 @@ class AvroSink(Sink):
                 self.ChunksPerFile = int(self.EventsPerFile / self.ChunkSize)
             else:
                 L.warning(
-                    "invalid events_per_file - {} or events_per_chunk - {} ".format(
-                        self.EventsPerFile, self.ChunkSize
-                    )
+                    "invalid events_per_file - {} or events_per_chunk - {} ".format(self.EventsPerFile, self.ChunkSize)
                 )
                 self.ChunksPerFile = 1
 
@@ -85,11 +81,7 @@ class AvroSink(Sink):
             self.Index = 0
         else:
             if self.RolloverMechanism != "none":
-                L.warning(
-                    "Unknown rollover mechanism {} - defaulting to none".format(
-                        self.RolloverMechanism
-                    )
-                )
+                L.warning("Unknown rollover mechanism {} - defaulting to none".format(self.RolloverMechanism))
 
             self.RolloverMechanism = "none"
             self.Index = None
@@ -97,9 +89,7 @@ class AvroSink(Sink):
 
     def build_filename(self, postfix=""):
         return (
-            self.FileNameTemplate.format(
-                index=("{:04d}".format(self.Index)) if self.Index is not None else ""
-            )
+            self.FileNameTemplate.format(index=("{:04d}".format(self.Index)) if self.Index is not None else "")
             + postfix
         )
 

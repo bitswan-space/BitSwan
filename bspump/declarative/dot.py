@@ -28,24 +28,14 @@ def declaration_to_dot_stream(decl, ostream):
                 else:
                     style = "filled"
 
-                ostream.write(
-                    '\t"{}" -> "{}" [style={},label="{}"];\n'.format(
-                        parent.Id, obj.Id, style, key
-                    )
-                )
+                ostream.write('\t"{}" -> "{}" [style={},label="{}"];\n'.format(parent.Id, obj.Id, style, key))
                 links.add((parent.Id, obj.Id, key))
 
         else:
             vid = ".{}.val".format(parent.Id)
             if (parent.Id, vid, key) not in links:
-                ostream.write(
-                    '\t"{}" -> "{}" [label="{}"];\n'.format(parent.Id, vid, key)
-                )
-                ostream.write(
-                    '\t"{}" [shape=box,label="<{}>\\n{}"]\n'.format(
-                        vid, obj.__class__.__name__, obj
-                    )
-                )
+                ostream.write('\t"{}" -> "{}" [label="{}"];\n'.format(parent.Id, vid, key))
+                ostream.write('\t"{}" [shape=box,label="<{}>\\n{}"]\n'.format(vid, obj.__class__.__name__, obj))
                 links.add((parent.Id, vid, key))
 
     for obj in nodes:

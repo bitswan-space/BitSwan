@@ -128,9 +128,7 @@ def string_to_boolean(value: str) -> bool:
     return configparser.ConfigParser.BOOLEAN_STATES[value.lower()]
 
 
-def validate_url(
-    input_url: str, scheme: typing.Union[str, typing.Tuple[str], None]
-) -> str:
+def validate_url(input_url: str, scheme: typing.Union[str, typing.Tuple[str], None]) -> str:
     """Parse URL, remove leading and trailing whitespaces and a trailing slash.
     If `scheme` is specified, check if it matches the `input_url` scheme.
 
@@ -159,9 +157,7 @@ def validate_url(
         return url.geturl()
     else:
         if url.scheme:
-            raise ValueError(
-                "'{}' has an invalid scheme: '{}'".format(url.geturl(), url.scheme)
-            )
+            raise ValueError("'{}' has an invalid scheme: '{}'".format(url.geturl(), url.scheme))
         elif not url.scheme:
             raise ValueError("'{}' does not have a scheme".format(url.geturl()))
         else:

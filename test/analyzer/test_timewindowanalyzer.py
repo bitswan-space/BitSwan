@@ -8,9 +8,7 @@ class TestTimeWindowAnalyzer(bspump.unittest.ProcessorTestCase):
             (None, {"lat": 70, "lon": 10}),
             (None, {"lat": 50, "lon": 30}),
         ]
-        self.set_up_processor(
-            bspump.analyzer.TimeWindowAnalyzer, clock_driven=False
-        )  # TODO test w/ clock_driven
+        self.set_up_processor(bspump.analyzer.TimeWindowAnalyzer, clock_driven=False)  # TODO test w/ clock_driven
 
         output = self.execute(events)
 

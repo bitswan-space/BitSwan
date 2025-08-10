@@ -20,10 +20,7 @@ def get_pipeline_topology(pump, pipeline):
     components.append(pipeline_data["Sources"][0])
     # get metrics
     for metric in pipeline_data["Metrics"]:
-        if (
-            metric["type"] == "Counter"
-            and metric["name"] == "bspump.pipeline.eps_processor"
-        ):
+        if metric["type"] == "Counter" and metric["name"] == "bspump.pipeline.eps_processor":
             metrics_components.append(metric)
     for depth in pipeline_data["Processors"]:
         for component in depth:
@@ -48,9 +45,7 @@ def get_pipeline_topology(pump, pipeline):
             component_data["wires"] = []
 
         # Implement getting properties
-        component_data["properties"] = {
-            key: value for key, value in component_obj.Config.items()
-        }
+        component_data["properties"] = {key: value for key, value in component_obj.Config.items()}
         component_data["capabilities"] = ["subscribable-events"]
 
         for metric in metrics_components:
@@ -135,18 +130,14 @@ class MQTTService(Service):
             for depth in pipeline.Processors:
                 for component in depth:
                     pipeline.PublishingProcessors[component.Id] = 0
-                    self.Connection.subscribe_topic(
-                        f"/c/{pipeline.Id}/c/{component.Id}/events/subscribe"
-                    )
+                    self.Connection.subscribe_topic(f"/c/{pipeline.Id}/c/{component.Id}/events/subscribe")
                     self.Connection.register_handler(
                         f"/c/{pipeline.Id}/c/{component.Id}/events/subscribe",
                         self.on_message,
                     )
 
             for source in pipeline.Sources:
-                self.Connection.subscribe_topic(
-                    f"/c/{pipeline.Id}/c/{source.Id}/events/subscribe"
-                )
+                self.Connection.subscribe_topic(f"/c/{pipeline.Id}/c/{source.Id}/events/subscribe")
                 self.Connection.register_handler(
                     f"/c/{pipeline.Id}/c/{source.Id}/events/subscribe",
                     self.on_message,
@@ -174,9 +165,7 @@ class MQTTService(Service):
             payload = json.loads(payload)
         except json.decoder.JSONDecodeError:
             payload = message.payload.decode("utf-8")
-            L.warning(
-                f"Payload sent to {topic} is not a valid JSON. Payload: {payload}"
-            )
+            L.warning(f"Payload sent to {topic} is not a valid JSON. Payload: {payload}")
             return
 
         count = payload.get("count")
@@ -204,9 +193,7 @@ class MQTTService(Service):
                     L.warning(f"Processor {processor} not found")
                     return
 
-                pipeline.PublishingProcessors[processor.Id] = max(
-                    count, pipeline.PublishingProcessors[processor.Id]
-                )
+                pipeline.PublishingProcessors[processor.Id] = max(count, pipeline.PublishingProcessors[processor.Id])
 
     def publish_event(self, pipeline, component, event, count_remaining):
         data = get_message_structure()

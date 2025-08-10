@@ -21,9 +21,7 @@ try:
     sentry_sdk.utils.MAX_STRING_LENGTH = 8192
 
 except ModuleNotFoundError:
-    L.critical(
-        "Package for Sentry SDK not found. Install it with: pip install sentry-sdk"
-    )
+    L.critical("Package for Sentry SDK not found. Install it with: pip install sentry-sdk")
     sys.exit(1)
 
 
@@ -62,16 +60,12 @@ class SentryService(Service):
         # DSN is automatically generated when new project is created
         # and can be modified: Settings > Client Keys (DSN) > Key Details
         # Specification: either in configuration '[sentry] data_source_name', $SENTRY_DSN environment variable as a fallback
-        self.DataSourceName = Config.get(
-            "asab:alert:sentry", "data_source_name", fallback=""
-        )
+        self.DataSourceName = Config.get("asab:alert:sentry", "data_source_name", fallback="")
         if len(self.DataSourceName) == 0:
             self.DataSourceName = os.getenv("SENTRY_DSN", "")
         if len(self.DataSourceName) == 0:
             # We do not need Sentry enabled in development - empty DSN leads to failure
-            L.critical(
-                "Data source name is not set. Specify it in configuration: '[sentry] data_source_name'."
-            )
+            L.critical("Data source name is not set. Specify it in configuration: '[sentry] data_source_name'.")
             raise SystemExit("Exit due to a critical configuration error.")
 
         # ENVIRONMENT (e.g. "production", "testing", ...)
@@ -97,23 +91,17 @@ class SentryService(Service):
             with open(manifest_path) as f:
                 manifest = json.load(f)
 
-        self.Release = (
-            "{appname}:{version}".format(  # e.g. 'LMIOParsecApplication:v23.40-alpha'
-                appname=app.__class__.__name__,
-                version=manifest.get("version", "<none>"),
-            )
+        self.Release = "{appname}:{version}".format(  # e.g. 'LMIOParsecApplication:v23.40-alpha'
+            appname=app.__class__.__name__,
+            version=manifest.get("version", "<none>"),
         )
 
         # PERFORMANCE MONITORING
         # traces sample rate: percentage of captured events
         # prevents overcrowding when deployed to production
         # default: 100%
-        self.TracesSampleRate = Config.getfloat(
-            "asab:alert:sentry", "traces_sample_rate", fallback=1.0
-        )
-        assert (
-            0 <= self.TracesSampleRate <= 1.0
-        ), "Traces sample rate must be between 0 and 1."
+        self.TracesSampleRate = Config.getfloat("asab:alert:sentry", "traces_sample_rate", fallback=1.0)
+        assert 0 <= self.TracesSampleRate <= 1.0, "Traces sample rate must be between 0 and 1."
 
         # INITIALIZATION
         sentry_sdk.init(
@@ -144,9 +132,7 @@ class SentryService(Service):
         if self.InstanceId:
             sentry_sdk.set_tag("instance_id", self.InstanceId)
 
-        sentry_sdk.set_tag(
-            "appclass", app.__class__.__name__
-        )  # e.g. 'LMIOParsecApplication'
+        sentry_sdk.set_tag("appclass", app.__class__.__name__)  # e.g. 'LMIOParsecApplication'
 
         L.info("is ready.")  # for debugging, visible only if argument '-v' is set
 
@@ -174,9 +160,7 @@ class SentryService(Service):
         Args:
                 message (str):  Text message that will be sent.
         """
-        return sentry_sdk.capture_message(
-            message=message, level=level, scope=scope, **scope_args
-        )
+        return sentry_sdk.capture_message(message=message, level=level, scope=scope, **scope_args)
 
     def set_tag(self, key: str, value: typing.Union[str, int]) -> None:
         """

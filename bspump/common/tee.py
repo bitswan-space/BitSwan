@@ -75,17 +75,11 @@ class TeeSource(InternalSource):
         for target in self.Targets:
             processor = self._svc.locate(target)
             if processor is None:
-                L.warning(
-                    "TeeSource '{}' cannot find processor '{}'".format(self.Id, target)
-                )
+                L.warning("TeeSource '{}' cannot find processor '{}'".format(self.Id, target))
                 return
 
             if not isinstance(processor, TeeProcessor):
-                L.warning(
-                    "TeeSource '{}' requires TeeProcessor as target, not '{}'".format(
-                        self.Id, target
-                    )
-                )
+                L.warning("TeeSource '{}' requires TeeProcessor as target, not '{}'".format(self.Id, target))
                 return
 
             processor.bind(self.locate_address())

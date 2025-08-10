@@ -9,9 +9,7 @@ class AccessLogger(aiohttp.abc.AbstractAccessLogger):
         super().__init__(logger, log_format)
         self.App = logger.App
         self.WebService = self.App.get_service("asab.WebService")
-        self.web_metrics_config = Config.getboolean(
-            "asab:metrics", "web_requests_metrics", fallback=False
-        )
+        self.web_metrics_config = Config.getboolean("asab:metrics", "web_requests_metrics", fallback=False)
 
     def log(self, request, response, time):
         struct_data = {
@@ -49,6 +47,4 @@ class AccessLogger(aiohttp.abc.AbstractAccessLogger):
             if path is None:
                 path = request.path
 
-            self.WebService.WebRequestsMetrics.set_metrics(
-                time, request.method, path, str(response.status)
-            )
+            self.WebService.WebRequestsMetrics.set_metrics(time, request.method, path, str(response.status))

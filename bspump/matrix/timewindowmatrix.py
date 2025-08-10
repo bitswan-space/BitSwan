@@ -130,10 +130,7 @@ class TimeWindowMatrix(NamedMatrix):
             self.Counters.add("events.early", 1)
             return None
 
-        column_idx = int(
-            (event_timestamp - self.TimeConfig.get_end())
-            // self.TimeConfig.get_resolution()
-        )
+        column_idx = int((event_timestamp - self.TimeConfig.get_end()) // self.TimeConfig.get_resolution())
 
         # These are temporal debug lines
         if column_idx < 0:
@@ -182,9 +179,7 @@ class TimeWindowMatrix(NamedMatrix):
         """
         added = 0
         while True:
-            dt = (
-                self.TimeConfig.get_start() - target_ts
-            ) / self.TimeConfig.get_resolution()
+            dt = (self.TimeConfig.get_start() - target_ts) / self.TimeConfig.get_resolution()
             if dt > 0.25:
                 break
             self.add_column()
@@ -248,9 +243,7 @@ class TimeWindowMatrix(NamedMatrix):
         array = np.delete(array, 0, axis=1)
         self.Array = array
 
-        open_rows = list(
-            set(range(0, self.Array.shape[0])) - self.ClosedRows.get_rows()
-        )
+        open_rows = list(set(range(0, self.Array.shape[0])) - self.ClosedRows.get_rows())
         self.WarmingUpCount.decrease(open_rows)
         self.Start = self.TimeConfig.get_start()
         self.End = self.TimeConfig.get_end()
@@ -345,10 +338,7 @@ class PersistentTimeWindowMatrix(PersistentNamedMatrix):
             self.Counters.add("events.early", 1)
             return None
 
-        column_idx = int(
-            (event_timestamp - self.TimeConfig.get_end())
-            // self.TimeConfig.get_resolution()
-        )
+        column_idx = int((event_timestamp - self.TimeConfig.get_end()) // self.TimeConfig.get_resolution())
 
         # These are temporal debug lines
         if column_idx < 0:
@@ -397,9 +387,7 @@ class PersistentTimeWindowMatrix(PersistentNamedMatrix):
         """
         added = 0
         while True:
-            dt = (
-                self.TimeConfig.get_start() - target_ts
-            ) / self.TimeConfig.get_resolution()
+            dt = (self.TimeConfig.get_start() - target_ts) / self.TimeConfig.get_resolution()
             if dt > 0.25:
                 break
             self.add_column()
@@ -434,9 +422,7 @@ class PersistentTimeWindowMatrix(PersistentNamedMatrix):
     def zeros(self):
         super().zeros()
         path = os.path.join(self.Path, "time_config.dat")
-        self.TimeConfig = PersistentTimeConfig(
-            path, self.Resolution, self.Columns, self.Start
-        )
+        self.TimeConfig = PersistentTimeConfig(path, self.Resolution, self.Columns, self.Start)
         self.End = self.TimeConfig.get_end()
         path = os.path.join(self.Path, "warming_up_count.dat")
         self.WarmingUpCount = PersistentWarmingUpCount(path, self.Array.shape[0])
@@ -469,14 +455,10 @@ class PersistentTimeWindowMatrix(PersistentNamedMatrix):
         array = np.hstack((array, column))
         array = np.delete(array, 0, axis=1)
 
-        self.Array = np.memmap(
-            self.ArrayPath, dtype=self.DType, mode="w+", shape=array.shape
-        )
+        self.Array = np.memmap(self.ArrayPath, dtype=self.DType, mode="w+", shape=array.shape)
         self.Array[:] = array[:]
 
-        open_rows = list(
-            set(range(0, self.Array.shape[0])) - self.ClosedRows.get_rows()
-        )
+        open_rows = list(set(range(0, self.Array.shape[0])) - self.ClosedRows.get_rows())
         self.WarmingUpCount.decrease(open_rows)
         self.Start = self.TimeConfig.get_start()
         self.End = self.TimeConfig.get_end()

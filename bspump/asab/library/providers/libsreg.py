@@ -65,9 +65,7 @@ class LibsRegLibraryProvider(FileSystemLibraryProvider):
             "asab.library.libsreg",
         )
 
-        self.RepoPath = os.path.join(
-            self.RootPath, hashlib.sha256(self.URLs[0].encode("utf-8")).hexdigest()
-        )
+        self.RepoPath = os.path.join(self.RootPath, hashlib.sha256(self.URLs[0].encode("utf-8")).hexdigest())
 
         os.makedirs(os.path.join(self.RepoPath), exist_ok=True)
 
@@ -107,9 +105,7 @@ class LibsRegLibraryProvider(FileSystemLibraryProvider):
             try:
                 async with aiohttp.ClientSession() as session:
                     async with session.get(url, headers=headers) as response:
-                        if (
-                            response.status == 200
-                        ):  # The request indicates a new version that we don't have yet
+                        if response.status == 200:  # The request indicates a new version that we don't have yet
                             etag_incoming = response.headers.get("ETag")
 
                             # Download new version

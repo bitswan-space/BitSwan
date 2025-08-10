@@ -15,9 +15,7 @@ class WarningPipeline(Pipeline):
     def __init__(self, app, id=None, config=None):
         super().__init__(app, id, config)
         self.PubSub.subscribe("bspump.pipeline.cycle_end!", self._on_finished)
-        self.Source = UnitTestSource(app, self).on(
-            PubSubTrigger(app, "Application.run!", app.PubSub)
-        )
+        self.Source = UnitTestSource(app, self).on(PubSubTrigger(app, "Application.run!", app.PubSub))
         self.Processor = RaisingProcessor(app, self)
         self.Sink = UnitTestSink(app, self)
         self.build(self.Source, self.Processor, self.Sink)

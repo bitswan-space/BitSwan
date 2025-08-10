@@ -30,20 +30,14 @@ class StorageServiceABC(Service):
 
     def __init__(self, app, service_name):
         super().__init__(app, service_name)
-        self.WebhookURIs = (
-            Config.get("asab:storage:changestream", "webhook_uri", fallback="") or None
-        )
+        self.WebhookURIs = Config.get("asab:storage:changestream", "webhook_uri", fallback="") or None
         if self.WebhookURIs is not None:
-            self.WebhookURIs = [
-                uri for uri in re.split(r"\s+", self.WebhookURIs) if len(uri) > 0
-            ]
+            self.WebhookURIs = [uri for uri in re.split(r"\s+", self.WebhookURIs) if len(uri) > 0]
             try:
                 self.ProactorService = app.get_service("asab.ProactorService")
             except KeyError as e:
                 raise Exception("Storage webhooks require ProactorService") from e
-        self.WebhookAuth = (
-            Config.get("asab:storage:changestream", "webhook_auth", fallback="") or None
-        )
+        self.WebhookAuth = Config.get("asab:storage:changestream", "webhook_auth", fallback="") or None
 
         # Specify a non-empty AES key to enable AES encryption of selected fields
         self._AESKey = Config.get("asab:storage", "aes_key", fallback="")
@@ -147,9 +141,7 @@ class StorageServiceABC(Service):
         Raises:
                 TypeError: The data are not in binary format.
         """
-        block_size = (
-            cryptography.hazmat.primitives.ciphers.algorithms.AES.block_size // 8
-        )
+        block_size = cryptography.hazmat.primitives.ciphers.algorithms.AES.block_size // 8
 
         if self._AESKey is None:
             raise RuntimeError(
@@ -175,9 +167,7 @@ class StorageServiceABC(Service):
         mode = cryptography.hazmat.primitives.ciphers.modes.CBC(iv)
         cipher = cryptography.hazmat.primitives.ciphers.Cipher(algorithm, mode)
         encryptor = cipher.encryptor()
-        encrypted = (
-            ENCRYPTED_PREFIX + iv + (encryptor.update(raw) + encryptor.finalize())
-        )
+        encrypted = ENCRYPTED_PREFIX + iv + (encryptor.update(raw) + encryptor.finalize())
         return encrypted
 
     def aes_decrypt(self, encrypted: bytes) -> bytes:
@@ -190,9 +180,7 @@ class StorageServiceABC(Service):
         Returns:
                 The decrypted data.
         """
-        block_size = (
-            cryptography.hazmat.primitives.ciphers.algorithms.AES.block_size // 8
-        )
+        block_size = cryptography.hazmat.primitives.ciphers.algorithms.AES.block_size // 8
 
         if self._AESKey is None:
             raise RuntimeError(
@@ -205,9 +193,7 @@ class StorageServiceABC(Service):
 
         # Strip the prefix
         if not encrypted.startswith(ENCRYPTED_PREFIX):
-            raise ValueError(
-                "Encrypted data must start with {!r} prefix".format(ENCRYPTED_PREFIX)
-            )
+            raise ValueError("Encrypted data must start with {!r} prefix".format(ENCRYPTED_PREFIX))
         encrypted = encrypted[len(ENCRYPTED_PREFIX) :]
 
         # Separate the initialization vector

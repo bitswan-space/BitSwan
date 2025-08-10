@@ -22,9 +22,7 @@ class KafkaBatchSink(KafkaSink):
         "batch_size": 10000,
     }
 
-    def __init__(
-        self, app, pipeline, connection, key_serializer=None, id=None, config=None
-    ):
+    def __init__(self, app, pipeline, connection, key_serializer=None, id=None, config=None):
         """
         Initializing parameters passed to the BatchSink class.
 
@@ -76,10 +74,7 @@ class KafkaBatchSink(KafkaSink):
 
         self._output_queue.put_nowait((kafka_topic, event, kafka_key))
 
-        if (
-            not self._throttled
-            and self._output_queue.qsize() >= self._output_queue_max_size
-        ):
+        if not self._throttled and self._output_queue.qsize() >= self._output_queue_max_size:
             self.Pipeline.throttle(self, True)
             self._throttled = True
 
@@ -99,10 +94,7 @@ class KafkaBatchSink(KafkaSink):
                     future = await producer.send(topic, message, key=kafka_key)
                     futures.append(future)
 
-                    if (
-                        self._throttled
-                        and self._output_queue.qsize() < self._output_queue_max_size
-                    ):
+                    if self._throttled and self._output_queue.qsize() < self._output_queue_max_size:
                         self.Pipeline.throttle(self, False)
                         self._throttled = False
 

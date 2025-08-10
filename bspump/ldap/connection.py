@@ -72,16 +72,12 @@ class LDAPConnection(Connection):
         client = LDAPObject(self.URI)
         client.protocol_version = ldap.VERSION3
         client.set_option(ldap.OPT_REFERRALS, 0)
-        client.set_option(
-            ldap.OPT_NETWORK_TIMEOUT, int(self.Config.get("network_timeout"))
-        )
+        client.set_option(ldap.OPT_NETWORK_TIMEOUT, int(self.Config.get("network_timeout")))
         if self.TLSEnabled:
             self._enable_tls(client)
 
         try:
-            client.simple_bind_s(
-                self.Config.get("username"), self.Config.get("password")
-            )
+            client.simple_bind_s(self.Config.get("username"), self.Config.get("password"))
             yield client
         except Exception as e:
             L.error(

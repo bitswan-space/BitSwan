@@ -5,8 +5,8 @@ asynchronous and serverless applications. It provides a simple yet powerful set 
 conventions for developing scalable and efficient applications.
 
 For detailed documentation and examples, please refer to the ASAB documentation at:
-	- GitHub Repository: https://github.com/TeskaLabs/asab
-	- Documentation: https://asab.readthedocs.io
+        - GitHub Repository: https://github.com/TeskaLabs/asab
+        - Documentation: https://asab.readthedocs.io
 """
 
 import logging

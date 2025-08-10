@@ -106,7 +106,5 @@ class Analyzer(Processor):
         """
         t0 = time.perf_counter()
         self.analyze()
-        self.Pipeline.ProfilerCounter["analyzer_" + self.Id].add(
-            "duration", time.perf_counter() - t0
-        )
+        self.Pipeline.ProfilerCounter["analyzer_" + self.Id].add("duration", time.perf_counter() - t0)
         self.Pipeline.ProfilerCounter["analyzer_" + self.Id].add("run", 1)

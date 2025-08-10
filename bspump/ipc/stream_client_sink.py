@@ -110,9 +110,7 @@ class StreamClientSink(Sink):
         port = addr.pop(0).strip()
         port = int(port)
 
-        addrinfo = await loop.getaddrinfo(
-            host, port, family=socket.AF_UNSPEC, type=socket.SOCK_STREAM
-        )
+        addrinfo = await loop.getaddrinfo(host, port, family=socket.AF_UNSPEC, type=socket.SOCK_STREAM)
 
         client_sock = None
         connection_exception = ""
@@ -127,24 +125,18 @@ class StreamClientSink(Sink):
                 continue
 
         if client_sock is None:
-            L.warning(
-                "Connection to '{}' failed: {}".format(addr, connection_exception)
-            )
+            L.warning("Connection to '{}' failed: {}".format(addr, connection_exception))
             return
 
         # TODO: Support also TLSStream ...
-        stream = Stream(
-            self.Pipeline.Loop, client_sock, outbound_queue=self.OutboundQueue
-        )
+        stream = Stream(self.Pipeline.Loop, client_sock, outbound_queue=self.OutboundQueue)
 
         outbound = loop.create_task(stream.outbound())
         inbound = loop.create_task(self._client_inbound_task(client_sock))
 
         self.Pipeline.throttle(self, enable=False)
         try:
-            done, active = await asyncio.wait(
-                {outbound, inbound}, return_when=asyncio.FIRST_COMPLETED
-            )
+            done, active = await asyncio.wait({outbound, inbound}, return_when=asyncio.FIRST_COMPLETED)
 
         except asyncio.CancelledError:
             active = {outbound, inbound}

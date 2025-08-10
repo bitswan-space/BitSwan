@@ -33,7 +33,5 @@ class Module(asab.Module):
             raise SystemExit("Exit due to a critical configuration error.")
 
         else:
-            L.critical(
-                "Unknown configuration type '{}' in [asab:storage].".format(sttype)
-            )
+            L.critical("Unknown configuration type '{}' in [asab:storage].".format(sttype))
             raise SystemExit("Exit due to a critical configuration error.")

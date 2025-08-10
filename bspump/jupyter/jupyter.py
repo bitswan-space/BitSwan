@@ -72,13 +72,9 @@ class DevRuntime:
 
 def auto_pipeline(source=None, sink=None, name=None):
     if source is None:
-        raise Exception(
-            "When calling auto_pipeline must specify a function that returns a source."
-        )
+        raise Exception("When calling auto_pipeline must specify a function that returns a source.")
     if sink is None:
-        raise Exception(
-            "When calling auto_pipeline must specify a function that returns a sink."
-        )
+        raise Exception("When calling auto_pipeline must specify a function that returns a sink.")
 
     global __bitswan_autopipeline_count
     if name is None:
@@ -142,9 +138,7 @@ def is_running_in_jupyter():
         # Check if the IPython kernel is running which is a strong indication of a Jupyter environment
         if "IPKernelApp" in get_ipython().config:
             return True
-        if (
-            "VSCODE_PID" in os.environ
-        ):  # Check for Visual Studio Code's Jupyter extension
+        if "VSCODE_PID" in os.environ:  # Check for Visual Studio Code's Jupyter extension
             return True
         return False
     except Exception:
@@ -192,11 +186,7 @@ def add_test_probe(name):
                 print(f"    │ Probing {name}.")
                 probed = probe(frame.f_back.f_locals, frame.f_back.f_globals)
                 if not probed == expected:
-                    print(
-                        "    └ \033[91m"
-                        + f"Probe {name} failed. Got {probed} expected {expected}."
-                        + "\033[0m"
-                    )
+                    print("    └ \033[91m" + f"Probe {name} failed. Got {probed} expected {expected}." + "\033[0m")
                     exit(1)
         finally:
             del frame
@@ -390,9 +380,7 @@ def register_processor(func):
     if not __bitswan_dev:
         __bitswan_processors.append(func)
     else:
-        pipeline = DevPipeline(
-            app=__bitswan_dev_runtime.dev_app, id=__bitswan_current_pipeline
-        )
+        pipeline = DevPipeline(app=__bitswan_dev_runtime.dev_app, id=__bitswan_current_pipeline)
         processor = func(__bitswan_dev_runtime.dev_app, pipeline)
         callable_process = partial(processor.process, processor)
         __bitswan_dev_runtime.step(func.__name__, callable_process)
@@ -416,9 +404,7 @@ def register_generator(func):
             # TODO: check this
             __bitswan_processors.append(func)
         else:
-            pipeline = DevPipeline(
-                __bitswan_dev_runtime.dev_app, __bitswan_current_pipeline
-            )
+            pipeline = DevPipeline(__bitswan_dev_runtime.dev_app, __bitswan_current_pipeline)
             generator = func(__bitswan_dev_runtime.dev_app, pipeline)
 
             async def asfunc(inject, event):
@@ -606,9 +592,7 @@ def deploy():
             details = DeployDetails(
                 json.dumps(notebook_json, sort_keys=True, indent=2),
                 os.environ["BITSWAN_DEPLOY_SECRET"],
-                os.environ[
-                    "BITSWAN_DEPLOY_URL"
-                ],  # raises KeyError if not set, to match google colab behavior
+                os.environ["BITSWAN_DEPLOY_URL"],  # raises KeyError if not set, to match google colab behavior
             )
             return details
         else:
@@ -619,9 +603,7 @@ def deploy():
                     "No VSCode or Colab environment detected. Please run this in a different environment."
                 )
 
-            notebook_json_string = _message.blocking_request(
-                "get_ipynb", request="", timeout_sec=None
-            )
+            notebook_json_string = _message.blocking_request("get_ipynb", request="", timeout_sec=None)
             details = DeployDetails(
                 json.dumps(notebook_json_string["ipynb"], sort_keys=True, indent=2),
                 userdata.get("BITSWAN_DEPLOY_SECRET"),

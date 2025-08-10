@@ -30,9 +30,7 @@ class StreamServerSource(Source):
         "decode": "utf-8",
     }
 
-    def __init__(
-        self, app, pipeline, id=None, config=None, protocol_class=LineSourceProtocol
-    ):
+    def __init__(self, app, pipeline, id=None, config=None, protocol_class=LineSourceProtocol):
         """
         Description:
 
@@ -84,9 +82,7 @@ class StreamServerSource(Source):
                     try:
                         s.bind(sockaddr)
                     except OSError as e:
-                        L.warning(
-                            "Failed to start listening at '{}': {}".format(addrline, e)
-                        )
+                        L.warning("Failed to start listening at '{}': {}".format(addrline, e))
                         continue
 
                     backlog = self.Config["backlog"]
@@ -131,10 +127,7 @@ class StreamServerSource(Source):
             L.error("No listening socket configured")
             return
 
-        await asyncio.gather(
-            *[self._handle_accept(sock) for sock in self.AcceptingSockets],
-            return_exceptions=True
-        )
+        await asyncio.gather(*[self._handle_accept(sock) for sock in self.AcceptingSockets], return_exceptions=True)
 
     async def _handle_accept(self, sock):
         """
@@ -145,9 +138,7 @@ class StreamServerSource(Source):
         server_addr = sock.getsockname()
         while True:
             client_sock, client_addr = await loop.sock_accept(sock)
-            t = loop.create_task(
-                self._client_connected_task(client_sock, client_addr, server_addr)
-            )
+            t = loop.create_task(self._client_connected_task(client_sock, client_addr, server_addr))
             self.ConnectedClients.add(t)
 
     async def _client_connected_task(self, client_sock, client_addr, server_addr):
@@ -174,9 +165,7 @@ class StreamServerSource(Source):
             "stream_me": me,
         }
         if self.SSL is not None:
-            stream = TLSStream(
-                self.Pipeline.App.Loop, self.SSL, client_sock, server_side=True
-            )
+            stream = TLSStream(self.Pipeline.App.Loop, self.SSL, client_sock, server_side=True)
             ok = await stream.handshake()
             if not ok:
                 return
@@ -186,13 +175,9 @@ class StreamServerSource(Source):
         # This allows to send a reply to a client
         context["stream"] = stream
 
-        inbound = self.Pipeline.App.Loop.create_task(
-            self.Protocol.handle(self, stream, context)
-        )
+        inbound = self.Pipeline.App.Loop.create_task(self.Protocol.handle(self, stream, context))
         outbound = self.Pipeline.App.Loop.create_task(stream.outbound())
-        done, active = await asyncio.wait(
-            {inbound, outbound}, return_when=asyncio.FIRST_COMPLETED
-        )
+        done, active = await asyncio.wait({inbound, outbound}, return_when=asyncio.FIRST_COMPLETED)
 
         for t in active:
             # TODO: There could be outstanding data in the outbound queue
@@ -213,9 +198,7 @@ class StreamServerSource(Source):
 
     def _on_tick(self, event_name):
         # Remove clients that disconnected
-        disconnected_client_tasks = [
-            *filter(lambda task: task.done(), self.ConnectedClients)
-        ]
+        disconnected_client_tasks = [*filter(lambda task: task.done(), self.ConnectedClients)]
         for task in disconnected_client_tasks:
             if task.done():
                 self.ConnectedClients.remove(task)

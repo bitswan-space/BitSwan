@@ -86,9 +86,7 @@ class ElasticSearchSource(TriggerSource):
                     if response.status != 200:
                         data = await response.text()
                         L.error(
-                            "Failed to fetch data from ElasticSearch: {} from {}\n{}".format(
-                                response.status, url, data
-                            )
+                            "Failed to fetch data from ElasticSearch: {} from {}\n{}".format(response.status, url, data)
                         )
                         break
 
@@ -120,9 +118,7 @@ class ElasticSearchAggsSource(TriggerSource):
         "index": "index-*",
     }
 
-    def __init__(
-        self, app, pipeline, connection, request_body=None, id=None, config=None
-    ):
+    def __init__(self, app, pipeline, connection, request_body=None, id=None, config=None):
         """
         Description:
 
@@ -168,15 +164,11 @@ class ElasticSearchAggsSource(TriggerSource):
         path = "{}/_search?".format(self.Index)
         url = self.Connection.get_url() + path
         async with self.Connection.get_session() as session:
-            async with session.post(
-                url, json=request_body, headers={"Content-Type": "application/json"}
-            ) as response:
+            async with session.post(url, json=request_body, headers={"Content-Type": "application/json"}) as response:
                 if response.status != 200:
                     data = await response.text()
                     L.error(
-                        "Failed to fetch data from ElasticSearch: {} from {}\n{}".format(
-                            response.status, url, data
-                        )
+                        "Failed to fetch data from ElasticSearch: {} from {}\n{}".format(response.status, url, data)
                     )
                     return
 

@@ -95,9 +95,7 @@ class ElasticSearchSink(Sink):
             and self.Config.get("index_prefix") != "bspump_"
             and len(self.Config.get("index_prefix")) > 0
         ):
-            L.warning(
-                "The 'index_prefix' has been renamed to 'index', please adjust the configuration."
-            )
+            L.warning("The 'index_prefix' has been renamed to 'index', please adjust the configuration.")
             self.Index = self.Config.get("index_prefix")
 
         if data_feeder is None:
@@ -105,12 +103,8 @@ class ElasticSearchSink(Sink):
 
         self.__data_feeder = data_feeder
 
-        app.PubSub.subscribe(
-            "ElasticSearchConnection.pause!", self._connection_throttle
-        )
-        app.PubSub.subscribe(
-            "ElasticSearchConnection.unpause!", self._connection_throttle
-        )
+        app.PubSub.subscribe("ElasticSearchConnection.pause!", self._connection_throttle)
+        app.PubSub.subscribe("ElasticSearchConnection.unpause!", self._connection_throttle)
 
     def process(self, context, event):
         """

@@ -103,9 +103,7 @@ class BSPumpService(Service):
 
         """
         if pipeline.Id in self.Pipelines:
-            raise RuntimeError(
-                "Pipeline with id '{}' is already registered".format(pipeline.Id)
-            )
+            raise RuntimeError("Pipeline with id '{}' is already registered".format(pipeline.Id))
 
         self.Pipelines[pipeline.Id] = pipeline
 
@@ -255,9 +253,7 @@ class BSPumpService(Service):
         except KeyError:
             pass
 
-        raise KeyError(
-            "Cannot find lookup id '{}' (did you call add_lookup() ?)".format(lookup_id)
-        )
+        raise KeyError("Cannot find lookup id '{}' (did you call add_lookup() ?)".format(lookup_id))
 
     def add_lookup_factory(self, lookup_factory):
         """
@@ -321,11 +317,7 @@ class BSPumpService(Service):
         try:
             return self.Matrixes[matrix_id]
         except KeyError:
-            raise KeyError(
-                "Cannot find matrix id '{}' (did you call add_matrix() ?)".format(
-                    matrix_id
-                )
-            )
+            raise KeyError("Cannot find matrix id '{}' (did you call add_matrix() ?)".format(matrix_id))
 
     #
 
@@ -369,6 +361,4 @@ class BSPumpService(Service):
         """
         # Stop all started pipelines
         if len(self.Pipelines) > 0:
-            await asyncio.gather(
-                *[pipeline.stop() for pipeline in self.Pipelines.values()]
-            )
+            await asyncio.gather(*[pipeline.stop() for pipeline in self.Pipelines.values()])

@@ -26,9 +26,7 @@ class SubProcessSource(Source):
         assert self.Command, "`command` not set on " + self.__class__.__name__
         self._process = None
         # Get the list of OK return codes
-        self.OKReturnCodes = [
-            int(i.strip()) for i in self.Config["ok_return_codes"].split(",")
-        ]
+        self.OKReturnCodes = [int(i.strip()) for i in self.Config["ok_return_codes"].split(",")]
 
     async def main(self):
         self._process = await asyncio.create_subprocess_shell(
@@ -44,14 +42,7 @@ class SubProcessSource(Source):
             event = await self._process.stdout.readline()
             await self.process(event)
         # Error message, when process has been terminated
-        if (
-            self._process.returncode not in self.OKReturnCodes
-            and self._process.returncode is not None
-        ):
+        if self._process.returncode not in self.OKReturnCodes and self._process.returncode is not None:
             # Print error, wait a bit and retry again
-            L.error(
-                "Command {} has exited with return code: {}".format(
-                    self.Command, self._process.returncode
-                )
-            )
+            L.error("Command {} has exited with return code: {}".format(self.Command, self._process.returncode))
             await asyncio.sleep(5)

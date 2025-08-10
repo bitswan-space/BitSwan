@@ -104,9 +104,7 @@ class MongoDBLookup(MappingLookup, AsyncLookupMixin):
             self.Cache = cache
 
         metrics_service = app.get_service("asab.MetricsService")
-        self.CacheCounter = metrics_service.create_counter(
-            "mongodb.lookup", tags={}, init_values={"hit": 0, "miss": 0}
-        )
+        self.CacheCounter = metrics_service.create_counter("mongodb.lookup", tags={}, init_values={"hit": 0, "miss": 0})
         self.SuccessCounter = metrics_service.create_counter(
             "mongodb.lookup.success", tags={}, init_values={"hit": 0, "miss": 0}
         )
@@ -148,15 +146,11 @@ class MongoDBLookup(MappingLookup, AsyncLookupMixin):
         return {self.Key: key}
 
     async def _find_one(self, query):
-        return await self.Connection.Client[self.Database][self.Collection].find_one(
-            query
-        )
+        return await self.Connection.Client[self.Database][self.Collection].find_one(query)
 
     async def _changestream(self):
         try:
-            async with self.Connection.Client[self.Database][
-                self.Collection
-            ].watch() as stream:
+            async with self.Connection.Client[self.Database][self.Collection].watch() as stream:
                 async for change in stream:
                     self.Cache.clear()
 

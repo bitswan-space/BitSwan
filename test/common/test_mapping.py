@@ -16,9 +16,7 @@ class TestMappingKeysProcessor(bspump.unittest.ProcessorTestCase):
 
         output = self.execute(events)
 
-        self.assertEqual(
-            [event for context, event in output], [["foo"], ["fizz"], ["spam"]]
-        )
+        self.assertEqual([event for context, event in output], [["foo"], ["fizz"], ["spam"]])
 
 
 class TestMappingValuesProcessor(bspump.unittest.ProcessorTestCase):
@@ -33,9 +31,7 @@ class TestMappingValuesProcessor(bspump.unittest.ProcessorTestCase):
 
         output = self.execute(events)
 
-        self.assertEqual(
-            [event for context, event in output], [["bar"], ["buzz"], ["eggs"]]
-        )
+        self.assertEqual([event for context, event in output], [["bar"], ["buzz"], ["eggs"]])
 
 
 class TestMappingItemsProcessor(bspump.unittest.ProcessorTestCase):

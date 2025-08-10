@@ -33,9 +33,7 @@ class HyperLogLog(object):
             self.alpha = self.alphas.get(m)
 
         if self.alpha is None:
-            raise RuntimeError(
-                "Incorrect m, it should be 16, 32 or 64, or powers of 2 >= 128"
-            )
+            raise RuntimeError("Incorrect m, it should be 16, 32 or 64, or powers of 2 >= 128")
 
     def add(self, value, array):
         """

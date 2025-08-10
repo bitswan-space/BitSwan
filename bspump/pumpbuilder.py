@@ -187,9 +187,7 @@ class PumpBuilder(object):
 
         sources = self.construct_sources(app, svc, pipeline, sources_definition)
         pipeline.set_source(sources)
-        processors = self.construct_processors(
-            app, svc, pipeline, processors_definition
-        )
+        processors = self.construct_processors(app, svc, pipeline, processors_definition)
         sink = self.construct_processor(app, svc, pipeline, sink_definition)
 
         processors.append(sink)
@@ -254,9 +252,7 @@ class PumpBuilder(object):
         processors = []
         for i in range(0, len(definition)):
             processor_definition = definition[i]
-            processor = self.construct_processor(
-                app, svc, pipeline, processor_definition
-            )
+            processor = self.construct_processor(app, svc, pipeline, processor_definition)
             processors.append(processor)
 
         return processors

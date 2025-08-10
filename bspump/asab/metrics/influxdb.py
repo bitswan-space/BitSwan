@@ -118,15 +118,11 @@ class InfluxDBTarget(asab.Configurable):
                         response = await resp.text()
                         if resp.status != 204:
                             L.warning(
-                                "Error when sending metrics to Influx: {}\n{}".format(
-                                    resp.status, response
-                                ),
+                                "Error when sending metrics to Influx: {}\n{}".format(resp.status, response),
                                 struct_data={"url": self.BaseURL},
                             )
             except aiohttp.client_exceptions.ClientConnectorError:
-                L.error(
-                    "Failed to connect to InfluxDB.", struct_data={"url": self.BaseURL}
-                )
+                L.error("Failed to connect to InfluxDB.", struct_data={"url": self.BaseURL})
             except Exception as err:
                 print(
                     "Failed to send metrics to InfluxDB: {}".format(err),
@@ -176,9 +172,7 @@ def get_field(fk, fv):
             fv.replace("\\", "\\\\").replace('"', '\\"'),
         )
     else:
-        raise RuntimeError(
-            "Unknown/invalid type of the metrics field: {} {}".format(type(fv), fk)
-        )
+        raise RuntimeError("Unknown/invalid type of the metrics field: {} {}".format(type(fv), fk))
 
     return field
 
@@ -189,16 +183,8 @@ def combine_tags_and_field(tags, values, timestamp):
     values = escape_values(values)
     # Then combine the tags and then values
     # remove "help" and "unit" tags -> utilized in openmetric target
-    tags_string = ",".join(
-        [
-            "{}={}".format(tk, tv)
-            for tk, tv in tags.items()
-            if tk not in ("help", "unit")
-        ]
-    )
-    field_set = ",".join(
-        [get_field(value_name, value) for value_name, value in values.items()]
-    )
+    tags_string = ",".join(["{}={}".format(tk, tv) for tk, tv in tags.items() if tk not in ("help", "unit")])
+    field_set = ",".join([get_field(value_name, value) for value_name, value in values.items()])
     return tags_string + " " + field_set + " " + str(int(timestamp * 1e9))
 
 
@@ -225,20 +211,14 @@ def metric_to_influxdb(metric_record, now):
     if metric_type in ["Histogram", "HistogramWithDynamicTags"]:
         for field in fieldset:
             # SKIP empty fields
-            if all(
-                [bucket == {} for bucket in field.get("values").get("buckets").values()]
-            ):
+            if all([bucket == {} for bucket in field.get("values").get("buckets").values()]):
                 continue
             timestamp = get_timestamp(field, now)
             for upperbound, bucket in field.get("values").get("buckets").items():
                 upperbound = str(upperbound)
                 if bucket == {}:
                     continue
-                values_lines.append(
-                    build_metric_line(
-                        field.get("tags").copy(), bucket, timestamp, upperbound
-                    )
-                )
+                values_lines.append(build_metric_line(field.get("tags").copy(), bucket, timestamp, upperbound))
             values_lines.append(
                 build_metric_line(
                     field.get("tags").copy(),
@@ -260,9 +240,7 @@ def metric_to_influxdb(metric_record, now):
             if not field.get("values") or field.get("values") == {}:
                 continue
             timestamp = get_timestamp(field, now)
-            values_lines.append(
-                build_metric_line(field.get("tags"), (field.get("values")), timestamp)
-            )
+            values_lines.append(build_metric_line(field.get("tags"), (field.get("values")), timestamp))
 
     return ["{},{}\n".format(name, line) for line in values_lines]
 

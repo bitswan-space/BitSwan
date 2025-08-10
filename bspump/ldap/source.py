@@ -40,9 +40,7 @@ class LDAPSource(TriggerSource):
         await self.Pipeline.ready()
         cookie = b""
         while True:
-            page, cookie = await self.ProactorService.execute(
-                self._search_worker, cookie
-            )
+            page, cookie = await self.ProactorService.execute(self._search_worker, cookie)
             for entry in page:
                 await self.process(entry, context={})
             if cookie is None or len(cookie) == 0:
@@ -81,10 +79,7 @@ class LDAPSource(TriggerSource):
                 page.append(event)
 
             for sc in serverctrls:
-                if (
-                    sc.controlType
-                    == ldap.controls.SimplePagedResultsControl.controlType
-                ):
+                if sc.controlType == ldap.controls.SimplePagedResultsControl.controlType:
                     cookie = sc.cookie
                     break
             else:

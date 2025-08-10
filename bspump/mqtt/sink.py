@@ -14,6 +14,4 @@ class MQTTSink(Sink):
         self.Connection = pipeline.locate_connection(app, connection)
 
     def process(self, context, event):
-        self.Connection.publish_to_topic(
-            self.Config["topic"], event, self.Config["qos"], self.Config["retain"]
-        )
+        self.Connection.publish_to_topic(self.Config["topic"], event, self.Config["qos"], self.Config["retain"])

@@ -8,11 +8,7 @@ class TestKafkaSink(bspump.unittest.ProcessorTestCase):
     @patch("bspump.kafka.sink.KafkaSink._on_health_check", lambda *x: None)
     def test_producer_params_configuration(self):
         svc = self.App.get_service("bspump.PumpService")
-        svc.add_connection(
-            KafkaConnection(
-                self.App, "KafkaConnection", config={"bootstrap_servers": "kafka:9092"}
-            )
-        )
+        svc.add_connection(KafkaConnection(self.App, "KafkaConnection", config={"bootstrap_servers": "kafka:9092"}))
 
         self.set_up_processor(
             KafkaSink,

@@ -72,9 +72,7 @@ class GeoAnalyzer(Analyzer):
                 configuration file with additional information
 
         """
-        super().__init__(
-            app, pipeline, analyze_on_clock=analyze_on_clock, id=id, config=config
-        )
+        super().__init__(app, pipeline, analyze_on_clock=analyze_on_clock, id=id, config=config)
         svc = app.get_service("bspump.PumpService")
         if matrix_id is None:
             g_id = self.Id + "Matrix"
@@ -90,9 +88,7 @@ class GeoAnalyzer(Analyzer):
                     app, dtype, bbox=bbox, resolution=resolution, id=g_id, config=config
                 )
             else:
-                self.GeoMatrix = GeoMatrix(
-                    app, dtype, bbox=bbox, resolution=resolution, id=g_id, config=config
-                )
+                self.GeoMatrix = GeoMatrix(app, dtype, bbox=bbox, resolution=resolution, id=g_id, config=config)
             svc.add_matrix(self.GeoMatrix)
         else:
             self.GeoMatrix = svc.locate_matrix(matrix_id)

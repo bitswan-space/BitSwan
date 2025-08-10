@@ -43,18 +43,14 @@ class DatagramSource(Source):
         addrline = self.Address.strip()
         if addrline.count(":") == 1:
             host, port = self.Address.rsplit(":", maxsplit=1)
-            (family, socktype, proto, canonname, sockaddr) = socket.getaddrinfo(
-                host, port
-            )[0]
+            (family, socktype, proto, canonname, sockaddr) = socket.getaddrinfo(host, port)[0]
 
             self.Socket = socket.socket(family, socket.SOCK_DGRAM)
             self.Socket.setblocking(False)
             self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
             if self.ReceiveBufferSize > 0:
-                self.Socket.setsockopt(
-                    socket.SOL_SOCKET, socket.SO_RCVBUF, self.ReceiveBufferSize
-                )
+                self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, self.ReceiveBufferSize)
 
             self.Socket.bind(sockaddr)
 
@@ -64,9 +60,7 @@ class DatagramSource(Source):
             self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
             if self.ReceiveBufferSize > 0:
-                self.Socket.setsockopt(
-                    socket.SOL_SOCKET, socket.SO_RCVBUF, self.ReceiveBufferSize
-                )
+                self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, self.ReceiveBufferSize)
 
             self.Socket.bind(self.Address)
 
@@ -86,9 +80,7 @@ class DatagramSource(Source):
         while True:
             try:
                 await self.Pipeline.ready()
-                event, peer = await self.Loop.sock_recvfrom(
-                    self.Socket, self.MaxPacketSize
-                )
+                event, peer = await self.Loop.sock_recvfrom(self.Socket, self.MaxPacketSize)
                 await self.Pipeline.ready()
                 await self.process(event, context={"datagram": peer})
 
@@ -134,18 +126,14 @@ class DatagramSink(Sink):
             host, port = self.Address.rsplit(" ", maxsplit=1)
         elif addrline.count(":") == 1:
             host, port = self.Address.rsplit(":", maxsplit=1)
-            (family, socktype, proto, canonname, sockaddr) = socket.getaddrinfo(
-                host, port
-            )[0]
+            (family, socktype, proto, canonname, sockaddr) = socket.getaddrinfo(host, port)[0]
 
             self.Socket = socket.socket(family, socket.SOCK_DGRAM)
             self.Socket.setblocking(False)
             self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
             if self.ReceiveBufferSize > 0:
-                self.Socket.setsockopt(
-                    socket.SOL_SOCKET, socket.SO_RCVBUF, self.ReceiveBufferSize
-                )
+                self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, self.ReceiveBufferSize)
 
             self.Socket.connect(sockaddr)
         else:
@@ -154,9 +142,7 @@ class DatagramSink(Sink):
             self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
             if self.ReceiveBufferSize > 0:
-                self.Socket.setsockopt(
-                    socket.SOL_SOCKET, socket.SO_RCVBUF, self.ReceiveBufferSize
-                )
+                self.Socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, self.ReceiveBufferSize)
 
             self.Socket.connect(self.Address)
 

@@ -57,9 +57,7 @@ class GoogleDriveConnection(Connection):
             )
 
         if self._delegated_credentials is None:
-            self._delegated_credentials = self._credentials.with_subject(
-                self._account_email
-            )
+            self._delegated_credentials = self._credentials.with_subject(self._account_email)
 
         svc = googleapiclient.discovery.build(
             "drive",

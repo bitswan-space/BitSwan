@@ -64,16 +64,7 @@ class REGEX_PARSE(Expression):
     Category = "Regex"
 
     def __init__(
-        self,
-        app,
-        *,
-        arg_regex,
-        arg_what,
-        arg_items=None,
-        arg_miss=None,
-        arg_set=None,
-        arg_unset=None,
-        arg_update=None
+        self, app, *, arg_regex, arg_what, arg_items=None, arg_miss=None, arg_set=None, arg_unset=None, arg_update=None
     ):
         super().__init__(app)
 
@@ -121,10 +112,7 @@ class REGEX_PARSE(Expression):
             if isinstance(value, Expression):
                 _to[key] = value
             else:
-                assert (
-                    isinstance(value, (int, str, bytes, bool, tuple, list))
-                    or value is None
-                )
+                assert isinstance(value, (int, str, bytes, bool, tuple, list)) or value is None
                 value = VALUE(self.App, value=value)
                 _to[key] = value
 

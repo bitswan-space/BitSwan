@@ -79,9 +79,7 @@ def get_hash_method(hash_type, input_type):
         elif input_type in ("str"):
             return hash_xxhash64_str
 
-    raise NotImplementedError(
-        "Hashing for '{}' and '{}' is not yet implemented".format(hash_type, input_type)
-    )
+    raise NotImplementedError("Hashing for '{}' and '{}' is not yet implemented".format(hash_type, input_type))
 
 
 def hash_xxhash64_str(what, seed):

@@ -199,9 +199,7 @@ class StringAggregationStrategy(AggregationStrategy):
         |
 
         """
-        result = self.AggregatedEvent[
-            0 : -len(self.Delimiter)
-        ]  # Remove trailing delimiter
+        result = self.AggregatedEvent[0 : -len(self.Delimiter)]  # Remove trailing delimiter
         self.AggregatedEvent = ""
         return result
 
@@ -251,9 +249,7 @@ class Aggregator(Generator):
         self.CompletionInterval = int(self.Config["completion_interval"])
 
         if self.CompletionTimeout > 0 and self.CompletionInterval > 0:
-            raise ValueError(
-                "completion_timeout and completion_interval cannot be combined"
-            )
+            raise ValueError("completion_timeout and completion_interval cannot be combined")
 
         self.AggregationStrategy = aggregation_strategy
 
@@ -270,17 +266,11 @@ class Aggregator(Generator):
             app.PubSub.subscribe("Application.tick!", self._check_periodic_flush)
 
     def _check_timeout(self, _):
-        if (
-            self.CurrentSize > 0
-            and self.App.time() - self.LastFlushTime > self.CompletionTimeout
-        ):
+        if self.CurrentSize > 0 and self.App.time() - self.LastFlushTime > self.CompletionTimeout:
             self.flush()
 
     def _check_periodic_flush(self, _):
-        if (
-            self.CurrentSize > 0
-            and self.App.time() - self.LastPeriodicFlushTime > self.CompletionInterval
-        ):
+        if self.CurrentSize > 0 and self.App.time() - self.LastPeriodicFlushTime > self.CompletionInterval:
             self.LastPeriodicFlushTime = self.App.time()
             self.flush()
 
@@ -300,9 +290,7 @@ class Aggregator(Generator):
             return
 
         aggregated = self.AggregationStrategy.flush()
-        self.Pipeline.ensure_future(
-            self.generate({}, aggregated, self.PipelineDepth + 1)
-        )
+        self.Pipeline.ensure_future(self.generate({}, aggregated, self.PipelineDepth + 1))
 
     def process(self, context, event):
         """

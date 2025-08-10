@@ -1,4 +1,4 @@
-""" Module for connecting to Mongo database"""
+"""Module for connecting to Mongo database"""
 
 import asyncio
 import logging
@@ -21,9 +21,7 @@ class MongoDBSource(TriggerSource):
         "collection": "",
     }
 
-    def __init__(
-        self, app, pipeline, connection, query_parms=None, id=None, config=None
-    ):
+    def __init__(self, app, pipeline, connection, query_parms=None, id=None, config=None):
         """
         Create new instance
                 Parameters:

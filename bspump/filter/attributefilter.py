@@ -16,9 +16,7 @@ class AttributeFilter(Processor):
     otherwise all fields not from lookup will be deleted from event.
     """
 
-    def __init__(
-        self, app, pipeline, lookup=None, inclusive=False, id=None, config=None
-    ):
+    def __init__(self, app, pipeline, lookup=None, inclusive=False, id=None, config=None):
         super().__init__(app, pipeline, id=id, config=config)
         self.Inclusive = inclusive
 

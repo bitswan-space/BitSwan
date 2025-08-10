@@ -59,7 +59,8 @@ dev = [
     "pytest",
     "pytest-asyncio",
     "ruff",
-    "black==23.1.0",
+    "black==25.1.0",
+    "black[jupyter]",
     "watchdog==6.0.0"
 ]
 pyjq-support = [

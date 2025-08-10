@@ -68,9 +68,7 @@ class TestAggregator(bspump.unittest.ProcessorTestCase):
 
         self.assertEqual(2, len(output))
 
-        self.assertEqual(
-            ({}, [({}, {"message": "one"}), ({}, {"message": "two"})]), output[0]
-        )
+        self.assertEqual(({}, [({}, {"message": "one"}), ({}, {"message": "two"})]), output[0])
 
         self.assertEqual(({}, [({}, {"message": "three"})]), output[1])
 

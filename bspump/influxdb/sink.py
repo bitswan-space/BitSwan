@@ -67,9 +67,7 @@ class InfluxDBSink(Sink):
 
         if isinstance(event, tuple):
             measurement, tag_set, field_set, timestamp = event
-            wire_line = "{},{} {} {}\n".format(
-                measurement, tag_set, field_set, int(timestamp * 1e9)
-            )
+            wire_line = "{},{} {} {}\n".format(measurement, tag_set, field_set, int(timestamp * 1e9))
 
         elif isinstance(event, bytes):
             wire_line = event.decode("utf-8")
