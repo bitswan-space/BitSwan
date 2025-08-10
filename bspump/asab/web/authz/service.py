@@ -47,7 +47,9 @@ class AuthzService(Service):
 
         super().__init__(app, service_name)
         self.RBACDisabled = Config.getboolean("authz", "_disable_rbac")
-        self._TokenVerificationDisabled = Config.getboolean("authz", "_disable_token_verification")
+        self._TokenVerificationDisabled = Config.getboolean(
+            "authz", "_disable_token_verification"
+        )
         if jwcrypto is None and not self._TokenVerificationDisabled:
             raise ModuleNotFoundError(
                 "You are trying to use asab.web.authz without 'jwcrypto' installed. "
@@ -59,7 +61,9 @@ class AuthzService(Service):
             raise ValueError("No public_keys_url provided in [authz] config section.")
         self.AuthServerPublicKey = None  # TODO: Support multiple public keys
         # TODO: Fetch public keys if validation fails (instead of periodic fetch)
-        self.App.PubSub.subscribe("Application.tick/30!", self._fetch_public_keys_if_needed)
+        self.App.PubSub.subscribe(
+            "Application.tick/30!", self._fetch_public_keys_if_needed
+        )
 
     async def initialize(self, app):
         await self._fetch_public_keys_if_needed()
@@ -157,7 +161,9 @@ class AuthzService(Service):
                         public_key = jwcrypto.jwk.JWK(**key_data)
                     except Exception as e:
                         L.error(
-                            "JWK decoding error while loading public keys: {}.".format(e),
+                            "JWK decoding error while loading public keys: {}.".format(
+                                e
+                            ),
                             struct_data={
                                 "url": self.PublicKeysUrl,
                                 "data": data,
@@ -204,13 +210,19 @@ def _get_id_token_claims_without_verification(bearer_token: str):
     try:
         header, payload, signature = bearer_token.split(".")
     except IndexError:
-        raise exceptions.NotAuthenticatedError("Cannot parse ID token: Wrong number of '.'.")
+        raise exceptions.NotAuthenticatedError(
+            "Cannot parse ID token: Wrong number of '.'."
+        )
 
     try:
         claims = json.loads(base64.b64decode(payload.encode("utf-8")))
     except binascii.Error:
-        raise exceptions.NotAuthenticatedError("Cannot parse ID token: Payload is not base 64.")
+        raise exceptions.NotAuthenticatedError(
+            "Cannot parse ID token: Payload is not base 64."
+        )
     except json.JSONDecodeError:
-        raise exceptions.NotAuthenticatedError("Cannot parse ID token: Payload cannot be parsed as JSON.")
+        raise exceptions.NotAuthenticatedError(
+            "Cannot parse ID token: Payload cannot be parsed as JSON."
+        )
 
     return claims

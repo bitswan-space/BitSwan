@@ -69,7 +69,9 @@ def noauth(handler):
     for arg in ("tenant", "user_info", "resources"):
         if arg in args:
             raise Exception(
-                "{}(): Handler with @noauth cannot have {!r} in its arguments.".format(handler.__qualname__, arg)
+                "{}(): Handler with @noauth cannot have {!r} in its arguments.".format(
+                    handler.__qualname__, arg
+                )
             )
     handler.NoAuth = True
 

@@ -22,7 +22,9 @@ class TimeWindowMatrixExportCSVGenerator(Generator):
                 for j in range(0, time_window_matrix.Dimensions[0]):
                     event = collections.OrderedDict()
                     event["id"] = row_id
-                    event["timestamp"] = time_window_matrix.Start + j * time_window_matrix.Resolution
+                    event["timestamp"] = (
+                        time_window_matrix.Start + j * time_window_matrix.Resolution
+                    )
                     for k in range(0, time_window_matrix.Dimensions[1]):
                         field_name = "value_{}".format(k)
                         event[field_name] = time_window_matrix.Array[i, j, k]
@@ -48,10 +50,16 @@ class SessionMatrixExportCSVGenerator(Generator):
                         event[name] = session_matrix.Array[name][i]
                     else:
                         for j in range(0, session_matrix.Array.dtype[name].shape[0]):
-                            for k in range(0, session_matrix.Array.dtype[name].shape[1]):
+                            for k in range(
+                                0, session_matrix.Array.dtype[name].shape[1]
+                            ):
                                 field_name = "{}_{}_{}".format(name, j, k)
-                                if session_matrix.Array.dtype[name].subdtype[0].kind in ["f", "u", "i", "b"]:
-                                    value = "{0:.10f}".format(session_matrix.Array[name][i, j, k])
+                                if session_matrix.Array.dtype[name].subdtype[
+                                    0
+                                ].kind in ["f", "u", "i", "b"]:
+                                    value = "{0:.10f}".format(
+                                        session_matrix.Array[name][i, j, k]
+                                    )
                                 else:
                                     value = session_matrix.Array[name][i, j, k]
 

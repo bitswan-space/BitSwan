@@ -20,7 +20,9 @@ class Module(Module):
         self.service = WebService(app, "asab.WebService")
 
 
-def create_web_server(app, section: str = "web", config: typing.Optional[dict] = None) -> aiohttp.web.UrlDispatcher:
+def create_web_server(
+    app, section: str = "web", config: typing.Optional[dict] = None
+) -> aiohttp.web.UrlDispatcher:
     """
     Build the web server with the specified configuration.
 

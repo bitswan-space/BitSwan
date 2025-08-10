@@ -12,5 +12,10 @@ def find_module_path(module_name):
         return f"Module '{module_name}' not found or built-in."
 
 
-path = str(Path(os.path.split(find_module_path("bspump"))[:-1][0]) / "http" / "web" / "templates")
+path = str(
+    Path(os.path.split(find_module_path("bspump"))[:-1][0])
+    / "http"
+    / "web"
+    / "templates"
+)
 env = Environment(loader=FileSystemLoader(path))

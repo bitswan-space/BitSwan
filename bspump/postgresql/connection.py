@@ -127,7 +127,9 @@ class PostgreSQLConnection(Connection):
 
         assert self._conn_future is None
 
-        self._conn_future = asyncio.ensure_future(self._async_connection(), loop=self.Loop)
+        self._conn_future = asyncio.ensure_future(
+            self._async_connection(), loop=self.Loop
+        )
 
         # Connection future already resulted (with or without exception)
         self._sync_connection()
@@ -161,7 +163,9 @@ class PostgreSQLConnection(Connection):
         dsn = self.build_dsn()
 
         try:
-            async with aiopg.create_pool(dsn=dsn, timeout=self._connect_timeout, loop=self.Loop) as pool:
+            async with aiopg.create_pool(
+                dsn=dsn, timeout=self._connect_timeout, loop=self.Loop
+            ) as pool:
                 self._conn_pool = pool
                 self.ConnectionEvent.set()
 
@@ -173,7 +177,11 @@ class PostgreSQLConnection(Connection):
             psycopg2.InternalError,
         ) as e:
             if e.pgcode in self.RetryErrors:
-                L.warning("Recoverable error '{}' ({}) occurred in PostgreSQLConnection.".format(e.pgerror, e.pgcode))
+                L.warning(
+                    "Recoverable error '{}' ({}) occurred in PostgreSQLConnection.".format(
+                        e.pgerror, e.pgcode
+                    )
+                )
                 return None
             raise e
         except BaseException as e:
@@ -214,7 +222,9 @@ class PostgreSQLConnection(Connection):
                 pass
             self._conn_sync = None
         try:
-            connection = psycopg2.connect(dsn=dsn, connect_timeout=self._connect_timeout)
+            connection = psycopg2.connect(
+                dsn=dsn, connect_timeout=self._connect_timeout
+            )
             self._conn_sync = connection
         except (
             psycopg2.OperationalError,
@@ -222,7 +232,11 @@ class PostgreSQLConnection(Connection):
             psycopg2.InternalError,
         ) as e:
             if e.pgcode in self.RetryErrors:
-                L.warning("Recoverable error '{}' ({}) occurred in PostgreSQLConnection.".format(e.pgerror, e.pgcode))
+                L.warning(
+                    "Recoverable error '{}' ({}) occurred in PostgreSQLConnection.".format(
+                        e.pgerror, e.pgcode
+                    )
+                )
                 return None
             L.exception("Unexpected PostgreSQL (psycopg2) connection error")
             raise e
@@ -259,7 +273,9 @@ class PostgreSQLConnection(Connection):
                 break
 
             if self._output_queue.qsize() == self._output_queue_max_size - 1:
-                self.PubSub.publish("PostgreSQLConnection.unpause!", self, asynchronously=True)
+                self.PubSub.publish(
+                    "PostgreSQLConnection.unpause!", self, asynchronously=True
+                )
 
             try:
                 async with self.acquire() as conn:
@@ -269,6 +285,8 @@ class PostgreSQLConnection(Connection):
                                 _query = cur.mogrify(query, item)
                                 await cur.execute(_query)
                     except BaseException:
-                        L.exception("Unexpected error when processing PostgreSQL query.")
+                        L.exception(
+                            "Unexpected error when processing PostgreSQL query."
+                        )
             except BaseException:
                 L.exception("Couldn't acquire connection")

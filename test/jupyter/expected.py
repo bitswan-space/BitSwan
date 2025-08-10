@@ -9,8 +9,14 @@ foovar = 3
 
 event = {}
 test_events = [
-    ({"foo": "aaa"}, {"expect": [{"foo": "aaa", "foovar": 3, "barvar": "hello", "bazvar": "aaa"}]}),
-    ({"foo": "aab"}, {"expect": [{"foo": "aab", "foovar": 3, "barvar": "hello", "bazvar": "aab"}]}),
+    (
+        {"foo": "aaa"},
+        {"expect": [{"foo": "aaa", "foovar": 3, "barvar": "hello", "bazvar": "aaa"}]},
+    ),
+    (
+        {"foo": "aab"},
+        {"expect": [{"foo": "aab", "foovar": 3, "barvar": "hello", "bazvar": "aab"}]},
+    ),
 ]
 
 

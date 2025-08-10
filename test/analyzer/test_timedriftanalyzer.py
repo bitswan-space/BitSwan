@@ -15,5 +15,7 @@ class TestTimeDriftAnalyzer(bspump.unittest.ProcessorTestCase):
 
         output = self.execute(events)
 
-        self.assertEqual([event for context, event in output], [{"@timestamp": 30}, {"foo": "bar"}])
+        self.assertEqual(
+            [event for context, event in output], [{"@timestamp": 30}, {"foo": "bar"}]
+        )
         self.assertEqual(self.Pipeline.Processor.History, [70])

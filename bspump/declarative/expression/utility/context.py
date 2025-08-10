@@ -54,7 +54,10 @@ class CONTEXT_SET(Expression):
             if isinstance(value, Expression):
                 _to[key] = value
             else:
-                assert isinstance(value, (int, str, bytes, bool, tuple, list)) or value is None
+                assert (
+                    isinstance(value, (int, str, bytes, bool, tuple, list))
+                    or value is None
+                )
                 value = VALUE(self.App, value=value)
                 _to[key] = value
 

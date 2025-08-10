@@ -15,7 +15,9 @@ class IteratorSource(TriggerSource):
 
     """
 
-    def __init__(self, app, pipeline, iterator: collections.abc.Iterator, id=None, config=None):
+    def __init__(
+        self, app, pipeline, iterator: collections.abc.Iterator, id=None, config=None
+    ):
         """
         Description:
 

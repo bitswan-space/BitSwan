@@ -113,4 +113,6 @@ class MongoDBSink(Sink):
                 await collection.insert_many(event)
                 self._output_queue.task_done()
             else:
-                raise TypeError(f"Only dict or list of dicts allowed, {type(event)} supplied")
+                raise TypeError(
+                    f"Only dict or list of dicts allowed, {type(event)} supplied"
+                )

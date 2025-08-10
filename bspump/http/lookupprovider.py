@@ -33,9 +33,15 @@ class HTTPBatchLookupProvider(LookupBatchProviderABC):
         self.CachePath = None
         if self.UseCache is True:
             cache_path = self.Config.get("cache_dir", "").strip()
-            if len(cache_path) == 0 and "general" in Config and "var_dir" in Config["general"]:
+            if (
+                len(cache_path) == 0
+                and "general" in Config
+                and "var_dir" in Config["general"]
+            ):
                 cache_path = os.path.abspath(Config["general"]["var_dir"])
-                self.CachePath = os.path.join(cache_path, "lookup_{}.cache".format(self.Id))
+                self.CachePath = os.path.join(
+                    cache_path, "lookup_{}.cache".format(self.Id)
+                )
             else:
                 self.UseCache = False
                 L.warning("No cache path specified. Cache disabled.")
@@ -53,10 +59,18 @@ class HTTPBatchLookupProvider(LookupBatchProviderABC):
                     timeout=float(self.Config["master_timeout"]),
                 )
             except aiohttp.ClientConnectorError as e:
-                L.warning("{}: Failed to contact lookup master at '{}': {}".format(self.Id, self.URL, e))
+                L.warning(
+                    "{}: Failed to contact lookup master at '{}': {}".format(
+                        self.Id, self.URL, e
+                    )
+                )
                 return self.load_from_cache()
             except asyncio.TimeoutError as e:
-                L.warning("{}: Failed to contact lookup master at '{}' (timeout): {}".format(self.Id, self.URL, e))
+                L.warning(
+                    "{}: Failed to contact lookup master at '{}' (timeout): {}".format(
+                        self.Id, self.URL, e
+                    )
+                )
                 return self.load_from_cache()
 
             if response.status == 304:
@@ -64,15 +78,25 @@ class HTTPBatchLookupProvider(LookupBatchProviderABC):
                 return False
 
             if response.status == 404:
-                L.warning("{}: lookup was not found at the lookup provider {}".format(self.Id, self.URL))
+                L.warning(
+                    "{}: lookup was not found at the lookup provider {}".format(
+                        self.Id, self.URL
+                    )
+                )
                 return self.load_from_cache()
 
             if response.status == 501:
-                L.warning("{}: master '{}' does not support serialization.".format(self.Id, self.URL))
+                L.warning(
+                    "{}: master '{}' does not support serialization.".format(
+                        self.Id, self.URL
+                    )
+                )
                 return False
 
             if response.status != 200:
-                L.warning("{}: Failed to get lookup from master {}".format(self.Id, self.URL))
+                L.warning(
+                    "{}: Failed to get lookup from master {}".format(self.Id, self.URL)
+                )
                 return self.load_from_cache()
             data = await response.read()
             self.ETag = response.headers.get("ETag")
@@ -104,7 +128,11 @@ class HTTPBatchLookupProvider(LookupBatchProviderABC):
                 data = f.read()
             return data
         except Exception as e:
-            L.warning("Failed to read content of lookup cache '{}' from '{}': {}".format(self.Id, self.CachePath, e))
+            L.warning(
+                "Failed to read content of lookup cache '{}' from '{}': {}".format(
+                    self.Id, self.CachePath, e
+                )
+            )
             os.unlink(self.CachePath)
         return False
 

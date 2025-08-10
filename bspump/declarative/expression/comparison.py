@@ -86,7 +86,9 @@ class EQ(ComparisonExpression):
 
             # The nested objects may not be optimized yet when this parent optimization is called
             if isinstance(self.Items[0], ITEM):
-                if isinstance(self.Items[0].With, EVENT) and isinstance(self.Items[0].Item, VALUE):
+                if isinstance(self.Items[0].With, EVENT) and isinstance(
+                    self.Items[0].Item, VALUE
+                ):
                     return EQ_optimized_EVENT_VALUE(self)
                 elif (
                     isinstance(self.Items[0].With, CONTEXT)
@@ -223,7 +225,9 @@ def evaluate_items_inlet_type(items):
                 signed_integers = True
             continue
 
-        raise NotImplementedError("Unsupported type '{}' in comparison operator".format(outlet_type))
+        raise NotImplementedError(
+            "Unsupported type '{}' in comparison operator".format(outlet_type)
+        )
 
     if strings is False and unsigned_integers is False and signed_integers is True:
         # Just signed integers found

@@ -33,7 +33,9 @@ class Source(asab.Configurable):
 
         """
         super().__init__(
-            "pipeline:{}:{}".format(pipeline.Id, id if id is not None else self.__class__.__name__),
+            "pipeline:{}:{}".format(
+                pipeline.Id, id if id is not None else self.__class__.__name__
+            ),
             config=config,
         )
 
@@ -68,7 +70,9 @@ class Source(asab.Configurable):
 
         self.EventCount += 1
         if self.MQTTService and self.EventsToPublish > 0:
-            self.MQTTService.publish_event(self.Pipeline.Id, self, event, self.EventsToPublish)
+            self.MQTTService.publish_event(
+                self.Pipeline.Id, self, event, self.EventsToPublish
+            )
             self.EventsToPublish -= 1
 
         await self.Pipeline.process(event, context=context)
@@ -294,7 +298,9 @@ class TriggerSource(Source):
                 break
 
             # Send begin on a cycle event
-            self.Pipeline.PubSub.publish("bspump.pipeline.cycle_begin!", pipeline=self.Pipeline)
+            self.Pipeline.PubSub.publish(
+                "bspump.pipeline.cycle_begin!", pipeline=self.Pipeline
+            )
 
             # Execute one cycle
             try:
@@ -302,10 +308,14 @@ class TriggerSource(Source):
 
             except asyncio.CancelledError:
                 # This happens when Ctrl-C is pressed
-                L.warning("Pipeline '{}' processing was cancelled".format(self.Pipeline.Id))
+                L.warning(
+                    "Pipeline '{}' processing was cancelled".format(self.Pipeline.Id)
+                )
 
                 # Send end of a cycle event
-                self.Pipeline.PubSub.publish("bspump.pipeline.cycle_canceled!", pipeline=self.Pipeline)
+                self.Pipeline.PubSub.publish(
+                    "bspump.pipeline.cycle_canceled!", pipeline=self.Pipeline
+                )
 
                 break
 
@@ -313,7 +323,9 @@ class TriggerSource(Source):
                 self.Pipeline.set_error(None, None, e)
 
             # Send end of a cycle event
-            self.Pipeline.PubSub.publish("bspump.pipeline.cycle_end!", pipeline=self.Pipeline)
+            self.Pipeline.PubSub.publish(
+                "bspump.pipeline.cycle_end!", pipeline=self.Pipeline
+            )
 
             self.TriggerEvent.clear()
             for trigger in self.Triggers:

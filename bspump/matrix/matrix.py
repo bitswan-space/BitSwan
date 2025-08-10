@@ -140,7 +140,9 @@ class Matrix(abc.ABC, Configurable):
         Override this method to gain control on how a new closed rows are added to the matrix
         """
         current_rows = self.Array.shape[0]
-        self.Array = np.pad(self.Array.copy(), ((0, rows), (0, 0)), "constant", constant_values=np.nan)
+        self.Array = np.pad(
+            self.Array.copy(), ((0, rows), (0, 0)), "constant", constant_values=np.nan
+        )
         self.ClosedRows.extend(current_rows, self.Array.shape[0])
 
     def time(self):
@@ -184,7 +186,9 @@ class PersistentMatrix(Matrix):
             self.Array = self.Array.reshape(self.reshape(self.Array.shape))
         else:
             array = np.zeros(self.build_shape(rows), dtype=self.DType)
-            self.Array = np.memmap(self.ArrayPath, dtype=self.DType, mode="w+", shape=array.shape)
+            self.Array = np.memmap(
+                self.ArrayPath, dtype=self.DType, mode="w+", shape=array.shape
+            )
 
         path = os.path.join(self.Path, "closed_rows.dat")
         self.ClosedRows = PersistentClosedRows(path, size=self.Array.shape[0])
@@ -199,7 +203,9 @@ class PersistentMatrix(Matrix):
         saved_indexes = list(indexes - closed_indexes)
         saved_indexes.sort()
         self.Array = self.Array.take(saved_indexes, axis=0)
-        array = np.memmap(self.ArrayPath, dtype=self.DType, mode="w+", shape=self.Array.shape)
+        array = np.memmap(
+            self.ArrayPath, dtype=self.DType, mode="w+", shape=self.Array.shape
+        )
         array[:] = self.Array[:]
         self.Array = array
 
@@ -234,6 +240,8 @@ class PersistentMatrix(Matrix):
         array = np.zeros(self.Array.shape, dtype=self.DType)
         array[:] = self.Array[:]
         array.resize((current_rows + rows,) + self.Array.shape[1:], refcheck=False)
-        self.Array = np.memmap(self.ArrayPath, dtype=self.DType, mode="w+", shape=array.shape)
+        self.Array = np.memmap(
+            self.ArrayPath, dtype=self.DType, mode="w+", shape=array.shape
+        )
         self.Array[:] = array[:]
         self.ClosedRows.extend(current_rows, self.Array.shape[0])

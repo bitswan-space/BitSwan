@@ -69,16 +69,24 @@ class ExpressionBuilder(object):
 
     async def read(self, identifier):
         if self.Library is None:
-            raise RuntimeError("Cannot read '{}' in builder, ASAB library is not provided".format(identifier))
+            raise RuntimeError(
+                "Cannot read '{}' in builder, ASAB library is not provided".format(
+                    identifier
+                )
+            )
 
         # Read declaration from available declarations libraries
         for include_path in self.IncludePaths:
-            declaration = await self.Library.read("{}/{}.yaml".format(include_path, identifier))
+            declaration = await self.Library.read(
+                "{}/{}.yaml".format(include_path, identifier)
+            )
 
             if declaration is not None:
                 return declaration.read().decode("utf-8")
 
-        raise RuntimeError("Cannot find '{}' YAML declaration in libraries".format(identifier))
+        raise RuntimeError(
+            "Cannot find '{}' YAML declaration in libraries".format(identifier)
+        )
 
     async def parse(self, declaration, source_name=None):
         """
@@ -190,11 +198,15 @@ class ExpressionBuilder(object):
             if isinstance(expr, (bool, int, float, str, set, list, dict)):
                 expr = VALUE(self.App, value=expr)
                 # Fake the location string
-                expr.set_location("  at line 1, column 1:\n{}\n^".format(declaration[:20]))
+                expr.set_location(
+                    "  at line 1, column 1:\n{}\n^".format(declaration[:20])
+                )
                 result.append(expr)
                 continue
 
-            raise NotImplementedError("Top-level type '{}' not supported".format(type(expr)))
+            raise NotImplementedError(
+                "Top-level type '{}' not supported".format(type(expr))
+            )
 
         return result
 
@@ -224,7 +236,9 @@ class ExpressionBuilder(object):
             return
 
         else:
-            raise NotImplementedError("Walk not implemented for '{}'.".format(expression))
+            raise NotImplementedError(
+                "Walk not implemented for '{}'.".format(expression)
+            )
 
     def _construct_include(self, loader: yaml.Loader, node: yaml.Node):
         """Include file referenced at node."""
@@ -262,7 +276,9 @@ class ExpressionBuilder(object):
 
             elif isinstance(node, yaml.MappingNode):
                 value = loader.construct_mapping(node)
-                obj = xclass(app=self.App, **dict(("arg_" + k, v) for k, v in value.items()))
+                obj = xclass(
+                    app=self.App, **dict(("arg_" + k, v) for k, v in value.items())
+                )
 
             else:
                 raise RuntimeError("Unsupported node type '{}'".format(node))
@@ -279,7 +295,9 @@ class ExpressionBuilder(object):
 
         except Exception as e:
             L.exception("Error in expression")
-            raise DeclarationError("Invalid expression at {}\n{}".format(node.start_mark, e))
+            raise DeclarationError(
+                "Invalid expression at {}\n{}".format(node.start_mark, e)
+            )
 
     def _construct_scalar(self, loader: yaml.Loader, node: yaml.Node):
         location = node.start_mark
@@ -297,7 +315,9 @@ class ExpressionBuilder(object):
             elif outlet_type[0] == "f":
                 value = float(node.value)
             else:
-                raise NotImplementedError("Unsupport scalar type '{}'".format(outlet_type))
+                raise NotImplementedError(
+                    "Unsupport scalar type '{}'".format(outlet_type)
+                )
             obj = VALUE(self.App, value=value, outlet_type=outlet_type)
 
         elif isinstance(node, yaml.MappingNode):

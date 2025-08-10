@@ -27,11 +27,20 @@ class WebSocketSource(Source):
 
         try:
             async for msg in ws:
-                if msg.type == aiohttp.WSMsgType.BINARY or msg.type == aiohttp.WSMsgType.TEXT:
-                    await self.Pipeline.process(msg.data, context={"type": msg.type, "request": request})
+                if (
+                    msg.type == aiohttp.WSMsgType.BINARY
+                    or msg.type == aiohttp.WSMsgType.TEXT
+                ):
+                    await self.Pipeline.process(
+                        msg.data, context={"type": msg.type, "request": request}
+                    )
 
                 elif msg.type == aiohttp.WSMsgType.ERROR:
-                    L.warning("WebSocket connection closed with exception {}".format(ws.exception()))
+                    L.warning(
+                        "WebSocket connection closed with exception {}".format(
+                            ws.exception()
+                        )
+                    )
 
                 else:
                     L.warning("WebSocket unknown/invalid message {}".format(msg))

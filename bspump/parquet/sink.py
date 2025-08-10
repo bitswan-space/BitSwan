@@ -47,7 +47,9 @@ class ParquetSink(Sink):
         app.PubSub.subscribe("Application.tick/10!", self.on_tick)
 
         metrics_service = app.get_service("asab.MetricsService")
-        self.Counter = metrics_service.create_counter("counter", tags={}, init_values={"parquet.error": 0})
+        self.Counter = metrics_service.create_counter(
+            "counter", tags={}, init_values={"parquet.error": 0}
+        )
         self.Gauge = metrics_service.create_gauge(
             "gauge",
             tags={},
@@ -94,8 +96,12 @@ class ParquetSink(Sink):
 
         if self.RolloverMechanism == "rows":
             if self.Config["rows_per_file"] % self.ChunkSize != 0:
-                self.ChunksPerFile = int(round(self.Config["rows_per_file"] / self.ChunkSize))
-                L.warning("rows_per_file % rows_in_chunk needs to be zero. rows_per_file was rounded")
+                self.ChunksPerFile = int(
+                    round(self.Config["rows_per_file"] / self.ChunkSize)
+                )
+                L.warning(
+                    "rows_per_file % rows_in_chunk needs to be zero. rows_per_file was rounded"
+                )
             elif self.Config["rows_per_file"] < self.ChunkSize:
                 self.ChunksPerFile = 1
                 L.warning(
@@ -128,7 +134,9 @@ class ParquetSink(Sink):
         if schema is not None:
             for col in schema.values():
                 if col["type"] is None:
-                    L.warning("SchemaFile is not valid schema. Type not found for every column.")
+                    L.warning(
+                        "SchemaFile is not valid schema. Type not found for every column."
+                    )
                     return False
 
                 col["type"] = col["type"].lower()
@@ -197,7 +205,9 @@ class ParquetSink(Sink):
 
     def build_filename(self, postfix=""):
         return (
-            self.FileNameTemplate.format(index=("{:04d}".format(self.Index)) if self.Index is not None else "")
+            self.FileNameTemplate.format(
+                index=("{:04d}".format(self.Index)) if self.Index is not None else ""
+            )
             + postfix
         )
 
@@ -224,7 +234,9 @@ class ParquetSink(Sink):
         if len(self.Frames) != 0:
             table = pa.Table.from_pandas(pd.concat(self.Frames))
             if self._pq_writer is None:
-                self._pq_writer = pq.ParquetWriter(self.build_filename("-open"), table.schema)
+                self._pq_writer = pq.ParquetWriter(
+                    self.build_filename("-open"), table.schema
+                )
             try:
                 self._pq_writer.write_table(table=table)
             except Exception as e:

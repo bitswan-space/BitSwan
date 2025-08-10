@@ -16,7 +16,9 @@ class TestCustomTimeZoneNormalizer(bspump.unittest.ProcessorTestCase):
         events = [
             (
                 None,
-                {"@timestamp": datetime.datetime(2000, 12, 30, 23, 59, 59, 59)},  # native time
+                {
+                    "@timestamp": datetime.datetime(2000, 12, 30, 23, 59, 59, 59)
+                },  # native time
             )
         ]
 

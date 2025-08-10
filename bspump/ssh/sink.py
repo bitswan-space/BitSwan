@@ -60,7 +60,9 @@ class SFTPSink(Sink):
         self.Pipeline = pipeline
 
         metrics_service = app.get_service("asab.MetricsService")
-        self.RewriteCounter = metrics_service.create_counter("sink.rewritefile", tags={}, init_values={"times": 0})
+        self.RewriteCounter = metrics_service.create_counter(
+            "sink.rewritefile", tags={}, init_values={"times": 0}
+        )
 
         self._output_queue = asyncio.Queue()
         self._output_queue_max_size = 1000
@@ -121,7 +123,9 @@ class SFTPSink(Sink):
                         L.warning("File {} has been overwritten".format(str(filename)))
 
                     # Writes event into a remote file
-                    async with sftp.open(remote + filename, self.Mode, encoding=None) as sftpfile:
+                    async with sftp.open(
+                        remote + filename, self.Mode, encoding=None
+                    ) as sftpfile:
                         # TODO fix RuntimeError when emptying queue on kill
                         await sftpfile.write(event)
 

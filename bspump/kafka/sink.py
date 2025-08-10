@@ -115,7 +115,9 @@ class KafkaSink(Sink):
                 context["kafka_topic"] if "kafka_topic" in context else self.Topic,
                 value=event,
                 key=context["kafka_key"] if "kafka_key" in context else None,
-                headers=(context["kafka_headers"] if "kafka_headers" in context else None),
+                headers=(
+                    context["kafka_headers"] if "kafka_headers" in context else None
+                ),
             )
 
         except Exception as e:

@@ -112,11 +112,16 @@ def test_iter_files_glob():
             func(*args)
 
     fake_loop = FakeLoop()
-    filelist = list(iter_files_glob("bspump/test-data/globscan/*", fake_gauge, fake_loop))
+    filelist = list(
+        iter_files_glob("bspump/test-data/globscan/*", fake_gauge, fake_loop)
+    )
     assert len(filelist) == 3
     assert filelist[0] == "bspump/test-data/globscan/1"
     assert filelist[1] == "bspump/test-data/globscan/2"
     assert filelist[2] == "bspump/test-data/globscan/3"
 
     # test _glob_scan
-    assert _glob_scan("bspump/test-data/globscan/*", fake_gauge, fake_loop) == "bspump/test-data/globscan/1"
+    assert (
+        _glob_scan("bspump/test-data/globscan/*", fake_gauge, fake_loop)
+        == "bspump/test-data/globscan/1"
+    )

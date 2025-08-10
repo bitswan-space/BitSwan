@@ -42,7 +42,9 @@ class InMemoryUpsertor(UpsertorABC):
                     obj = {id_name: self.ObjId}
                     self.Storage._set(self.Collection, self.ObjId, obj)
                 else:
-                    raise RuntimeError("Previous version of '{}' not found".format(self.ObjId))
+                    raise RuntimeError(
+                        "Previous version of '{}' not found".format(self.ObjId)
+                    )
 
         for k, v in self.ModSet.items():
             obj[k] = v
@@ -93,7 +95,9 @@ class StorageService(StorageServiceABC):
         """
         return InMemoryUpsertor(self, collection, obj_id, version)
 
-    async def get(self, collection: str, obj_id: typing.Union[str, bytes], decrypt=None) -> dict:
+    async def get(
+        self, collection: str, obj_id: typing.Union[str, bytes], decrypt=None
+    ) -> dict:
         """Retrieve a document from an in-memory collection by its ID.
 
         :collection (str): The name of the collection to retrieve the document from.

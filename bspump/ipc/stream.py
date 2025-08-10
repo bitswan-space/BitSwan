@@ -64,7 +64,9 @@ class TLSStream(object):
         self.OutBuffer = ssl.MemoryBIO()
         self.OutboundQueue = asyncio.Queue()
 
-        self.SSLSocket = sslcontext.wrap_bio(self.InBuffer, self.OutBuffer, server_side=server_side)
+        self.SSLSocket = sslcontext.wrap_bio(
+            self.InBuffer, self.OutBuffer, server_side=server_side
+        )
 
     async def handshake(self):
         """

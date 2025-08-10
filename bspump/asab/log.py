@@ -53,7 +53,10 @@ class Logging(object):
 
         if not self.RootLogger.hasHandlers():
             # Add console logger if needed
-            if os.isatty(sys.stdout.fileno()) or os.environ.get("ASABFORCECONSOLE", "0") != "0":
+            if (
+                os.isatty(sys.stdout.fileno())
+                or os.environ.get("ASABFORCECONSOLE", "0") != "0"
+            ):
                 self._configure_console_logging()
 
             # Initialize file handler
@@ -87,7 +90,9 @@ class Logging(object):
                         i, u = rotate_every.groups()
                         i = int(i)
                         if i <= 0:
-                            self.RootLogger.error("Invalid 'rotate_every' configuration value.")
+                            self.RootLogger.error(
+                                "Invalid 'rotate_every' configuration value."
+                            )
                         else:
                             if u == "H":
                                 i = i * 60 * 60
@@ -100,20 +105,26 @@ class Logging(object):
 
                             # PubSub is not ready at this moment, we need to create timer in a future
                             async def schedule(app, interval):
-                                self.LogRotatingTime = Timer(app, self._on_tick_rotate_check, autorestart=True)
+                                self.LogRotatingTime = Timer(
+                                    app, self._on_tick_rotate_check, autorestart=True
+                                )
                                 self.LogRotatingTime.start(i)
 
                             asyncio.ensure_future(schedule(app, i))
 
                     else:
-                        self.RootLogger.error("Invalid 'rotate_every' configuration value.")
+                        self.RootLogger.error(
+                            "Invalid 'rotate_every' configuration value."
+                        )
 
             # Initialize syslog
             if Config["logging:syslog"].getboolean("enabled"):
                 address = Config["logging:syslog"]["address"]
 
                 if address[:1] == "/":
-                    self.SyslogHandler = AsyncIOHandler(app.Loop, socket.AF_UNIX, socket.SOCK_DGRAM, address)
+                    self.SyslogHandler = AsyncIOHandler(
+                        app.Loop, socket.AF_UNIX, socket.SOCK_DGRAM, address
+                    )
 
                 else:
                     url = urllib.parse.urlparse(address)
@@ -124,8 +135,16 @@ class Logging(object):
                             socket.AF_INET,
                             socket.SOCK_STREAM,
                             (
-                                url.hostname if url.hostname is not None else "localhost",
-                                url.port if url.port is not None else logging.handlers.SYSLOG_UDP_PORT,
+                                (
+                                    url.hostname
+                                    if url.hostname is not None
+                                    else "localhost"
+                                ),
+                                (
+                                    url.port
+                                    if url.port is not None
+                                    else logging.handlers.SYSLOG_UDP_PORT
+                                ),
                             ),
                         )
 
@@ -135,42 +154,72 @@ class Logging(object):
                             socket.AF_INET,
                             socket.SOCK_DGRAM,
                             (
-                                url.hostname if url.hostname is not None else "localhost",
-                                url.port if url.port is not None else logging.handlers.SYSLOG_UDP_PORT,
+                                (
+                                    url.hostname
+                                    if url.hostname is not None
+                                    else "localhost"
+                                ),
+                                (
+                                    url.port
+                                    if url.port is not None
+                                    else logging.handlers.SYSLOG_UDP_PORT
+                                ),
                             ),
                         )
 
                     elif url.scheme == "unix-connect":
-                        self.SyslogHandler = AsyncIOHandler(app.Loop, socket.AF_UNIX, socket.SOCK_STREAM, url.path)
+                        self.SyslogHandler = AsyncIOHandler(
+                            app.Loop, socket.AF_UNIX, socket.SOCK_STREAM, url.path
+                        )
 
                     elif url.scheme == "unix-sendto":
-                        self.SyslogHandler = AsyncIOHandler(app.Loop, socket.AF_UNIX, socket.SOCK_DGRAM, url.path)
+                        self.SyslogHandler = AsyncIOHandler(
+                            app.Loop, socket.AF_UNIX, socket.SOCK_DGRAM, url.path
+                        )
 
                     else:
-                        self.RootLogger.warning("Invalid logging:syslog address '{}'".format(address))
+                        self.RootLogger.warning(
+                            "Invalid logging:syslog address '{}'".format(address)
+                        )
                         address = None
 
                 if self.SyslogHandler is not None:
                     self.SyslogHandler.setLevel(logging.DEBUG)
                     format = Config["logging:syslog"]["format"]
                     if format == "m":
-                        self.SyslogHandler.setFormatter(MacOSXSyslogFormatter(sd_id=Config["logging"]["sd_id"]))
+                        self.SyslogHandler.setFormatter(
+                            MacOSXSyslogFormatter(sd_id=Config["logging"]["sd_id"])
+                        )
                     elif format == "5":
-                        self.SyslogHandler.setFormatter(SyslogRFC5424Formatter(sd_id=Config["logging"]["sd_id"]))
+                        self.SyslogHandler.setFormatter(
+                            SyslogRFC5424Formatter(sd_id=Config["logging"]["sd_id"])
+                        )
                     elif format == "5micro":
-                        self.SyslogHandler.setFormatter(SyslogRFC5424microFormatter(sd_id=Config["logging"]["sd_id"]))
+                        self.SyslogHandler.setFormatter(
+                            SyslogRFC5424microFormatter(
+                                sd_id=Config["logging"]["sd_id"]
+                            )
+                        )
                     else:
-                        self.SyslogHandler.setFormatter(SyslogRFC3164Formatter(sd_id=Config["logging"]["sd_id"]))
+                        self.SyslogHandler.setFormatter(
+                            SyslogRFC3164Formatter(sd_id=Config["logging"]["sd_id"])
+                        )
                     self.RootLogger.addHandler(self.SyslogHandler)
 
             # No logging is configured
-            if self.ConsoleHandler is None and self.FileHandler is None and self.SyslogHandler is None:
+            if (
+                self.ConsoleHandler is None
+                and self.FileHandler is None
+                and self.SyslogHandler is None
+            ):
                 # Let's check if we run in Docker and if so, then log on stderr
                 if running_in_container():
                     self._configure_console_logging()
 
         else:
-            self.RootLogger.warning("Logging seems to be already configured. Proceed with caution.")
+            self.RootLogger.warning(
+                "Logging seems to be already configured. Proceed with caution."
+            )
 
         if Config["logging"].getboolean("verbose"):
             self.RootLogger.setLevel(logging.DEBUG)
@@ -185,7 +234,11 @@ class Logging(object):
         levels = Config["logging"].get("levels")
         for level_line in levels.split("\n"):
             level_line = level_line.strip()
-            if len(level_line) == 0 or level_line.startswith("#") or level_line.startswith(";"):
+            if (
+                len(level_line) == 0
+                or level_line.startswith("#")
+                or level_line.startswith(";")
+            ):
                 # line starts with a comment
                 continue
             try:
@@ -201,7 +254,11 @@ class Logging(object):
             try:
                 logging.getLogger(logger_name).setLevel(level)
             except ValueError:
-                L.error("Cannot detect logging level '{}' for {} logger".format(level_name, logger_name))
+                L.error(
+                    "Cannot detect logging level '{}' for {} logger".format(
+                        level_name, logger_name
+                    )
+                )
 
     def rotate(self):
         if self.FileHandler is not None:
@@ -261,7 +318,9 @@ class _StructuredDataLogger(logging.Logger):
                 extra = dict()
             extra["_struct_data"] = struct_data
 
-        super()._log(level, msg, args, exc_info=exc_info, extra=extra, stack_info=stack_info)
+        super()._log(
+            level, msg, args, exc_info=exc_info, extra=extra, stack_info=stack_info
+        )
 
 
 logging.setLoggerClass(_StructuredDataLogger)
@@ -294,7 +353,9 @@ class StructuredDataFormatter(logging.Formatter):
         Format the specified record as text.
         """
 
-        record.struct_data = self.render_struct_data(record.__dict__.get("_struct_data"))
+        record.struct_data = self.render_struct_data(
+            record.__dict__.get("_struct_data")
+        )
 
         # The Priority value is calculated by first multiplying the Facility number by 8 and then adding the numerical value of the Severity.
         if record.levelno <= logging.DEBUG:
@@ -351,7 +412,9 @@ class StructuredDataFormatter(logging.Formatter):
         else:
             return "[{sd_id} {sd_params}] ".format(
                 sd_id=self.SD_id,
-                sd_params=" ".join(['{}="{}"'.format(key, val) for key, val in struct_data.items()]),
+                sd_params=" ".join(
+                    ['{}="{}"'.format(key, val) for key, val in struct_data.items()]
+                ),
             )
 
 
@@ -373,7 +436,10 @@ def _loop_exception_handler(loop, context):
     if exception is not None:
         ex_traceback = exception.__traceback__
         tb_lines = [
-            line.rstrip("\n") for line in traceback.format_exception(exception.__class__, exception, ex_traceback)
+            line.rstrip("\n")
+            for line in traceback.format_exception(
+                exception.__class__, exception, ex_traceback
+            )
         ]
         message += "\n" + "\n".join(tb_lines)
 
@@ -446,7 +512,9 @@ class SyslogRFC5424microFormatter(StructuredDataFormatter):
             proc_id=os.getpid(),
         )
 
-        super().__init__(fmt=fmt, datefmt="%Y-%m-%dT%H:%M:%S.%f", style=style, sd_id=sd_id)
+        super().__init__(
+            fmt=fmt, datefmt="%Y-%m-%dT%H:%M:%S.%f", style=style, sd_id=sd_id
+        )
         self.converter = time.gmtime
 
 

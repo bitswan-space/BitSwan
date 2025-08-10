@@ -16,7 +16,8 @@ def metric_to_openmetric(m):
     if m.get("type") in ["Histogram", "HistogramWithDynamicTags"]:
         metric_type = "histogram"
     elif (
-        m.get("type") in ["Counter", "CounterWithDynamicTags", "AggregationCounterWithDynamicTags"]
+        m.get("type")
+        in ["Counter", "CounterWithDynamicTags", "AggregationCounterWithDynamicTags"]
         and m.get("reset") is False
     ):
         metric_type = "counter"
@@ -51,7 +52,11 @@ def metric_to_openmetric(m):
                     histogram_labels.update({"le": str(upperbound)})
                     if validate_value(value) is False:
                         continue
-                    metric_lines.append(translate_value(name, v_name, value, metric_type, histogram_labels))
+                    metric_lines.append(
+                        translate_value(
+                            name, v_name, value, metric_type, histogram_labels
+                        )
+                    )
             metric_lines.append(
                 translate_value(
                     name + "_count",
@@ -82,7 +87,9 @@ def metric_to_openmetric(m):
             for v_name, value in values.items():
                 if validate_value(value) is False:
                     continue
-                metric_lines.append(translate_value(name, v_name, value, metric_type, field.get("tags")))
+                metric_lines.append(
+                    translate_value(name, v_name, value, metric_type, field.get("tags"))
+                )
 
     metric_text = "\n".join(metric_lines)
     return metric_text

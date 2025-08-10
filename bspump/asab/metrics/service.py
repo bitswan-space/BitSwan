@@ -114,10 +114,14 @@ class MetricsService(Service):
 
         pending = set()
         for target in self.Targets:
-            pending.add(asyncio.ensure_future(target.process(self.Storage.Metrics, now)))
+            pending.add(
+                asyncio.ensure_future(target.process(self.Storage.Metrics, now))
+            )
 
         while len(pending) > 0:
-            done, pending = await asyncio.wait(pending, timeout=180.0, return_when=asyncio.ALL_COMPLETED)
+            done, pending = await asyncio.wait(
+                pending, timeout=180.0, return_when=asyncio.ALL_COMPLETED
+            )
 
     def _add_metric(
         self,
@@ -136,10 +140,14 @@ class MetricsService(Service):
         if tags is not None:
             for key, value in tags.items():
                 # Check if every key and value is of type string. If not, try to convert it.
-                assert isinstance(key, str), "Cannot add metrics tag: key '{}' is not a string.".format(key)
+                assert isinstance(
+                    key, str
+                ), "Cannot add metrics tag: key '{}' is not a string.".format(key)
                 assert isinstance(
                     value, str
-                ), "Cannot add metrics tag for key '{}': value '{}' is not a string.".format(key, value)
+                ), "Cannot add metrics tag for key '{}': value '{}' is not a string.".format(
+                    key, value
+                )
             metric.StaticTags.update(tags)
 
         metric._initialize_storage(
@@ -346,7 +354,9 @@ class MetricsService(Service):
                 AssertionError: `tags` dictionary has to be of type 'str': 'str'.
         """
         if dynamic_tags:
-            m = AggregationCounterWithDynamicTags(init_values=init_values, aggregator=aggregator)
+            m = AggregationCounterWithDynamicTags(
+                init_values=init_values, aggregator=aggregator
+            )
         else:
             m = AggregationCounter(init_values=init_values, aggregator=aggregator)
         self._add_metric(m, metric_name, tags=tags, reset=reset, help=help, unit=unit)

@@ -73,7 +73,9 @@ class PubSub(object):
         """
         for member_name in dir(obj):
             member = getattr(obj, member_name)
-            message_types = getattr(member, "asab_pubsub_subscribe_to_message_types", None)
+            message_types = getattr(
+                member, "asab_pubsub_subscribe_to_message_types", None
+            )
             if message_types is not None:
                 for message_type in message_types:
                     self.subscribe(message_type, member)
@@ -119,7 +121,11 @@ class PubSub(object):
                 break
 
         else:
-            L.warning("Subscriber '{}'' not found for the message type '{}'.".format(message_type, callback))
+            L.warning(
+                "Subscriber '{}'' not found for the message type '{}'.".format(
+                    message_type, callback
+                )
+            )
 
         if remove_list is not None:
             for callback_ref in remove_list:
@@ -187,7 +193,9 @@ class PubSub(object):
 
         if asynchronously:
             for callback in self._callback_iter(message_type):
-                self.Loop.call_soon(functools.partial(callback, message_type, *args, **kwargs))
+                self.Loop.call_soon(
+                    functools.partial(callback, message_type, *args, **kwargs)
+                )
 
         else:
             for callback in self._callback_iter(message_type):

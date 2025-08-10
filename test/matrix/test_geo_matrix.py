@@ -16,8 +16,12 @@ class TestGeoMatrix(bspump.unittest.TestCase):
             "max_lat": 50.160150,
         }
         matrix = bspump.matrix.GeoMatrix(app=self.App, bbox=bbox, resolution=5)
-        self.assertEqual(int(matrix.MapHeight * matrix.Resolution), int(matrix.SizeHeight))
-        self.assertEqual(int(matrix.MapWidth * matrix.Resolution), int(matrix.SizeWidth))
+        self.assertEqual(
+            int(matrix.MapHeight * matrix.Resolution), int(matrix.SizeHeight)
+        )
+        self.assertEqual(
+            int(matrix.MapWidth * matrix.Resolution), int(matrix.SizeWidth)
+        )
         self.assertEqual(matrix.Array.shape, (matrix.MapHeight, matrix.MapWidth))
 
     def test_matrix_is_in_boundaries(self):

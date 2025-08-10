@@ -73,7 +73,11 @@ def json_response(request, data, pretty=None, dumps=JSONDumper, **kwargs):
     When appending ?pretty to any request made, the JSON returned will be pretty formatted (use it for debugging only!).
     """
     assert issubclass(dumps, JSONDumper)
-    pretty = request.query.get("pretty", "no").lower() in frozenset(["true", "1", "t", "y", "yes", ""]) or pretty
+    pretty = (
+        request.query.get("pretty", "no").lower()
+        in frozenset(["true", "1", "t", "y", "yes", ""])
+        or pretty
+    )
 
     return aiohttp.web.json_response(data, dumps=dumps(pretty), **kwargs)
 
@@ -127,7 +131,9 @@ async def JsonExceptionMiddleware(request, handler):
             "status": 404,
             **_filter_logging_headers(request.headers),
         }
-        Lex.warning("KeyError when handling web request", exc_info=True, struct_data=struct_data)
+        Lex.warning(
+            "KeyError when handling web request", exc_info=True, struct_data=struct_data
+        )
 
         if len(e.args) > 1:
             message = e.args[0].format(*e.args[1:])
@@ -186,7 +192,9 @@ async def JsonExceptionMiddleware(request, handler):
             "status": 409,
             **_filter_logging_headers(request.headers),
         }
-        Lex.warning("Conflict when handling web request", exc_info=True, struct_data=struct_data)
+        Lex.warning(
+            "Conflict when handling web request", exc_info=True, struct_data=struct_data
+        )
 
         if len(e.args) > 1:
             message = e.args[0].format(*e.args[1:])
@@ -275,7 +283,9 @@ def json_schema_handler(json_schema, *_args, **_kwargs):
                 "not type {}.".format(type(json_schema))
             )
 
-        form_content_types = frozenset(["", "application/x-www-form-urlencoded", "multipart/form-data"])
+        form_content_types = frozenset(
+            ["", "application/x-www-form-urlencoded", "multipart/form-data"]
+        )
 
         @functools.wraps(func)
         async def validator(*args, **kwargs):
@@ -286,12 +296,16 @@ def json_schema_handler(json_schema, *_args, **_kwargs):
                 try:
                     data = await request.json()
                 except json.decoder.JSONDecodeError:
-                    raise aiohttp.web.HTTPBadRequest(reason="Failed to parse JSON request")
+                    raise aiohttp.web.HTTPBadRequest(
+                        reason="Failed to parse JSON request"
+                    )
             elif request.content_type in form_content_types:
                 multi_dict = await request.post()
                 data = {k: v for k, v in multi_dict.items()}
             else:
-                raise aiohttp.web.HTTPBadRequest(reason="Unsupported content-type {}".format(request.content_type))
+                raise aiohttp.web.HTTPBadRequest(
+                    reason="Unsupported content-type {}".format(request.content_type)
+                )
             # Checking the validation on JSON data set
             try:
                 validate(data)

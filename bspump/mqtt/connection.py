@@ -28,7 +28,9 @@ class MQTTConnection(Connection):
             self._client.tls_set(cert_reqs=mqtt.ssl.CERT_NONE)
 
         if self.Config["username"] != "" and self.Config["password"] != "":
-            self._client.username_pw_set(self.Config["username"], self.Config["password"])
+            self._client.username_pw_set(
+                self.Config["username"], self.Config["password"]
+            )
 
         self._client.connect(self._host, int(self._port), int(self.Config["keepalive"]))
 

@@ -34,7 +34,9 @@ class SamplePipeline(bspump.Pipeline):
     def __init__(self, app, pipeline_id):
         super().__init__(app, pipeline_id)
         self.build(
-            LoadSource(app, self).on(bspump.trigger.OpportunisticTrigger(app, chilldown_period=10)),
+            LoadSource(app, self).on(
+                bspump.trigger.OpportunisticTrigger(app, chilldown_period=10)
+            ),
             bspump.common.NullSink(app, self),
         )
 

@@ -158,7 +158,9 @@ class AuthService(Service):
                 resources.items(),
             )
         ):
-            raise ValueError("User info 'resources' must be an object with string keys and array values.")
+            raise ValueError(
+                "User info 'resources' must be an object with string keys and array values."
+            )
         L.warning(
             "AuthService is running in MOCK MODE. All web requests will be authorized with mock user info, which "
             "currently grants access to the following tenants: {}. To customize mock mode authorization (add or "
@@ -210,7 +212,9 @@ class AuthService(Service):
             if self.AuthServerPublicKey is None:
                 await self._fetch_public_keys_if_needed()
             if not self.is_ready():
-                L.error("Cannot authenticate request: Failed to load authorization server's public keys.")
+                L.error(
+                    "Cannot authenticate request: Failed to load authorization server's public keys."
+                )
                 raise aiohttp.web.HTTPUnauthorized()
 
         try:
@@ -234,7 +238,9 @@ class AuthService(Service):
             return True
         return SUPERUSER_RESOURCE in authorized_resources
 
-    def has_resource_access(self, authorized_resources: typing.Iterable, required_resources: typing.Iterable) -> bool:
+    def has_resource_access(
+        self, authorized_resources: typing.Iterable, required_resources: typing.Iterable
+    ) -> bool:
         """
         Check if the requested resources or the superuser resource are present in the authorized resource list.
         """
@@ -298,7 +304,9 @@ class AuthService(Service):
                         public_key = jwcrypto.jwk.JWK(**key_data)
                     except Exception as e:
                         L.error(
-                            "JWK decoding error while loading public keys: {}.".format(e),
+                            "JWK decoding error while loading public keys: {}.".format(
+                                e
+                            ),
                             struct_data={
                                 "url": self.PublicKeysUrl,
                                 "data": data,
@@ -315,7 +323,9 @@ class AuthService(Service):
                 return
 
         self.AuthServerPublicKey = public_key
-        self.AuthServerLastSuccessfulCheck = datetime.datetime.now(datetime.timezone.utc)
+        self.AuthServerLastSuccessfulCheck = datetime.datetime.now(
+            datetime.timezone.utc
+        )
         L.debug("Public key loaded.", struct_data={"url": self.PublicKeysUrl})
 
     def _authenticate_request(self, handler):
@@ -342,7 +352,9 @@ class AuthService(Service):
                 request._UserInfo = user_info
                 resource_dict = request._UserInfo["resources"]
                 request._Resources = frozenset(resource_dict.get("*", []))
-                request._Tenants = frozenset(t for t in resource_dict.keys() if t != "*")
+                request._Tenants = frozenset(
+                    t for t in resource_dict.keys() if t != "*"
+                )
             else:
                 request._UserInfo = None
                 request._Resources = None
@@ -379,7 +391,11 @@ class AuthService(Service):
             try:
                 self._wrap_handler(route)
             except Exception as e:
-                raise Exception("Failed to initialize auth for handler {!r}.".format(route.handler.__qualname__)) from e
+                raise Exception(
+                    "Failed to initialize auth for handler {!r}.".format(
+                        route.handler.__qualname__
+                    )
+                ) from e
 
     def _wrap_handler(self, route):
         """
@@ -387,7 +403,9 @@ class AuthService(Service):
         """
         # Check if tenant is in route path
         route_info = route.get_info()
-        tenant_in_path = "formatter" in route_info and "{tenant}" in route_info["formatter"]
+        tenant_in_path = (
+            "formatter" in route_info and "{tenant}" in route_info["formatter"]
+        )
 
         # Extract the actual handler method for signature checks
         handler_method = route.handler
@@ -436,7 +454,9 @@ class AuthService(Service):
             raise exceptions.AccessDeniedError()
 
         # Extend globally granted resources with tenant-granted resources
-        request._Resources = frozenset(request._Resources.union(request._UserInfo["resources"].get(tenant, [])))
+        request._Resources = frozenset(
+            request._Resources.union(request._UserInfo["resources"].get(tenant, []))
+        )
 
     def _add_tenant_from_path(self, handler):
         """
@@ -500,11 +520,15 @@ def _get_id_token_claims(bearer_token: str, auth_server_public_key):
         raise e
     except ValueError as e:
         L.error(
-            "Failed to parse JWT ID token ({}). Please check if the Authorization header contains ID token.".format(e)
+            "Failed to parse JWT ID token ({}). Please check if the Authorization header contains ID token.".format(
+                e
+            )
         )
         raise aiohttp.web.HTTPBadRequest()
     except Exception:
-        L.exception("Failed to parse JWT ID token. Please check if the Authorization header contains ID token.")
+        L.exception(
+            "Failed to parse JWT ID token. Please check if the Authorization header contains ID token."
+        )
         raise aiohttp.web.HTTPBadRequest()
 
     try:

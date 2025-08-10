@@ -70,7 +70,9 @@ class LineSourceProtocol(SourceProtocolABC):
             if recv_bytes <= 0:
                 # Client closed the connection
                 if recv_bytes < 0:
-                    raise RuntimeError("Client sock_recv_into returned {}".format(recv_bytes))
+                    raise RuntimeError(
+                        "Client sock_recv_into returned {}".format(recv_bytes)
+                    )
                 return
 
             input_buffer_pos += recv_bytes
@@ -80,7 +82,9 @@ class LineSourceProtocol(SourceProtocolABC):
                 # Grow the input_buffer if the size touches the top
                 new_input_buffer = bytearray(b" " * (len(input_buffer) * 2))
                 input_buffer_mv = memoryview(new_input_buffer)
-                input_buffer_mv[: len(input_buffer)] = input_buffer  # Copy the content of the old buffer
+                input_buffer_mv[: len(input_buffer)] = (
+                    input_buffer  # Copy the content of the old buffer
+                )
                 input_buffer = new_input_buffer
 
             while last_eol_pos < input_buffer_pos:

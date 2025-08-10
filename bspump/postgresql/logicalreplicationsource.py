@@ -79,13 +79,17 @@ class PostgreSQLLogicalReplicationSource(Source):
     async def main(self):
         await self.Pipeline.ready()
 
-        conn = psycopg2.connect(self.DSN, connection_factory=psycopg2.extras.LogicalReplicationConnection)
+        conn = psycopg2.connect(
+            self.DSN, connection_factory=psycopg2.extras.LogicalReplicationConnection
+        )
         self.Cursor = conn.cursor()
 
         try:
             self.Cursor.start_replication(slot_name=self.SlotName, decode=False)
         except psycopg2.ProgrammingError:
-            self.Cursor.create_replication_slot(self.SlotName, output_plugin=self.OutputPlugin)
+            self.Cursor.create_replication_slot(
+                self.SlotName, output_plugin=self.OutputPlugin
+            )
             self.Cursor.start_replication(slot_name=self.SlotName, decode=False)
 
         self.ProactorService.execute(self.stream_data)
@@ -99,7 +103,11 @@ class PostgreSQLLogicalReplicationSource(Source):
         except asyncio.CancelledError:
             if self.Queue.qsize() > 0:
                 self.Running = False
-                L.warning("'{}' stopped with {} events in a queue".format(self.locate_address(), self.Queue.qsize()))
+                L.warning(
+                    "'{}' stopped with {} events in a queue".format(
+                        self.locate_address(), self.Queue.qsize()
+                    )
+                )
 
         finally:
             self.Running = False

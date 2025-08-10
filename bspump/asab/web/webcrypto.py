@@ -57,7 +57,9 @@ Flow:
 """
 
 
-def aes_gcm_decrypt(key: bytes, ciphertext: bytes, associated_data: bytes = None) -> bytes:
+def aes_gcm_decrypt(
+    key: bytes, ciphertext: bytes, associated_data: bytes = None
+) -> bytes:
     """
     Decrypt the ciphertext that is encrypted by AES GCM.
     """

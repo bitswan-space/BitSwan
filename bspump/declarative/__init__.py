@@ -16,7 +16,9 @@ from .dot import declaration_to_dot, declaration_to_dot_stream
 
 
 asab.Config.add_defaults(
-    {"declarations": {"timezone": ""}}  # Default timezone to be used by DATETIME expression, such as Europe/Prague
+    {
+        "declarations": {"timezone": ""}
+    }  # Default timezone to be used by DATETIME expression, such as Europe/Prague
 )
 
 

@@ -44,5 +44,9 @@ class PostgreSQLSource(TriggerSource):
             psycopg2.OperationalError,
         ) as e:
             if e.args[0] in self._connection.RetryErrors:
-                L.warn("Recoverable error '{}' occurred in PostgresSource. Retrying.".format(e.args[0]))
+                L.warn(
+                    "Recoverable error '{}' occurred in PostgresSource. Retrying.".format(
+                        e.args[0]
+                    )
+                )
             raise e

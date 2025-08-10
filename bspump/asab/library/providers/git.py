@@ -16,7 +16,9 @@ L = logging.getLogger(__name__)
 try:
     import pygit2
 except ImportError:
-    L.critical("Please install pygit2 package to enable Git Library Provider. >>> pip install pygit2")
+    L.critical(
+        "Please install pygit2 package to enable Git Library Provider. >>> pip install pygit2"
+    )
     raise SystemExit("Application exiting... .")
 
 
@@ -128,14 +130,18 @@ class GitLibraryProvider(FileSystemLibraryProvider):
                     struct_data={"url": self.URLPath, "branch": self.Branch},
                 )
             else:
-                L.exception("Error when initializing git repository: {}".format(pygit_message))
+                L.exception(
+                    "Error when initializing git repository: {}".format(pygit_message)
+                )
             self.App.stop()  # NOTE: raising Exception doesn't exit the app
 
         except pygit2.GitError as err:
             pygit_message = str(err).replace('"', "")
             if "unexpected http status code: 404" in pygit_message:
                 # repository not found
-                L.exception("Git repository not found.", struct_data={"url": self.URLPath})
+                L.exception(
+                    "Git repository not found.", struct_data={"url": self.URLPath}
+                )
             elif "remote authentication required but no callback set" in pygit_message:
                 # either repository not found or authentication failed
                 L.exception(
@@ -149,7 +155,9 @@ class GitLibraryProvider(FileSystemLibraryProvider):
                 )
             elif "cannot redirect from" in pygit_message:
                 # bad URL
-                L.exception("Git repository not found.", struct_data={"url": self.URLPath})
+                L.exception(
+                    "Git repository not found.", struct_data={"url": self.URLPath}
+                )
             elif "Temporary failure in name resolution" in pygit_message:
                 # Internet connection does
                 L.exception(
@@ -161,7 +169,9 @@ class GitLibraryProvider(FileSystemLibraryProvider):
             self.App.stop()
 
         assert hasattr(self.GitRepository, "remotes"), "Git repository not initialized."
-        assert self.GitRepository.remotes["origin"] is not None, "Git repository not initialized."
+        assert (
+            self.GitRepository.remotes["origin"] is not None
+        ), "Git repository not initialized."
         await self._set_ready()
 
     def _do_fetch(self):
@@ -177,7 +187,9 @@ class GitLibraryProvider(FileSystemLibraryProvider):
         if self.Branch is None:
             reference = self.GitRepository.lookup_reference("refs/remotes/origin/HEAD")
         else:
-            reference = self.GitRepository.lookup_reference("refs/remotes/origin/{}".format(self.Branch))
+            reference = self.GitRepository.lookup_reference(
+                "refs/remotes/origin/{}".format(self.Branch)
+            )
         commit_id = reference.peel().id
         return commit_id
 
@@ -189,7 +201,9 @@ class GitLibraryProvider(FileSystemLibraryProvider):
         # Before new head is set, check the diffs. If changes in subscribed directory occured, add path to "to_publish" list.
         to_publish = []
         for path in self.SubscribedPaths:
-            for i in self.GitRepository.diff(self.GitRepository.head.target, new_commit_id).deltas:
+            for i in self.GitRepository.diff(
+                self.GitRepository.head.target, new_commit_id
+            ).deltas:
                 if ("/" + i.old_file.path).startswith(path):
                     to_publish.append(path)
 

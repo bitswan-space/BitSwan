@@ -59,7 +59,11 @@ class Lookup(asab.Configurable):
             # Construct URL from the old "master_" params
             server = self.Config.get("master_url", "").strip()
             if len(server) == 0:
-                L.error("Neither `source_url` nor `master_url` specified in lookup {} config.".format(self.Id))
+                L.error(
+                    "Neither `source_url` nor `master_url` specified in lookup {} config.".format(
+                        self.Id
+                    )
+                )
                 return
             if not server.startswith("http:"):
                 server = "http://{}".format(server)
@@ -72,16 +76,24 @@ class Lookup(asab.Configurable):
         self._create_provider(url)
 
     def __getitem__(self, key):
-        raise NotImplementedError("Lookup '{}' __getitem__() method not implemented".format(self.Id))
+        raise NotImplementedError(
+            "Lookup '{}' __getitem__() method not implemented".format(self.Id)
+        )
 
     def __iter__(self):
-        raise NotImplementedError("Lookup '{}' __iter__() method not implemented".format(self.Id))
+        raise NotImplementedError(
+            "Lookup '{}' __iter__() method not implemented".format(self.Id)
+        )
 
     def __len__(self):
-        raise NotImplementedError("Lookup '{}' __len__() method not implemented".format(self.Id))
+        raise NotImplementedError(
+            "Lookup '{}' __len__() method not implemented".format(self.Id)
+        )
 
     def __contains__(self, item):
-        raise NotImplementedError("Lookup '{}' __contains__() method not implemented".format(self.Id))
+        raise NotImplementedError(
+            "Lookup '{}' __contains__() method not implemented".format(self.Id)
+        )
 
     def _create_provider(self, path: str):
         """
@@ -161,7 +173,9 @@ class Lookup(asab.Configurable):
         Description:
 
         """
-        raise NotImplementedError("Lookup '{}' serialize() method not implemented".format(self.Id))
+        raise NotImplementedError(
+            "Lookup '{}' serialize() method not implemented".format(self.Id)
+        )
 
     def deserialize(self, data):
         """
@@ -170,7 +184,9 @@ class Lookup(asab.Configurable):
         |
 
         """
-        raise NotImplementedError("Lookup '{}' deserialize() method not implemented".format(self.Id))
+        raise NotImplementedError(
+            "Lookup '{}' deserialize() method not implemented".format(self.Id)
+        )
 
     def rest_get(self):
         """

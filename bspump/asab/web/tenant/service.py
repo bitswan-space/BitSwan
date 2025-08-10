@@ -35,7 +35,9 @@ class TenantService(Service):
         self.Tenants = set()
 
         # Load tenants from configuration
-        for tenant_id in re.split(r"[,\s]+", Config.get("tenants", "ids"), flags=re.MULTILINE):
+        for tenant_id in re.split(
+            r"[,\s]+", Config.get("tenants", "ids"), flags=re.MULTILINE
+        ):
             tenant_id = tenant_id.strip()
             # Skip comments and empty lines
             if len(tenant_id) == 0:

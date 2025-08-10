@@ -54,8 +54,12 @@ class BitMapIndex(Index):
     def update(self, matrix):
         open_rows = list(matrix.I2NMap.keys())
         unique_values = set(np.unique(matrix.Array[self.Column][open_rows]))
-        set_difference_left = set(self.UniqueValues) - unique_values  # there are some deleted vals
-        set_difference_right = unique_values - set(self.UniqueValues)  # there are some added vals
+        set_difference_left = (
+            set(self.UniqueValues) - unique_values
+        )  # there are some deleted vals
+        set_difference_right = unique_values - set(
+            self.UniqueValues
+        )  # there are some added vals
 
         if len(set_difference_left) != 0:
             for set_member in set_difference_left:
@@ -154,7 +158,9 @@ class TreeRangeIndex(Index):
                 path_ = path + [-float("inf")]
                 r = tuple([path_[-1], path_[-2]])
 
-            condition = (matrix.Array[self.ColumnEnd] <= r[1]) & (matrix.Array[self.ColumnStart] >= r[0])
+            condition = (matrix.Array[self.ColumnEnd] <= r[1]) & (
+                matrix.Array[self.ColumnStart] >= r[0]
+            )
             indexes = np.where(condition)
             result = {
                 "node": None,
@@ -167,8 +173,12 @@ class TreeRangeIndex(Index):
 
         mid = int(len(arr) / 2)
         root = dict(node=int(arr[mid]), indexes=[])
-        root["left"] = self.sorted_array_to_bst(matrix, arr[:mid], path + [arr[mid]], mask + [False])
-        root["right"] = self.sorted_array_to_bst(matrix, arr[mid + 1 :], path + [arr[mid]], mask + [True])
+        root["left"] = self.sorted_array_to_bst(
+            matrix, arr[:mid], path + [arr[mid]], mask + [False]
+        )
+        root["right"] = self.sorted_array_to_bst(
+            matrix, arr[mid + 1 :], path + [arr[mid]], mask + [True]
+        )
         return root
 
     def update(self, matrix):
@@ -257,14 +267,19 @@ class SliceIndex(Index):
         self.MaxValue = float(np.max(matrix.Array[self.ColumnEnd][open_rows]))
 
         if self.Resolution is None:
-            diffs = matrix.Array[self.ColumnEnd][open_rows] - matrix.Array[self.ColumnStart][open_rows]
+            diffs = (
+                matrix.Array[self.ColumnEnd][open_rows]
+                - matrix.Array[self.ColumnStart][open_rows]
+            )
             self.Resolution = float(np.min(diffs))
 
         start_value = self.MinValue
 
         while start_value < self.MaxValue:
             end_value = start_value + self.Resolution
-            condition = (matrix.Array[self.ColumnEnd] >= end_value) & (matrix.Array[self.ColumnStart] <= start_value)
+            condition = (matrix.Array[self.ColumnEnd] >= end_value) & (
+                matrix.Array[self.ColumnStart] <= start_value
+            )
             indexes = np.where(condition)
             self.SliceMap[start_value] = indexes[0].tolist()
             start_value = end_value

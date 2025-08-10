@@ -87,7 +87,9 @@ def userinfo_handler(func):
 
         # Fail if no access token is found in the request
         if bearer_token is None:
-            L.warning("Access token has not been provided in the request - unauthorized.")
+            L.warning(
+                "Access token has not been provided in the request - unauthorized."
+            )
             raise aiohttp.web.HTTPUnauthorized()
 
         userinfo_data = authz_service.userinfo(bearer_token=bearer_token)

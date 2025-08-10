@@ -31,7 +31,9 @@ class ConfigParser(configparser.ConfigParser):
         "general": {
             "config_file": os.environ.get("ASAB_CONFIG", ""),
             "tick_period": 1,  # In seconds
-            "var_dir": os.path.expanduser("~/." + os.path.splitext(os.path.basename(sys.argv[0]))[0]),
+            "var_dir": os.path.expanduser(
+                "~/." + os.path.splitext(os.path.basename(sys.argv[0]))[0]
+            ),
             "changelog": "",
             "manifest": "",
             # Daemonization
@@ -113,7 +115,9 @@ class ConfigParser(configparser.ConfigParser):
             if groups := temp_config.get("secrets", "groups", fallback=""):
                 gitops_dir = os.environ.get(
                     "BITSWAN_GITOPS_DIR",
-                    os.path.join(os.environ.get("HOME"), ".config/bitswan/local-gitops/"),
+                    os.path.join(
+                        os.environ.get("HOME"), ".config/bitswan/local-gitops/"
+                    ),
                 )
                 if type(groups) is not list:
                     groups = groups.split(" ")
@@ -170,7 +174,9 @@ class ConfigParser(configparser.ConfigParser):
 
                 if include in self._included:
                     # Preventing infinite dependency looping
-                    L.warn("Config file '{}' can be included only once.".format(include))
+                    L.warn(
+                        "Config file '{}' can be included only once.".format(include)
+                    )
                     continue
 
                 self._included.add(include)
@@ -201,7 +207,9 @@ class ConfigParser(configparser.ConfigParser):
                 config_fname = ""
         else:
             if not os.path.isfile(config_fname):
-                print("Config file '{}' not found".format(config_fname), file=sys.stderr)
+                print(
+                    "Config file '{}' not found".format(config_fname), file=sys.stderr
+                )
                 sys.exit(1)
 
         if config_fname:
@@ -282,7 +290,9 @@ class ConfigParser(configparser.ConfigParser):
                 config = data.decode("utf-8")
                 self.read_string(config)
             else:
-                raise NotImplementedError("Unknown configuration format '{}'".format(url_path))
+                raise NotImplementedError(
+                    "Unknown configuration format '{}'".format(url_path)
+                )
 
             zk.stop()
             zk.close()
@@ -291,13 +301,19 @@ class ConfigParser(configparser.ConfigParser):
             self.config_contents_list.append(config)
 
         except Exception as e:
-            print("Failed to obtain configuration from Zookeeper server(s): '{}'.".format(e))
+            print(
+                "Failed to obtain configuration from Zookeeper server(s): '{}'.".format(
+                    e
+                )
+            )
             sys.exit(1)
 
     def get_config_contents_list(self):
         return self.config_contents_list, self.config_name_list
 
-    def getseconds(self, section, option, *, raw=False, vars=None, fallback=None, **kwargs) -> float:
+    def getseconds(
+        self, section, option, *, raw=False, vars=None, fallback=None, **kwargs
+    ) -> float:
         """
         Get time data from config and convert time string into seconds with `convert_to_seconds()` method.
 
@@ -372,9 +388,13 @@ class ConfigParser(configparser.ConfigParser):
         asab.Config.geturl("urls", "github", scheme=None)
         ```
         """
-        return utils.validate_url(self.get(section, option, raw=raw, vars=vars, fallback=fallback), scheme)
+        return utils.validate_url(
+            self.get(section, option, raw=raw, vars=vars, fallback=fallback), scheme
+        )
 
-    def getmultiline(self, section, option, *, raw=False, vars=None, fallback=None, **kwargs) -> typing.List[str]:
+    def getmultiline(
+        self, section, option, *, raw=False, vars=None, fallback=None, **kwargs
+    ) -> typing.List[str]:
         """
         Get multiline data from config.
 
@@ -465,7 +485,8 @@ class Configurable(object):
             for key, value in base_class.ConfigDefaults.items():
                 if value is None:
                     raise ValueError(
-                        "None value not allowed in ConfigDefaults. Found in %s:%s " % (config_section_name, key)
+                        "None value not allowed in ConfigDefaults. Found in %s:%s "
+                        % (config_section_name, key)
                     )
 
                 if key not in self.Config:

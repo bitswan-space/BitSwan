@@ -136,7 +136,11 @@ class KafkaSource(Source):
                     await self.Pipeline.ready()
                     current_time = self.App.time()
 
-                    if self.RefreshTopics > 0 and current_time > self.LastRefreshTopicsTime + self.RefreshTopics:
+                    if (
+                        self.RefreshTopics > 0
+                        and current_time
+                        > self.LastRefreshTopicsTime + self.RefreshTopics
+                    ):
                         L.info("Topics refreshed in '{}'.".format(self.Id))
                         c.unsubscribe()
                         c.close()
@@ -150,7 +154,11 @@ class KafkaSource(Source):
                         continue
 
                     if m.error():
-                        L.error("The following error occured while polling for messages: '{}'.".format(m.error()))
+                        L.error(
+                            "The following error occured while polling for messages: '{}'.".format(
+                                m.error()
+                            )
+                        )
                         await asyncio.sleep(self.Sleep)
                         continue
 

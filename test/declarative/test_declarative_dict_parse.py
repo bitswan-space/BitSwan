@@ -49,4 +49,6 @@ class TestDeclarativeDictParser(bspump.unittest.TestCase):
     def test_dict_parse_qs_01(self):
         decl = self.load("./test_dict_parse_qs_01.yaml")
         res = decl({}, """first=this+is+a+field&second=was+it+clear+%28already%29%3F""")
-        self.assertEqual(res, {"first": "this is a field", "second": "was it clear (already)?"})
+        self.assertEqual(
+            res, {"first": "this is a field", "second": "was it clear (already)?"}
+        )

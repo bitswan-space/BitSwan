@@ -62,7 +62,9 @@ class IN(Expression):
         return self.get_items_inlet_type()
 
     def __call__(self, context, event, *args, **kwargs):
-        return self.What(context, event, *args, **kwargs) in self.Where(context, event, *args, **kwargs)
+        return self.What(context, event, *args, **kwargs) in self.Where(
+            context, event, *args, **kwargs
+        )
 
     def get_outlet_type(self):
         return bool.__name__

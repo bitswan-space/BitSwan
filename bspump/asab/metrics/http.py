@@ -22,4 +22,8 @@ class HTTPTarget(asab.Configurable):
             async with session.post(self.URL, json=metrics_to_send) as resp:
                 response = await resp.text()
                 if resp.status != 200:
-                    L.warning("Error when sending metrics by HTTPTarget: {}\n{}".format(resp.status, response))
+                    L.warning(
+                        "Error when sending metrics by HTTPTarget: {}\n{}".format(
+                            resp.status, response
+                        )
+                    )

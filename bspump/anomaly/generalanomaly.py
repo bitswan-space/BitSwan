@@ -51,5 +51,7 @@ class GeneralAnomaly(Anomaly):
 
         if close_rule != "status":
             close_rule_seconds = int(close_rule)
-            if last_timestamp != 0 and current_time > (last_timestamp + close_rule_seconds):
+            if last_timestamp != 0 and current_time > (
+                last_timestamp + close_rule_seconds
+            ):
                 self["status"] = "closed"

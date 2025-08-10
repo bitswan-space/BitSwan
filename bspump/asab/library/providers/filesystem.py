@@ -155,7 +155,9 @@ class FileSystemLibraryProvider(LibraryProviderABC):
             pos += EVENT_SIZE + namesize
             name = (data[pos - namesize : pos].split(b"\x00", 1)[0]).decode()
 
-            if mask & IN_ISDIR == IN_ISDIR and ((mask & IN_CREATE == IN_CREATE) or (mask & IN_MOVED_TO == IN_MOVED_TO)):
+            if mask & IN_ISDIR == IN_ISDIR and (
+                (mask & IN_CREATE == IN_CREATE) or (mask & IN_MOVED_TO == IN_MOVED_TO)
+            ):
                 subscribed_path, child_path = self.WDs[wd]
                 self._subscribe_recursive(subscribed_path, "/".join([child_path, name]))
 
@@ -187,7 +189,11 @@ class FileSystemLibraryProvider(LibraryProviderABC):
         if not os.path.isdir(self.BasePath + path):
             return
         if self.FD is None:
-            L.warning("Cannot subscribe to changes in the filesystem layer of the library: '{}'".format(self.BasePath))
+            L.warning(
+                "Cannot subscribe to changes in the filesystem layer of the library: '{}'".format(
+                    self.BasePath
+                )
+            )
             return
         self._subscribe_recursive(path, path)
 

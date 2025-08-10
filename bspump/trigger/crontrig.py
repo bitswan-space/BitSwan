@@ -23,7 +23,9 @@ class CronTrigger(Trigger):
         """
         if datetime.now() > self.next_trigger_time:
             # get new time for next trigger
-            self.next_trigger_time = self.get_new_time(self.cron_string, self.next_trigger_time)
+            self.next_trigger_time = self.get_new_time(
+                self.cron_string, self.next_trigger_time
+            )
             self.fire()
         else:
             return

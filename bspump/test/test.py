@@ -54,7 +54,9 @@ class TestSource(Source):
                 all_tasks_before = asyncio.all_tasks()
                 await self.process(event, context=tests)
                 all_tasks_after = asyncio.all_tasks()
-                other_tasks = [task for task in all_tasks_after if task not in all_tasks_before]
+                other_tasks = [
+                    task for task in all_tasks_after if task not in all_tasks_before
+                ]
 
                 # Wait for all other tasks to complete
                 if other_tasks:
@@ -62,7 +64,9 @@ class TestSource(Source):
                 print(f"    └ Outputs:              {tests['outputs']}", end="")
                 if tests.get("expect") and tests["outputs"] != tests["expect"]:
                     print(" \033[91m✘\033[0m")
-                    print(f"    ! \033[91mTest failed\033[0m Expected: {tests['expect']}\n")
+                    print(
+                        f"    ! \033[91mTest failed\033[0m Expected: {tests['expect']}\n"
+                    )
                     if not self.Pipeline.App.Watch:
                         exit(1)
                 if tests.get("inspect"):
@@ -70,7 +74,9 @@ class TestSource(Source):
                     expected = tests["inspect"][1]
                     if not inspected == expected:
                         print(" \033[91m✘\033[0m")
-                        print(f"    ! \033[91mInspect failed. Got {inspected} expected {expected}\033[0m")
+                        print(
+                            f"    ! \033[91mInspect failed. Got {inspected} expected {expected}\033[0m"
+                        )
                         if not self.Pipeline.App.Watch:
                             exit(1)
                 if tests.get("inspect_in"):
@@ -87,7 +93,9 @@ class TestSource(Source):
                 print(" \033[92m✔\033[0m")
             print(f"\n\033[92mAll tests passed for {self.Pipeline.Id}.\033[0m\n")
             bspump.jupyter.bitswan_tested_pipelines.add(self.Pipeline.Id)
-            if bspump.jupyter.bitswan_tested_pipelines == set(self.Pipeline.App.PumpService.Pipelines):
+            if bspump.jupyter.bitswan_tested_pipelines == set(
+                self.Pipeline.App.PumpService.Pipelines
+            ):
                 if not self.Pipeline.App.Watch:
                     exit()
 

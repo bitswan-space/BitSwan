@@ -47,7 +47,9 @@ class HTTPClientWebSocketSink(Sink):
                         try:
                             writer = asyncio.ensure_future(self._writer(ws))
                             reader = asyncio.ensure_future(self._reader(ws))
-                            await asyncio.wait([writer, reader], return_when=asyncio.FIRST_COMPLETED)
+                            await asyncio.wait(
+                                [writer, reader], return_when=asyncio.FIRST_COMPLETED
+                            )
 
                         finally:
                             self.WebSocket = None
@@ -99,7 +101,11 @@ class HTTPClientWebSocketSink(Sink):
     async def _reader(self, ws):
         async for msg in ws:
             if msg.type == aiohttp.WSMsgType.ERROR:
-                L.warning("WebSocket connection closed with exception {}".format(ws.exception()))
+                L.warning(
+                    "WebSocket connection closed with exception {}".format(
+                        ws.exception()
+                    )
+                )
 
             else:
                 L.warning("WebSocket unknown/invalid message {}".format(msg))

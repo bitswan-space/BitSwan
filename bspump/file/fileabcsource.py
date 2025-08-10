@@ -77,7 +77,11 @@ class FileABCSource(TriggerSource):
         self.newline = self.Config["newline"]
         self.post = self.Config["post"]
         if self.post not in ["delete", "noop", "move"]:
-            L.warning("Incorrect/unknown 'post' configuration value '{}' - defaulting to 'move'".format(self.post))
+            L.warning(
+                "Incorrect/unknown 'post' configuration value '{}' - defaulting to 'move'".format(
+                    self.post
+                )
+            )
             self.post = "move"
         self.include = self.Config["include"]
         self.exclude = self.Config["exclude"]
@@ -88,7 +92,11 @@ class FileABCSource(TriggerSource):
             try:
                 self.files_per_cycle = int(self.files_per_cycle)
             except ValueError:
-                L.error("Incorrect 'files_per_cycle' configuration value '{}'".format(self.files_per_cycle))
+                L.error(
+                    "Incorrect 'files_per_cycle' configuration value '{}'".format(
+                        self.files_per_cycle
+                    )
+                )
         self.encoding = conf_encoding if len(conf_encoding) > 0 else None
 
         self.MoveDestination = self.Config["move_destination"]
@@ -164,7 +172,9 @@ class FileABCSource(TriggerSource):
         except FileNotFoundError:
             return
         except (OSError, PermissionError):  # OSError - UNIX, PermissionError - Windows
-            L.exception("Error when locking the file '{}'  - will try again".format(filename))
+            L.exception(
+                "Error when locking the file '{}'  - will try again".format(filename)
+            )
             return
         except BaseException as e:
             L.exception("Error when locking the file '{}'".format(filename))
@@ -198,7 +208,9 @@ class FileABCSource(TriggerSource):
                 )
 
         except (OSError, PermissionError):  # OSError - UNIX, PermissionError - Windows
-            L.exception("Error when opening the file '{}' - will try again".format(filename))
+            L.exception(
+                "Error when opening the file '{}' - will try again".format(filename)
+            )
             return
         except BaseException as e:
             L.exception("Error when opening the file '{}'".format(filename))
@@ -218,7 +230,11 @@ class FileABCSource(TriggerSource):
                     # Otherwise rename to ...-failed and continue processing
                     os.rename(locked_filename, filename + "-failed")
             except BaseException:
-                L.exception("Error when renaming the file '{}'  - will try again".format(filename))
+                L.exception(
+                    "Error when renaming the file '{}'  - will try again".format(
+                        filename
+                    )
+                )
             return
         finally:
             f.close()
@@ -235,14 +251,18 @@ class FileABCSource(TriggerSource):
                 if self.MoveDestination is not None:
                     file_from = os.path.abspath(locked_filename)
                     base = os.path.basename(filename)
-                    file_to = os.path.abspath(os.path.join(self.MoveDestination, base + "-processed"))
+                    file_to = os.path.abspath(
+                        os.path.join(self.MoveDestination, base + "-processed")
+                    )
                 else:
                     file_from = locked_filename
                     file_to = filename + "-processed"
 
                 os.rename(file_from, file_to)
         except (OSError, PermissionError):  # OSError - UNIX, PermissionError - Windows
-            L.exception("Error when finalizing the file '{}' - will try again".format(filename))
+            L.exception(
+                "Error when finalizing the file '{}' - will try again".format(filename)
+            )
             return
         except BaseException as e:
             L.exception("Error when finalizing the file '{}'".format(filename))
@@ -288,8 +308,12 @@ try:
             "move",
             ["1-processed", "2-processed", "3", "4-locked", "5-failed", "6-processed"],
         )
-        await run_file_abc_source("noop", ["1", "2", "3", "4-locked", "5-failed", "6-processed"])
-        await run_file_abc_source("delete", ["3", "4-locked", "5-failed", "6-processed"])
+        await run_file_abc_source(
+            "noop", ["1", "2", "3", "4-locked", "5-failed", "6-processed"]
+        )
+        await run_file_abc_source(
+            "delete", ["3", "4-locked", "5-failed", "6-processed"]
+        )
 
     async def run_file_abc_source(post, expected_resultant_files):
         read_files = []
@@ -352,7 +376,9 @@ try:
         assert read_files[1] == os.path.join(temp_dir, "globscan", "2")
         # Make sure that the files have been renamed as being processed
         # Get file listing and compare for easy debugging
-        assert sorted(os.listdir(os.path.join(temp_dir, "globscan"))) == sorted(expected_resultant_files)
+        assert sorted(os.listdir(os.path.join(temp_dir, "globscan"))) == sorted(
+            expected_resultant_files
+        )
 
 except ImportError:
     pass

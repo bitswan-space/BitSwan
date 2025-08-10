@@ -71,7 +71,9 @@ class LatchAnalyzer(Analyzer):
                 configuration file with additional information.
 
         """
-        super().__init__(app, pipeline, analyze_on_clock=analyze_on_clock, id=id, config=config)
+        super().__init__(
+            app, pipeline, analyze_on_clock=analyze_on_clock, id=id, config=config
+        )
         max_size = int(self.Config.get("latch_max_size"))
         if max_size == 0:
             self.Latch = collections.deque()

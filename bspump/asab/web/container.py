@@ -43,9 +43,7 @@ class WebContainer(Configurable):
     ):
         super().__init__(config_section_name=config_section_name, config=config)
 
-        self.Addresses = (
-            None  # The address is available only after `WebContainer.started!` PubSub message is published.
-        )
+        self.Addresses = None  # The address is available only after `WebContainer.started!` PubSub message is published.
         self.BackLog = int(self.Config.get("backlog"))
         self.CORS = self.Config.get("cors")
 
@@ -56,7 +54,9 @@ class WebContainer(Configurable):
         else:
             from .. import __version__
 
-            self.ServerTokens = aiohttp.web_response.SERVER_SOFTWARE + " asab/" + __version__
+            self.ServerTokens = (
+                aiohttp.web_response.SERVER_SOFTWARE + " asab/" + __version__
+            )
 
         # Parse listen address(es), can be multiline configuration item
         ls = self.Config.get("listen")
@@ -91,10 +91,14 @@ class WebContainer(Configurable):
                     ssl_context = SSLContextBuilder(param, config=self.Config).build()
                     # SSL parameters are included in the current config section
                 elif param.startswith("ssl"):
-                    ssl_context = SSLContextBuilder("<none>", config=self.Config).build()
+                    ssl_context = SSLContextBuilder(
+                        "<none>", config=self.Config
+                    ).build()
                 else:
                     raise RuntimeError(
-                        "Unknown listen parameter in section [{}]: {}".format(config_section_name, param)
+                        "Unknown listen parameter in section [{}]: {}".format(
+                            config_section_name, param
+                        )
                     )
 
             if isinstance(addr, list):
@@ -107,7 +111,9 @@ class WebContainer(Configurable):
             L.warning("Missing configuration.")
 
         client_max_size = int(self.Config.get("body_max_size"))
-        self.WebApp: aiohttp.web.Application = aiohttp.web.Application(client_max_size=client_max_size)
+        self.WebApp: aiohttp.web.Application = aiohttp.web.Application(
+            client_max_size=client_max_size
+        )
         """
 		The Web Application object. See [aiohttp documentation](https://docs.aiohttp.org/en/stable/web_reference.html?highlight=Application#application) for the details.
 
@@ -125,7 +131,9 @@ class WebContainer(Configurable):
         if len(rootdir) > 0:
             from .staticdir import StaticDirProvider
 
-            self.WebApp["rootdir"] = StaticDirProvider(self.WebApp, root="/", path=rootdir)
+            self.WebApp["rootdir"] = StaticDirProvider(
+                self.WebApp, root="/", path=rootdir
+            )
 
         access_log = logging.getLogger(__name__[: __name__.rfind(".")] + ".al")
         access_log.App = websvc.App
@@ -140,7 +148,11 @@ class WebContainer(Configurable):
         websvc._register_container(self, config_section_name)
 
         if self.CORS != "":
-            preflight_str = self.Config["cors_preflight_paths"].strip("\n").replace("*", "{tail:.*}")
+            preflight_str = (
+                self.Config["cors_preflight_paths"]
+                .strip("\n")
+                .replace("*", "{tail:.*}")
+            )
             preflight_paths = re.split(r"[,\s]+", preflight_str, re.MULTILINE)
             self.add_preflight_handlers(preflight_paths)
 
@@ -209,7 +221,9 @@ class WebContainer(Configurable):
         if self.CORS != "":
             # TODO: Be more precise about "allow origin" header
             response.headers["Access-Control-Allow-Origin"] = "*"
-            response.headers["Access-Control-Allow-Methods"] = "GET, POST, DELETE, PUT, PATCH, OPTIONS"
+            response.headers["Access-Control-Allow-Methods"] = (
+                "GET, POST, DELETE, PUT, PATCH, OPTIONS"
+            )
 
     def get_ports(self) -> typing.List[str]:
         """

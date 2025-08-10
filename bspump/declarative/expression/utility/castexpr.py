@@ -49,7 +49,9 @@ class CAST(Expression):
         "list": (list, list.__name__),
     }
 
-    def __init__(self, app, *, arg_what=None, arg_type=None, arg_default=None, value=None):
+    def __init__(
+        self, app, *, arg_what=None, arg_type=None, arg_default=None, value=None
+    ):
         super().__init__(app)
 
         if value is not None:

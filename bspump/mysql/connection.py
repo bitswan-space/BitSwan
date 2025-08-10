@@ -218,7 +218,11 @@ class MySQLConnection(Connection):
             pymysql.err.OperationalError,
         ) as e:
             if e.args[0] in self.RetryErrors:
-                L.warn("Recoverable error '{}' occurred in MySQLConnection. Retrying.".format(e.args[0]))
+                L.warn(
+                    "Recoverable error '{}' occurred in MySQLConnection. Retrying.".format(
+                        e.args[0]
+                    )
+                )
                 self._conn_future = None
                 return
             L.exception("Unexpected MySQL connection error")
@@ -258,7 +262,11 @@ class MySQLConnection(Connection):
             pymysql.err.OperationalError,
         ) as e:
             if e.args[0] in self.RetryErrors:
-                L.warn("Recoverable error '{}' occurred in MySQLConnection. Retrying.".format(e.args[0]))
+                L.warn(
+                    "Recoverable error '{}' occurred in MySQLConnection. Retrying.".format(
+                        e.args[0]
+                    )
+                )
                 return
             L.exception("Unexpected MySQL connection error")
             raise e
@@ -319,7 +327,9 @@ class MySQLConnection(Connection):
                 break
 
             if self._output_queue.qsize() == self._output_queue_max_size - 1:
-                self.PubSub.publish("MySQLConnection.unpause!", self, asynchronously=True)
+                self.PubSub.publish(
+                    "MySQLConnection.unpause!", self, asynchronously=True
+                )
 
             async with self.acquire_connection() as connection:
                 async with connection.cursor() as cursor:
@@ -335,7 +345,11 @@ class MySQLConnection(Connection):
                         pymysql.err.OperationalError,
                     ) as e:
                         if e.args[0] in self.RetryErrors:
-                            L.warn("Recoverable error '{}' occurred in MySQLConnection. Retrying.".format(e.args[0]))
+                            L.warn(
+                                "Recoverable error '{}' occurred in MySQLConnection. Retrying.".format(
+                                    e.args[0]
+                                )
+                            )
                             self._output_queue.put_nowait((query, data))
                             self.Pipeline.throttle(self, True)
                             self._throttled_by_error = True

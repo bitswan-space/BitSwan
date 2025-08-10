@@ -95,7 +95,9 @@ class Pipeline(abc.ABC, bspump.asab.Configurable):
         self.AsyncFuturesThrottler = object()
 
         self.Sources = []
-        self.Processors = [[]]  # List of lists of processors, the depth is increased by a Generator object
+        self.Processors = [
+            []
+        ]  # List of lists of processors, the depth is increased by a Generator object
         self.Sinks = []
 
         # Publish-Subscribe for this pipeline
@@ -138,7 +140,9 @@ class Pipeline(abc.ABC, bspump.asab.Configurable):
         app.PubSub.subscribe("Metrics.flush!", self._on_metrics_flush)
 
         # Pipeline logger
-        self.L = PipelineLogger("bspump.pipeline.{}".format(self.Id), self.MetricsCounter)
+        self.L = PipelineLogger(
+            "bspump.pipeline.{}".format(self.Id), self.MetricsCounter
+        )
 
         self.LastReadyStateSwitch = self.Loop.time()
 
@@ -197,14 +201,20 @@ class Pipeline(abc.ABC, bspump.asab.Configurable):
                 self.MetricsGauge.set("warning.ratio", 0.0)
                 self.MetricsGauge.set("error.ratio", 0.0)
                 continue
-            self.MetricsGauge.set("warning.ratio", values["warning"] / values["event.in"])
+            self.MetricsGauge.set(
+                "warning.ratio", values["warning"] / values["event.in"]
+            )
             self.MetricsGauge.set("error.ratio", values["error"] / values["event.in"])
 
         for processor in self.ProcessorsCounter:
             for field in self.ProcessorsCounter[processor].Storage["fieldset"]:
                 values = field["values"]
-                self.ProcessorsEPSMetrics[processor].add("eps.in", round(values["event.in"] / 60, 3))
-                self.ProcessorsEPSMetrics[processor].add("eps.out", round(values["event.out"] / 60, 3))
+                self.ProcessorsEPSMetrics[processor].add(
+                    "eps.in", round(values["event.in"] / 60, 3)
+                )
+                self.ProcessorsEPSMetrics[processor].add(
+                    "eps.out", round(values["event.out"] / 60, 3)
+                )
 
     def is_error(self):
         """
@@ -288,7 +298,11 @@ class Pipeline(abc.ABC, bspump.asab.Configurable):
 
             self._error = (context, event, exc, self.App.time())
 
-            L.exception("Pipeline '{}' stopped due to a processing error: {} ({})".format(self.Id, exc, type(exc)))
+            L.exception(
+                "Pipeline '{}' stopped due to a processing error: {} ({})".format(
+                    self.Id, exc, type(exc)
+                )
+            )
 
             self.PubSub.publish("bspump.pipeline.error!", pipeline=self)
             self._evaluate_ready()
@@ -479,7 +493,9 @@ class Pipeline(abc.ABC, bspump.asab.Configurable):
                 event = None  # Event is discarted
             finally:
                 self.ProcessorsCounter[processor.Id].add("event.out", 1)
-                self.ProfilerCounter[processor.Id].add("duration", time.perf_counter() - t0)
+                self.ProfilerCounter[processor.Id].add(
+                    "duration", time.perf_counter() - t0
+                )
                 self.ProfilerCounter[processor.Id].add("run", 1)
 
             if event is None:  # Event has been consumed on the way
@@ -511,7 +527,11 @@ class Pipeline(abc.ABC, bspump.asab.Configurable):
         self.set_error(
             context,
             event,
-            ProcessingError("Incomplete pipeline, event '{}' is not consumed by a Sink".format(event)),
+            ProcessingError(
+                "Incomplete pipeline, event '{}' is not consumed by a Sink".format(
+                    event
+                )
+            ),
         )
 
     def inject(self, context, event, depth):
@@ -789,14 +809,16 @@ class Pipeline(abc.ABC, bspump.asab.Configurable):
         )
 
         if isinstance(processor, Analyzer):
-            self.ProfilerCounter["analyzer_" + processor.Id] = self.MetricsService.create_counter(
-                "bspump.pipeline.profiler",
-                tags={
-                    "analyzer": processor.Id,
-                    "pipeline": self.Id,
-                },
-                init_values={"duration": 0.0, "run": 0},
-                reset=self.ResetProfiler,
+            self.ProfilerCounter["analyzer_" + processor.Id] = (
+                self.MetricsService.create_counter(
+                    "bspump.pipeline.profiler",
+                    tags={
+                        "analyzer": processor.Id,
+                        "pipeline": self.Id,
+                    },
+                    init_values={"duration": 0.0, "run": 0},
+                    reset=self.ResetProfiler,
+                )
             )
 
     def build(self, source, *processors):
@@ -915,7 +937,9 @@ class Pipeline(abc.ABC, bspump.asab.Configurable):
         # Stop all futures
         while len(self.AsyncFutures) > 0:
             # The futures are removed in _future_done
-            await asyncio.wait(self.AsyncFutures, return_when=concurrent.futures.ALL_COMPLETED)
+            await asyncio.wait(
+                self.AsyncFutures, return_when=concurrent.futures.ALL_COMPLETED
+            )
 
         # Stop all started sources
         for source in self.Sources:

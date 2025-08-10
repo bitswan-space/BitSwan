@@ -78,7 +78,9 @@ class ZooKeeperContainer(Configurable):
 
         if url_netloc == "":
             # if server entry is missing exit
-            L.critical("Cannot connect to Zookeeper, the configuration of the server address is not available.")
+            L.critical(
+                "Cannot connect to Zookeeper, the configuration of the server address is not available."
+            )
             raise SystemExit("Exit due to a critical configuration error.")
 
         assert url_netloc is not None
@@ -121,7 +123,9 @@ class ZooKeeperContainer(Configurable):
                 return
             except Exception as e:
                 L.error(
-                    "Failed to connect to ZooKeeper: {} (retrying in 2 seconds)".format(e),
+                    "Failed to connect to ZooKeeper: {} (retrying in 2 seconds)".format(
+                        e
+                    ),
                     struct_data={
                         "hosts": str(self.ZooKeeper.Client.hosts),
                     },
@@ -141,12 +145,18 @@ class ZooKeeperContainer(Configurable):
         * ZooKeeperContainer.state/SUSPENDED!
         """
         if state == kazoo.protocol.states.KazooState.CONNECTED:
-            self.App.Loop.call_soon_threadsafe(self.ZooKeeper.Client.ensure_path, self.Path)
+            self.App.Loop.call_soon_threadsafe(
+                self.ZooKeeper.Client.ensure_path, self.Path
+            )
             L.log(LOG_NOTICE, "Connected to ZooKeeper")
         else:
-            L.warning("ZooKeeper connection state changed", struct_data={"state": str(state)})
+            L.warning(
+                "ZooKeeper connection state changed", struct_data={"state": str(state)}
+            )
 
-        self.App.PubSub.publish_threadsafe("ZooKeeperContainer.state/{}!".format(state), self)
+        self.App.PubSub.publish_threadsafe(
+            "ZooKeeperContainer.state/{}!".format(state), self
+        )
 
     def is_connected(self):
         """

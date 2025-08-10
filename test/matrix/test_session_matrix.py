@@ -58,7 +58,9 @@ class TestSessionMatrix(bspump.unittest.TestCase):
             ("f0", "U3"),
             ("f1", "U8"),
         ]
-        matrix = bspump.matrix.SessionMatrix(app=self.App, dtype=dtype, config={"primary_name": "event_id"})
+        matrix = bspump.matrix.SessionMatrix(
+            app=self.App, dtype=dtype, config={"primary_name": "event_id"}
+        )
         event_id = "abc"
         index = matrix.add_row(event_id)
         matrix.Array[index]["f0"] = "aaa"

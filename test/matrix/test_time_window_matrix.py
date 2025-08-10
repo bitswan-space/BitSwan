@@ -11,7 +11,9 @@ class TestTimeWindowMatrix(bspump.unittest.TestCase):
         self.assertEqual(matrix.Array.shape, (1, 15))
 
     def test_matrix_add_column(self):
-        matrix = bspump.matrix.TimeWindowMatrix(app=self.App, columns=3, clock_driven=False)
+        matrix = bspump.matrix.TimeWindowMatrix(
+            app=self.App, columns=3, clock_driven=False
+        )
         start = matrix.TimeConfig.get_start()
         end = matrix.TimeConfig.get_end()
         row_index = matrix.add_row("abc")
@@ -35,7 +37,9 @@ class TestTimeWindowMatrix(bspump.unittest.TestCase):
         self.assertEqual(matrix.Array.shape[1], num_columns)
 
     def test_matrix_add_row(self):
-        matrix = bspump.matrix.TimeWindowMatrix(app=self.App, columns=3, clock_driven=False)
+        matrix = bspump.matrix.TimeWindowMatrix(
+            app=self.App, columns=3, clock_driven=False
+        )
         row_index = matrix.add_row("abc")
         self.assertEqual(matrix.Array.shape[0], len(matrix.WarmingUpCount))
 
@@ -50,7 +54,9 @@ class TestTimeWindowMatrix(bspump.unittest.TestCase):
 
     def test_matrix_get_column(self):
         columns = 10
-        matrix = bspump.matrix.TimeWindowMatrix(app=self.App, resolution=1, columns=columns, clock_driven=False)
+        matrix = bspump.matrix.TimeWindowMatrix(
+            app=self.App, resolution=1, columns=columns, clock_driven=False
+        )
         cur_time = int(time.time())
         for i in range(columns):
             time_ = cur_time - i

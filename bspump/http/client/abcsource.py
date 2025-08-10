@@ -41,7 +41,9 @@ class HTTPABCClientSource(TriggerSource):
         self.MaxFailedResponses = int(self.Config.get("max_failed_retries"))
         self.FailChilldown = float(self.Config.get("fail_chilldown"))
         try:
-            self.ResponseCodes = frozenset(map(int, re.findall(r"\d+", self.Config.get("response_code"))))
+            self.ResponseCodes = frozenset(
+                map(int, re.findall(r"\d+", self.Config.get("response_code")))
+            )
         except Exception:
             L.error("Failed to parse 'response_code' configuration value")
             raise
@@ -61,7 +63,9 @@ class HTTPABCClientSource(TriggerSource):
                 if response.status not in self.ResponseCodes:
                     await response.text()
                     raise InvalidResponseStatusCodeError(
-                        "The response status code {} from '{}' is invalid".format(response.status, self.URL)
+                        "The response status code {} from '{}' is invalid".format(
+                            response.status, self.URL
+                        )
                     )
                 else:
                     self.FailedResponses = 0  # Reset the counter

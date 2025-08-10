@@ -92,7 +92,9 @@ class ElasticSearchLookup(MappingLookup, AsyncLookupMixin):
         self.Index = self.Config["index"]
         self.ScrollTimeout = self.Config["scroll_timeout"]
         self.Key = self.Config["key"]
-        self.CacheNonExistent = {"True": True, "False": False}.get(self.Config["cache_non_existent"], False)
+        self.CacheNonExistent = {"True": True, "False": False}.get(
+            self.Config["cache_non_existent"], False
+        )
         self.Timefield = self.Config.get("timefield")
         self.SortOrder = self.Config["sort_order"]
 
@@ -119,11 +121,15 @@ class ElasticSearchLookup(MappingLookup, AsyncLookupMixin):
         url = self.Connection.get_url() + "{}/{}".format(self.Index, prefix)
 
         async with self.Connection.get_session() as session:
-            async with session.post(url, json=request, headers={"Content-Type": "application/json"}) as response:
+            async with session.post(
+                url, json=request, headers={"Content-Type": "application/json"}
+            ) as response:
                 if response.status != 200:
                     data = await response.text()
                     L.error(
-                        "Failed to fetch data from ElasticSearch: {} from {}\n{}".format(response.status, url, data)
+                        "Failed to fetch data from ElasticSearch: {} from {}\n{}".format(
+                            response.status, url, data
+                        )
                     )
 
                 msg = await response.json()
@@ -193,11 +199,15 @@ class ElasticSearchLookup(MappingLookup, AsyncLookupMixin):
         url = self.Connection.get_url() + "{}/{}".format(self.Index, prefix)
 
         async with self.Connection.get_session() as session:
-            async with session.post(url, json=request, headers={"Content-Type": "application/json"}) as response:
+            async with session.post(
+                url, json=request, headers={"Content-Type": "application/json"}
+            ) as response:
                 if response.status != 200:
                     data = await response.text()
                     L.error(
-                        "Failed to fetch data from ElasticSearch: {} from {}\n{}".format(response.status, url, data)
+                        "Failed to fetch data from ElasticSearch: {} from {}\n{}".format(
+                            response.status, url, data
+                        )
                     )
 
                 msg = await response.json()
@@ -242,7 +252,9 @@ class ElasticSearchLookup(MappingLookup, AsyncLookupMixin):
             if response.status_code != 200:
                 data = response.text()
                 L.error(
-                    "Failed to fetch data from ElasticSearch: {} from {}\n{}".format(response.status_code, url, data)
+                    "Failed to fetch data from ElasticSearch: {} from {}\n{}".format(
+                        response.status_code, url, data
+                    )
                 )
                 break
 

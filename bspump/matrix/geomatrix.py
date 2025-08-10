@@ -24,7 +24,9 @@ class GeoMatrix(Matrix):
         "max_lon": 40.6,
     }
 
-    def __init__(self, app, dtype="float_", bbox=None, resolution=5, id=None, config=None):
+    def __init__(
+        self, app, dtype="float_", bbox=None, resolution=5, id=None, config=None
+    ):
         if bbox is None:
             bbox = {
                 "min_lat": float(self.ConfigDefaults["min_lat"]),
@@ -89,7 +91,9 @@ class GeoMatrix(Matrix):
         dLon = self.degrees_to_radians(lon2 - lon1)
         lat1 = self.degrees_to_radians(lat1)
         lat2 = self.degrees_to_radians(lat2)
-        a = np.sin(dLat / 2) * np.sin(dLat / 2) + np.sin(dLon / 2) * np.sin(dLon / 2) * np.cos(lat1) * np.cos(lat2)
+        a = np.sin(dLat / 2) * np.sin(dLat / 2) + np.sin(dLon / 2) * np.sin(
+            dLon / 2
+        ) * np.cos(lat1) * np.cos(lat2)
         c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
         return R * c
 
@@ -97,7 +101,9 @@ class GeoMatrix(Matrix):
         """
         Converts latitude and longitude into row and column indexes.
         """
-        column = (lon - self.Bbox["min_lon"]) * ((self.MapWidth - 1) / (self.Bbox["max_lon"] - self.Bbox["min_lon"]))
+        column = (lon - self.Bbox["min_lon"]) * (
+            (self.MapWidth - 1) / (self.Bbox["max_lon"] - self.Bbox["min_lon"])
+        )
         row = ((lat * (-1)) + self.Bbox["max_lat"]) * (
             (self.MapHeight - 1) / (self.Bbox["max_lat"] - self.Bbox["min_lat"])
         )
@@ -110,8 +116,14 @@ class GeoMatrix(Matrix):
         row += 0.5
         column += 0.5
 
-        lat = -((row / (self.MapHeight - 1) * (self.Bbox["max_lat"] - self.Bbox["min_lat"])) - self.Bbox["max_lat"])
-        lon = column * (self.Bbox["max_lon"] - self.Bbox["min_lon"]) / (self.MapWidth - 1) + self.Bbox["min_lon"]
+        lat = -(
+            (row / (self.MapHeight - 1) * (self.Bbox["max_lat"] - self.Bbox["min_lat"]))
+            - self.Bbox["max_lat"]
+        )
+        lon = (
+            column * (self.Bbox["max_lon"] - self.Bbox["min_lon"]) / (self.MapWidth - 1)
+            + self.Bbox["min_lon"]
+        )
 
         return lat, lon
 
@@ -133,7 +145,9 @@ class PersistentGeoMatrix(PersistentMatrix):
         "max_lon": 40.6,
     }
 
-    def __init__(self, app, dtype="float_", bbox=None, resolution=5, id=None, config=None):
+    def __init__(
+        self, app, dtype="float_", bbox=None, resolution=5, id=None, config=None
+    ):
         if bbox is None:
             bbox = {
                 "min_lat": float(self.ConfigDefaults["min_lat"]),
@@ -155,7 +169,9 @@ class PersistentGeoMatrix(PersistentMatrix):
             self.Array = self.Array.reshape(self.reshape(self.Array.shape))
         else:
             array = np.zeros([self.MapHeight, self.MapWidth], dtype=self.DType)
-            self.Array = np.memmap(self.ArrayPath, dtype=self.DType, mode="w+", shape=array.shape)
+            self.Array = np.memmap(
+                self.ArrayPath, dtype=self.DType, mode="w+", shape=array.shape
+            )
 
     def reshape(self, shape):
         return [self.MapHeight, self.MapWidth]
@@ -207,7 +223,9 @@ class PersistentGeoMatrix(PersistentMatrix):
         dLon = self.degrees_to_radians(lon2 - lon1)
         lat1 = self.degrees_to_radians(lat1)
         lat2 = self.degrees_to_radians(lat2)
-        a = np.sin(dLat / 2) * np.sin(dLat / 2) + np.sin(dLon / 2) * np.sin(dLon / 2) * np.cos(lat1) * np.cos(lat2)
+        a = np.sin(dLat / 2) * np.sin(dLat / 2) + np.sin(dLon / 2) * np.sin(
+            dLon / 2
+        ) * np.cos(lat1) * np.cos(lat2)
         c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
         return R * c
 
@@ -215,7 +233,9 @@ class PersistentGeoMatrix(PersistentMatrix):
         """
         Converts latitude and longitude into row and column indexes.
         """
-        column = (lon - self.Bbox["min_lon"]) * ((self.MapWidth - 1) / (self.Bbox["max_lon"] - self.Bbox["min_lon"]))
+        column = (lon - self.Bbox["min_lon"]) * (
+            (self.MapWidth - 1) / (self.Bbox["max_lon"] - self.Bbox["min_lon"])
+        )
         row = ((lat * (-1)) + self.Bbox["max_lat"]) * (
             (self.MapHeight - 1) / (self.Bbox["max_lat"] - self.Bbox["min_lat"])
         )
@@ -228,7 +248,13 @@ class PersistentGeoMatrix(PersistentMatrix):
         row += 0.5
         column += 0.5
 
-        lat = -((row / (self.MapHeight - 1) * (self.Bbox["max_lat"] - self.Bbox["min_lat"])) - self.Bbox["max_lat"])
-        lon = column * (self.Bbox["max_lon"] - self.Bbox["min_lon"]) / (self.MapWidth - 1) + self.Bbox["min_lon"]
+        lat = -(
+            (row / (self.MapHeight - 1) * (self.Bbox["max_lat"] - self.Bbox["min_lat"]))
+            - self.Bbox["max_lat"]
+        )
+        lon = (
+            column * (self.Bbox["max_lon"] - self.Bbox["min_lon"]) / (self.MapWidth - 1)
+            + self.Bbox["min_lon"]
+        )
 
         return lat, lon

@@ -85,12 +85,16 @@ class SessionAnalyzer(Analyzer):
                 configuration file with additional information.
 
         """
-        super().__init__(app, pipeline, analyze_on_clock=analyze_on_clock, id=id, config=config)
+        super().__init__(
+            app, pipeline, analyze_on_clock=analyze_on_clock, id=id, config=config
+        )
         svc = app.get_service("bspump.PumpService")
         if matrix_id is None:
             s_id = self.Id + "Matrix"
             if persistent:
-                self.Sessions = PersistentSessionMatrix(app, dtype, id=s_id, config=config)
+                self.Sessions = PersistentSessionMatrix(
+                    app, dtype, id=s_id, config=config
+                )
             else:
                 self.Sessions = SessionMatrix(app, dtype, id=s_id, config=config)
             svc.add_matrix(self.Sessions)

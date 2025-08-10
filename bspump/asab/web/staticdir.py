@@ -22,7 +22,9 @@ class StaticDirProvider(object):
                     functools.partial(self._file, fname),
                 )
             elif os.path.isdir(fname):
-                webapp.router.add_static(self.Root + "/" + os.path.basename(fname), path=fname)
+                webapp.router.add_static(
+                    self.Root + "/" + os.path.basename(fname), path=fname
+                )
 
     async def _index(self, request):
         return aiohttp.web.FileResponse(os.path.join(self.Path, self.Index))

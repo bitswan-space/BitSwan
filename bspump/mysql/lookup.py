@@ -117,7 +117,11 @@ class MySQLLookup(MappingLookup, AsyncLookupMixin):
                     pymysql.err.OperationalError,
                 ) as e:
                     if e.args[0] in self.Connection.RetryErrors:
-                        L.warning("Recoverable error '{}' occurred in MySQLLookup. Skipping lookup.".format(e.args[0]))
+                        L.warning(
+                            "Recoverable error '{}' occurred in MySQLLookup. Skipping lookup.".format(
+                                e.args[0]
+                            )
+                        )
                         return None
                     raise e
 

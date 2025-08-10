@@ -92,9 +92,13 @@ class WebHookSource(Source):
     async def main(self):
         import aiohttp.web
 
-        aiohttp_app = aiohttp.web.Application(client_max_size=self.Config["max_body_size_bytes"])
+        aiohttp_app = aiohttp.web.Application(
+            client_max_size=self.Config["max_body_size_bytes"]
+        )
         print("Adding routes to webserver")
-        aiohttp_app.add_routes([aiohttp.web.post(self.Config["path"], self.handle_post)])
+        aiohttp_app.add_routes(
+            [aiohttp.web.post(self.Config["path"], self.handle_post)]
+        )
         print("Starting webserver")
         try:
             self.App.Loop.create_task(

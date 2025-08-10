@@ -81,7 +81,9 @@ class FileCSVSource(FileABCSource):
         if v is not None:
             kwargs["strict"] = v
 
-        return csv.DictReader(f, dialect=self.Dialect, fieldnames=self.FieldNames, **kwargs)
+        return csv.DictReader(
+            f, dialect=self.Dialect, fieldnames=self.FieldNames, **kwargs
+        )
 
     async def read(self, filename, f):
         """

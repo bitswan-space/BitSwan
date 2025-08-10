@@ -104,7 +104,9 @@ class PostgreSQLLookup(MappingLookup, AsyncLookupMixin):
     async def _find_one(self, key):
         query = self.QueryFindOne.format(self.Statement, self.From, self.Key)
         async with self.Connection.acquire() as connection:
-            async with connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cursor_async:
+            async with connection.cursor(
+                cursor_factory=psycopg2.extras.RealDictCursor
+            ) as cursor_async:
                 try:
                     await cursor_async.execute(query, (key,))
                     result = await cursor_async.fetchone()
@@ -126,7 +128,9 @@ class PostgreSQLLookup(MappingLookup, AsyncLookupMixin):
     async def _count(self):
         query = self.QueryCount.format(self.From)
         async with self.Connection.acquire() as connection:
-            async with connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cursor:
+            async with connection.cursor(
+                cursor_factory=psycopg2.extras.RealDictCursor
+            ) as cursor:
                 await cursor.execute(query)
                 result = await cursor.fetchone()
                 return result["count"]

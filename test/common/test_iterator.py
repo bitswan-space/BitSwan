@@ -14,7 +14,9 @@ class TestIteratorGenerator(bspump.unittest.ProcessorTestCase):
 
         output = self.execute(events)
 
-        self.assertEqual([event for context, event in output], [i for i in event_message])
+        self.assertEqual(
+            [event for context, event in output], [i for i in event_message]
+        )
 
 
 class TestIteratorSource(bspump.unittest.ProcessorTestCase):

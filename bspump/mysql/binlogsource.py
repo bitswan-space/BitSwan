@@ -129,9 +129,13 @@ class MySQLBinaryLogSource(Source):
                 gtid = row.get("gtid")
                 self.ResumeStream = True
                 if self.LogFile is not None:
-                    L.warning("Requested auto_position. Configuration log_file and log_pos is ignored.")
+                    L.warning(
+                        "Requested auto_position. Configuration log_file and log_pos is ignored."
+                    )
             else:
-                L.warning("MySQL server is not configured for GTID, auto_position cannot be used.")
+                L.warning(
+                    "MySQL server is not configured for GTID, auto_position cannot be used."
+                )
 
         self.Stream = pymysqlreplication.BinLogStreamReader(
             connection_settings=self.MySQLSettings,
@@ -229,7 +233,11 @@ class MySQLBinaryLogSource(Source):
         except asyncio.CancelledError:
             if self.Queue.qsize() > 0:
                 self.Running = False
-                L.warning("'{}' stopped with {} events in a queue".format(self.locate_address(), self.Queue.qsize()))
+                L.warning(
+                    "'{}' stopped with {} events in a queue".format(
+                        self.locate_address(), self.Queue.qsize()
+                    )
+                )
 
         finally:
             self.Running = False

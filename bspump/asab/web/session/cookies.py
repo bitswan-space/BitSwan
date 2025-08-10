@@ -24,9 +24,13 @@ class CookieSessionMixIn(object):
         params = {}  # dict(self._cookie_params)
         if max_age is not None:
             params["max_age"] = max_age
-            params["expires"] = time.strftime("%a, %d-%b-%Y %T GMT", time.gmtime(time.time() + max_age))
+            params["expires"] = time.strftime(
+                "%a, %d-%b-%Y %T GMT", time.gmtime(time.time() + max_age)
+            )
 
         if not cookie_data:
-            response.del_cookie(self.CookieName, domain=params["domain"], path=params["path"])
+            response.del_cookie(
+                self.CookieName, domain=params["domain"], path=params["path"]
+            )
         else:
             response.set_cookie(self.CookieName, cookie_data, **params)

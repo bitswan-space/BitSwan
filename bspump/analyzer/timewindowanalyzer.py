@@ -49,7 +49,9 @@ class TimeWindowAnalyzer(Analyzer):
 
         """
 
-        super().__init__(app, pipeline, analyze_on_clock=analyze_on_clock, id=id, config=config)
+        super().__init__(
+            app, pipeline, analyze_on_clock=analyze_on_clock, id=id, config=config
+        )
         svc = app.get_service("bspump.PumpService")
         if matrix_id is None:
             matrix_id = self.Id + "Matrix"

@@ -26,11 +26,15 @@ class StorageService(StorageServiceABC):
 
     def __init__(self, app, service_name, config_section_name="asab:storage"):
         super().__init__(app, service_name)
-        self.Client = motor.motor_asyncio.AsyncIOMotorClient(asab.Config.get(config_section_name, "mongodb_uri"))
+        self.Client = motor.motor_asyncio.AsyncIOMotorClient(
+            asab.Config.get(config_section_name, "mongodb_uri")
+        )
 
         self.Database = self.Client.get_database(
             asab.Config.get(config_section_name, "mongodb_database"),
-            codec_options=bson.codec_options.CodecOptions(tz_aware=True, tzinfo=datetime.timezone.utc),
+            codec_options=bson.codec_options.CodecOptions(
+                tz_aware=True, tzinfo=datetime.timezone.utc
+            ),
         )
         assert self.Database is not None
 
@@ -59,7 +63,9 @@ class StorageService(StorageServiceABC):
                     ret[field] = self.aes_decrypt(ret[field])
         return ret
 
-    async def collection(self, collection: str) -> motor.motor_asyncio.AsyncIOMotorCollection:
+    async def collection(
+        self, collection: str
+    ) -> motor.motor_asyncio.AsyncIOMotorCollection:
         """
         Get collection. Useful for custom operations.
 
@@ -132,7 +138,9 @@ class MongoDBUpsertor(UpsertorABC):
                 ret = await coll.find_one_and_update(
                     filtr,
                     update=addobj,
-                    upsert=True if (self.Version == 0) or (self.Version is None) else False,
+                    upsert=(
+                        True if (self.Version == 0) or (self.Version is None) else False
+                    ),
                     return_document=pymongo.collection.ReturnDocument.AFTER,
                 )
             except pymongo.errors.DuplicateKeyError as e:
@@ -143,7 +151,9 @@ class MongoDBUpsertor(UpsertorABC):
                         key_value=e.details.get("keyValue"),
                     )
                 else:
-                    raise DuplicateError("Duplicate key error: {}".format(e), self.ObjId)
+                    raise DuplicateError(
+                        "Duplicate key error: {}".format(e), self.ObjId
+                    )
 
             if ret is None:
                 # Object might have been changed in the meantime
@@ -179,13 +189,21 @@ class MongoDBUpsertor(UpsertorABC):
                 "_v": int(self.Version),
             }
             if len(self.ModSet) > 0:
-                upsertor_data["set"] = {k: v for k, v in self.ModSet.items() if not k.startswith("__")}
+                upsertor_data["set"] = {
+                    k: v for k, v in self.ModSet.items() if not k.startswith("__")
+                }
             if len(self.ModInc) > 0:
-                upsertor_data["inc"] = {k: v for k, v in self.ModInc.items() if not k.startswith("__")}
+                upsertor_data["inc"] = {
+                    k: v for k, v in self.ModInc.items() if not k.startswith("__")
+                }
             if len(self.ModPush) > 0:
-                upsertor_data["push"] = {k: v for k, v in self.ModPush.items() if not k.startswith("__")}
+                upsertor_data["push"] = {
+                    k: v for k, v in self.ModPush.items() if not k.startswith("__")
+                }
             if len(self.ModUnset) > 0:
-                upsertor_data["unset"] = {k: v for k, v in self.ModUnset.items() if not k.startswith("__")}
+                upsertor_data["unset"] = {
+                    k: v for k, v in self.ModUnset.items() if not k.startswith("__")
+                }
             webhook_data["upsertor"] = upsertor_data
 
             await self.webhook(webhook_data)

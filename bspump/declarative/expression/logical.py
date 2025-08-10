@@ -17,7 +17,9 @@ class AND(SequenceExpression):
             try:
                 v = item(context, event, *args, **kwargs)
             except Exception as e:
-                raise DeclarationError(original_exception=e, location=item.get_location())
+                raise DeclarationError(
+                    original_exception=e, location=item.get_location()
+                )
             if v is None or not v:
                 return False
         return True
@@ -43,7 +45,9 @@ class OR(SequenceExpression):
             try:
                 v = item(context, event, *args, **kwargs)
             except Exception as e:
-                raise DeclarationError(original_exception=e, location=item.get_location())
+                raise DeclarationError(
+                    original_exception=e, location=item.get_location()
+                )
             if v is not None and v:
                 return True
         return False

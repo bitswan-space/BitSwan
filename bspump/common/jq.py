@@ -37,7 +37,9 @@ def test_jq():
 def test_multiple_jq():
     # Arrange
     processor = MockProcessor(None, None, None)
-    processor.Query = '{"result1": (.foo * 5), "result2": (.foo * 10), "result3": (.foo * 15) }'
+    processor.Query = (
+        '{"result1": (.foo * 5), "result2": (.foo * 10), "result3": (.foo * 15) }'
+    )
     event = {"foo": 3}
 
     # Act
@@ -50,7 +52,9 @@ def test_multiple_jq():
 def test_concat_jq():
     # Arrange
     processor = MockProcessor(None, None, None)
-    processor.Query = '{"result1": (.value2 + .value3), "result2": (.value1 * .value4) }'
+    processor.Query = (
+        '{"result1": (.value2 + .value3), "result2": (.value1 * .value4) }'
+    )
     event = {"value1": 3, "value2": "hi", "value3": "!", "value4": 5}
 
     # Act

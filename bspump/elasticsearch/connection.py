@@ -143,7 +143,11 @@ class ElasticSearchBulk(object):
                     continue
 
                 if counter < self.FailLogMaxSize:
-                    L.error("Failed to insert document into ElasticSearch: '{}'".format(str(response_item)))
+                    L.error(
+                        "Failed to insert document into ElasticSearch: '{}'".format(
+                            str(response_item)
+                        )
+                    )
 
                 counter += 1
 
@@ -162,7 +166,11 @@ class ElasticSearchBulk(object):
         else:
             # The major ElasticSearch error occurred while inserting documents, response was not 200
             self.InsertMetric.add("fail", items_count)
-            L.error("Failed to insert document into ElasticSearch status:{} body:{}".format(resp.status, resp_body))
+            L.error(
+                "Failed to insert document into ElasticSearch status:{} body:{}".format(
+                    resp.status, resp_body
+                )
+            )
             return self.full_error_callback(self.Items, resp.status)
 
         return True
@@ -180,7 +188,11 @@ class ElasticSearchBulk(object):
 
         :return:
         """
-        L.error("Failed to insert items in the elasticsearch: {}".format(response_items[:10]))
+        L.error(
+            "Failed to insert items in the elasticsearch: {}".format(
+                response_items[:10]
+            )
+        )
 
     def full_error_callback(self, bulk_items, return_code):
         """
@@ -401,7 +413,11 @@ class ElasticSearchConnection(Connection):
             self.flush(forced=True)
             await asyncio.sleep(1)
             if self._output_queue.qsize() > 0:
-                L.warn("Still have {} bulk in output queue".format(self._output_queue.qsize()))
+                L.warn(
+                    "Still have {} bulk in output queue".format(
+                        self._output_queue.qsize()
+                    )
+                )
 
         self._started = False
 
@@ -411,7 +427,9 @@ class ElasticSearchConnection(Connection):
         while len(pending) > 0:
             # By sending None via queue, we signalize end of life
             await self._output_queue.put(None)
-            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+            done, pending = await asyncio.wait(
+                pending, return_when=asyncio.FIRST_COMPLETED
+            )
 
     def _on_tick(self, event_name):
         """
@@ -431,7 +449,9 @@ class ElasticSearchConnection(Connection):
                     if self._started:
                         L.error("ElasticSearch issue detected, will retry shortly")
                 except Exception as e:
-                    L.exception(f"ElasticSearch issue detected '{e}', will retry shortly")
+                    L.exception(
+                        f"ElasticSearch issue detected '{e}', will retry shortly"
+                    )
 
                 self._futures[i] = (url, None)
 
@@ -495,7 +515,9 @@ class ElasticSearchConnection(Connection):
                 async with session.get(url + "_cluster/health") as resp:
                     await resp.json()
                     if resp.status != 200:
-                        L.error("Cluster is not ready", struct_data={"status": resp.status})
+                        L.error(
+                            "Cluster is not ready", struct_data={"status": resp.status}
+                        )
                         await asyncio.sleep(5)  # Throttle a bit before next try
                         return
 

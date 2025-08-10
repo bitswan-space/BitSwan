@@ -48,8 +48,14 @@ class GoogleDriveBlockSink(GoogleDriveABCSink):
 
             file_metadata = {"name": filename, "parents": [self.ParentFolderID]}
             file = io.BytesIO(event)
-            media = apiclient.http.MediaIoBaseUpload(file, mimetype=mimetype, resumable=True)
-            drive_file = self.Drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
+            media = apiclient.http.MediaIoBaseUpload(
+                file, mimetype=mimetype, resumable=True
+            )
+            drive_file = (
+                self.Drive_service.files()
+                .create(body=file_metadata, media_body=media, fields="id")
+                .execute()
+            )
 
             if drive_file.get("id") is None:
                 L.error(f"Failed upload file to Google drive: {file_metadata['name']}")

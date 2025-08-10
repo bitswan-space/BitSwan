@@ -33,8 +33,12 @@ class AMQPSource(Source):
         self._error_exchange = self.Config["error_exchange"]
         self._queue = asyncio.Queue()
 
-        self._connection.PubSub.subscribe("AMQPConnection.open!", self._on_connection_open)
-        self._connection.PubSub.subscribe("AMQPConnection.close!", self._on_connection_close)
+        self._connection.PubSub.subscribe(
+            "AMQPConnection.open!", self._on_connection_open
+        )
+        self._connection.PubSub.subscribe(
+            "AMQPConnection.close!", self._on_connection_close
+        )
 
     async def main(self):
         """
@@ -82,7 +86,9 @@ class AMQPSource(Source):
 
     def _on_connection_open(self, event_name):
         assert self._channel is None
-        self._channel = self._connection.Connection.channel(on_open_callback=self._on_channel_open)
+        self._channel = self._connection.Connection.channel(
+            on_open_callback=self._on_channel_open
+        )
         self._channel_ready.set()
 
     def _on_connection_close(self, event_name):
@@ -90,7 +96,9 @@ class AMQPSource(Source):
         self._channel_ready.clear()
 
     def _on_qos_applied(self, channel):
-        if pkg_resources.parse_version(pika.__version__) >= pkg_resources.parse_version("1.0.a"):
+        if pkg_resources.parse_version(pika.__version__) >= pkg_resources.parse_version(
+            "1.0.a"
+        ):
             self._channel.basic_consume(self.Config["queue"], self._on_consume_message)
         else:
             self._channel.basic_consume(self._on_consume_message, self.Config["queue"])
