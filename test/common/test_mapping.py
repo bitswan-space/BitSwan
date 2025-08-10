@@ -1,4 +1,3 @@
-
 import bspump.unittest
 import bspump.common
 
