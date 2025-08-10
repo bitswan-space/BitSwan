@@ -15,14 +15,8 @@ from .components import (
     IntField,
     CheckboxField,
     TextField,
-    ChoiceField,  # noqa: F401
     FieldSet,  # noqa: F401
-    RawJSONField,  # noqa: F401
-    FileField,  # noqa: F401
     Button,  # noqa: F401
-    DateField,  # noqa: F401
-    DateTimeField,  # noqa: F401
-    TableComponent,  # noqa: F401
 )
 
 
@@ -164,7 +158,7 @@ class WebRouteSource(Source):
             return aiohttp.web.Response(status=500)
 
 
-async def gate_response(request, test_secret, response_fn):
+async def gate_response(request, expected_secret, response_fn):
     secret = request.query.get("secret")
     if secret is None:
         auth = request.headers.get("Authorization")
@@ -176,8 +170,9 @@ async def gate_response(request, test_secret, response_fn):
                 text="Secret is missing. Pass via query parameter 'secret' or in the Authorization as 'Bearer <secret>'",
                 status=401,
             )
-    if not test_secret(secret):
+    if secret != expected_secret:
         return aiohttp.web.Response(text="Invalid secret", status=403)
+
     return await response_fn()
 
 
@@ -361,11 +356,8 @@ class ProtectedWebFormSource(WebFormSource):
             return await su.handle_request(request)
 
         return await gate_response(
-            request, lambda secret: self.test_secret(secret), response_fn
+            request, self.Config["secret"], response_fn
         )
-
-    def test_secret(self, secret):
-        return secret == self.Config["secret"]
 
     async def handle_post(self, request: Request):
         su = super()
@@ -374,7 +366,7 @@ class ProtectedWebFormSource(WebFormSource):
             return await su.handle_post(request)
 
         return await gate_response(
-            request, lambda secret: self.test_secret(secret), response_fn
+            request, self.Config["secret"], response_fn
         )
 
 
@@ -408,18 +400,6 @@ class JWTWebFormSource(ProtectedWebFormSource):
             config=config,
             form_intro="",
         )
-
-    def test_secret(self, secret):
-        print(self.Config["jwt-secret"])
-        try:
-            jwt.decode(secret, self.Config["jwt-secret"], algorithms=["HS256"])
-        except DecodeError as e:
-            print(e)
-            return False
-        except ExpiredSignatureError as e:
-            print(e)
-            return False
-        return True
 
     def extract_defaults(self, request: Request):
         su = super()
