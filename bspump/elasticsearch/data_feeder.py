@@ -75,9 +75,9 @@ def data_feeder_update(event, _id):
 
     """
 
-    assert (
-        _id is not None
-    ), "_id must be present in the event when updating a document in ElasticSearch"
+    assert _id is not None, (
+        "_id must be present in the event when updating a document in ElasticSearch"
+    )
 
     yield orjson.dumps({"update": {"_id": _id}}, option=orjson.OPT_APPEND_NEWLINE)
 
@@ -94,14 +94,14 @@ def data_feeder_delete(event, _id):
                     You can specify an event that is passed to the method.
 
     """
-    assert (
-        _id is not None
-    ), "_id must be present in the event when deleting a document from ElasticSearch"
+    assert _id is not None, (
+        "_id must be present in the event when deleting a document from ElasticSearch"
+    )
 
     yield orjson.dumps({"delete": {"_id": _id}}, option=orjson.OPT_APPEND_NEWLINE)
 
-    assert (
-        len(event) == 0
-    ), "When deleting items from ElasticSearch, no data should be provide, but '{}' found.".format(
-        event
+    assert len(event) == 0, (
+        "When deleting items from ElasticSearch, no data should be provide, but '{}' found.".format(
+            event
+        )
     )

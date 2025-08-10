@@ -71,17 +71,17 @@ class FileSystemLibraryProvider(LibraryProviderABC):
         node_path = self.BasePath + path
 
         # File path must start with '/'
-        assert (
-            node_path[:1] == "/"
-        ), "File path must start with a forward slash (/). For example: /library/Templates/file.json"
+        assert node_path[:1] == "/", (
+            "File path must start with a forward slash (/). For example: /library/Templates/file.json"
+        )
         # File path must end with the extension
-        assert (
-            len(os.path.splitext(node_path)[1]) > 0
-        ), "File path must end with an extension. For example: /library/Templates/item.json"
+        assert len(os.path.splitext(node_path)[1]) > 0, (
+            "File path must end with an extension. For example: /library/Templates/item.json"
+        )
         # File cannot contain '//'
-        assert (
-            "//" not in node_path
-        ), "File path cannot contain double slashes (//). Example format: /library/Templates/item.json"
+        assert "//" not in node_path, (
+            "File path cannot contain double slashes (//). Example format: /library/Templates/item.json"
+        )
 
         try:
             return io.FileIO(node_path, "rb")
@@ -100,17 +100,17 @@ class FileSystemLibraryProvider(LibraryProviderABC):
         node_path = self.BasePath + path
 
         # Directory path must start with '/'
-        assert (
-            node_path[:1] == "/"
-        ), "Directory path must start with a forward slash (/). For example: /library/Templates/"
+        assert node_path[:1] == "/", (
+            "Directory path must start with a forward slash (/). For example: /library/Templates/"
+        )
         # Directory path must end with '/'
-        assert (
-            node_path[-1:] == "/"
-        ), "Directory path must end with a forward slash (/). For example: /library/Templates/"
+        assert node_path[-1:] == "/", (
+            "Directory path must end with a forward slash (/). For example: /library/Templates/"
+        )
         # Directory cannot contain '//'
-        assert (
-            "//" not in node_path
-        ), "Directory path cannot contain double slashes (//). Example format: /library/Templates/"
+        assert "//" not in node_path, (
+            "Directory path cannot contain double slashes (//). Example format: /library/Templates/"
+        )
 
         exists = os.access(node_path, os.R_OK) and os.path.isdir(node_path)
         if not exists:

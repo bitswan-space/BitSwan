@@ -169,9 +169,9 @@ class GitLibraryProvider(FileSystemLibraryProvider):
             self.App.stop()
 
         assert hasattr(self.GitRepository, "remotes"), "Git repository not initialized."
-        assert (
-            self.GitRepository.remotes["origin"] is not None
-        ), "Git repository not initialized."
+        assert self.GitRepository.remotes["origin"] is not None, (
+            "Git repository not initialized."
+        )
         await self._set_ready()
 
     def _do_fetch(self):

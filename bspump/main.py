@@ -96,7 +96,7 @@ class NotebookCompiler:
                 self.parse_cell(cell, f)
             step_func_code = f"""@async_step
 async def processor_internal(inject, event):
-{''.join(list(self._cell_processor_contents.values()))}    await inject(event)
+{"".join(list(self._cell_processor_contents.values()))}    await inject(event)
 """
             f.write(step_func_code)
 
@@ -121,9 +121,7 @@ def main():
             exit(f"Notebook {app.Notebook} not found")
 
         if bspump.jupyter.bitswan_auto_pipeline.get("sink") is not None:
-            register_sink(
-                bspump.jupyter.bitswan_auto_pipeline.get("sink")
-            )  # noqa: F405  # noqa: F405
+            register_sink(bspump.jupyter.bitswan_auto_pipeline.get("sink"))  # noqa: F405  # noqa: F405
             end_pipeline()  # noqa: F405
 
         app.init_componets()

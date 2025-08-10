@@ -107,9 +107,7 @@ For more information, visit: https://github.com/LibertyAces/BitSwanPump
 
 version: {}
 build: {} [{}]
-""".format(
-            __version__, __build__, __build__[:7]
-        )
+""".format(__version__, __build__, __build__[:7])
         parser = super().create_argument_parser(prog=prog, description=description)
         parser.add_argument(
             "--test", action="store_true", help="Run pipeline/automation tests"

@@ -201,13 +201,13 @@ class LibraryService(Service):
         ```
         """
         # item path must start with '/'
-        assert (
-            path[:1] == "/"
-        ), "Item path must start with a forward slash (/). For example: /library/Templates/item.json"
+        assert path[:1] == "/", (
+            "Item path must start with a forward slash (/). For example: /library/Templates/item.json"
+        )
         # Item path must end with the extension
-        assert (
-            len(os.path.splitext(path)[1]) > 0
-        ), "Item path must end with an extension. For example: /library/Templates/item.json"
+        assert len(os.path.splitext(path)[1]) > 0, (
+            "Item path must end with an extension. For example: /library/Templates/item.json"
+        )
 
         if self.check_disabled(path, tenant=tenant):
             return None
@@ -239,17 +239,17 @@ class LibraryService(Service):
         """
 
         # Directory path must start with '/'
-        assert (
-            path[:1] == "/"
-        ), "Directory path must start with a forward slash (/). For example: /library/Templates/"
+        assert path[:1] == "/", (
+            "Directory path must start with a forward slash (/). For example: /library/Templates/"
+        )
         # Directory path must end with '/'
-        assert (
-            path[-1:] == "/"
-        ), "Directory path must end with a forward slash (/). For example: /library/Templates/"
+        assert path[-1:] == "/", (
+            "Directory path must end with a forward slash (/). For example: /library/Templates/"
+        )
         # Directory path cannot contain '//'
-        assert (
-            "//" not in path
-        ), "Directory path cannot contain double slashes (//). Example format: /library/Templates/"
+        assert "//" not in path, (
+            "Directory path cannot contain double slashes (//). Example format: /library/Templates/"
+        )
 
         # List requested level using all available providers
         items = await self._list(path, tenant, providers=self.Libraries)
@@ -413,17 +413,17 @@ class LibraryService(Service):
         """
 
         # Directory path must start with '/'
-        assert (
-            path[:1] == "/"
-        ), "Directory path must start with a forward slash (/). For example: /library/Templates/"
+        assert path[:1] == "/", (
+            "Directory path must start with a forward slash (/). For example: /library/Templates/"
+        )
         # Directory path must end with '/'
-        assert (
-            path[-1:] == "/"
-        ), "Directory path must end with a forward slash (/). For example: /library/Templates/"
+        assert path[-1:] == "/", (
+            "Directory path must end with a forward slash (/). For example: /library/Templates/"
+        )
         # Directory path cannot contain '//'
-        assert (
-            "//" not in path
-        ), "Directory path cannot contain double slashes (//). Example format: /library/Templates/"
+        assert "//" not in path, (
+            "Directory path cannot contain double slashes (//). Example format: /library/Templates/"
+        )
 
         fileobj = tempfile.TemporaryFile()
         tarobj = tarfile.open(name=None, mode="w:gz", fileobj=fileobj)
@@ -488,9 +488,9 @@ class LibraryService(Service):
         if isinstance(paths, str):
             paths = [paths]
         for path in paths:
-            assert (
-                path[:1] == "/"
-            ), "Absolute path must be used when subscribing to the library changes"
+            assert path[:1] == "/", (
+                "Absolute path must be used when subscribing to the library changes"
+            )
 
             for provider in self.Libraries:
                 await provider.subscribe(path)

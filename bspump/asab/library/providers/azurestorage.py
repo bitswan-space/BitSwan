@@ -130,9 +130,9 @@ class AzureStorageLibraryProvider(LibraryProviderABC):
             raise RuntimeError("Not ready")
 
         assert path[:1] == "/"
-        assert (
-            "//" not in path
-        ), "Directory path cannot contain double slashes (//). Example format: /library/Templates/"
+        assert "//" not in path, (
+            "Directory path cannot contain double slashes (//). Example format: /library/Templates/"
+        )
         assert len(path) == 1 or path[-1:] != "/"
 
         if path == "/":
@@ -163,12 +163,12 @@ class AzureStorageLibraryProvider(LibraryProviderABC):
 
     async def read(self, path: str) -> typing.IO:
         assert path[:1] == "/"
-        assert (
-            "//" not in path
-        ), "Item path cannot contain double slashes (//). Example format: /library/Templates/item.json"
-        assert (
-            len(path) == 1 or path[-1:] != "/"
-        ), "Item path must end with an extension. Example format: /library/Templates/item.json"
+        assert "//" not in path, (
+            "Item path cannot contain double slashes (//). Example format: /library/Templates/item.json"
+        )
+        assert len(path) == 1 or path[-1:] != "/", (
+            "Item path must end with an extension. Example format: /library/Templates/item.json"
+        )
 
         headers = {}
 

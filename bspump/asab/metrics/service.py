@@ -140,13 +140,13 @@ class MetricsService(Service):
         if tags is not None:
             for key, value in tags.items():
                 # Check if every key and value is of type string. If not, try to convert it.
-                assert isinstance(
-                    key, str
-                ), "Cannot add metrics tag: key '{}' is not a string.".format(key)
-                assert isinstance(
-                    value, str
-                ), "Cannot add metrics tag for key '{}': value '{}' is not a string.".format(
-                    key, value
+                assert isinstance(key, str), (
+                    "Cannot add metrics tag: key '{}' is not a string.".format(key)
+                )
+                assert isinstance(value, str), (
+                    "Cannot add metrics tag for key '{}': value '{}' is not a string.".format(
+                        key, value
+                    )
                 )
             metric.StaticTags.update(tags)
 

@@ -269,8 +269,8 @@ class Pipeline(abc.ABC, bspump.asab.Configurable):
             }
             print(
                 f"""
-            Event: {alert_data['event']}
-            Traceback: {alert_data['traceback']}"""
+            Event: {alert_data["event"]}
+            Traceback: {alert_data["traceback"]}"""
             )
             # send alert
             self.App.AlertService.trigger(

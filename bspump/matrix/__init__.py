@@ -17,7 +17,7 @@ __all__ = [
     "Matrix",
     "PersistentMatrix",
     "NamedMatrix",
-    "PersistentNamedMatrix" "TimeWindowMatrix",
+    "PersistentNamedMatrixTimeWindowMatrix",
     "PersistentTimeWindowMatrix",
     "SessionMatrix",
     "PersistentSessionMatrix",
