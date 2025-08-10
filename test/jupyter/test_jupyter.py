@@ -1,7 +1,6 @@
 from bspump.main import NotebookCompiler
 import json
 import ast
-import pytest
 
 
 def test_notebook_parse_valid():

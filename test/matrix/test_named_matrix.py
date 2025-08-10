@@ -1,6 +1,4 @@
-import unittest
 import collections
-import time
 
 import bspump
 import bspump.matrix

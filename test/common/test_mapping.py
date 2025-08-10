@@ -1,4 +1,3 @@
-from unittest.mock import MagicMock
 
 import bspump.unittest
 import bspump.common
