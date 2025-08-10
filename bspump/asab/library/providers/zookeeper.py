@@ -323,12 +323,12 @@ class ZooKeeperLibraryProvider(LibraryProviderABC):
         # Zookeeper path should not have forward slash at the end of path
         node_path = node_path.rstrip("/")
 
-        assert "//" not in node_path, (
-            "Directory path cannot contain double slashes (//). Example format: /library/Templates/"
-        )
-        assert node_path[0] == "/", (
-            "Directory path must start with a forward slash (/). For example: /library/Templates/"
-        )
+        assert (
+            "//" not in node_path
+        ), "Directory path cannot contain double slashes (//). Example format: /library/Templates/"
+        assert (
+            node_path[0] == "/"
+        ), "Directory path must start with a forward slash (/). For example: /library/Templates/"
 
         return node_path
 

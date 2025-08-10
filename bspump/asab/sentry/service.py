@@ -111,9 +111,9 @@ class SentryService(Service):
         self.TracesSampleRate = Config.getfloat(
             "asab:alert:sentry", "traces_sample_rate", fallback=1.0
         )
-        assert 0 <= self.TracesSampleRate <= 1.0, (
-            "Traces sample rate must be between 0 and 1."
-        )
+        assert (
+            0 <= self.TracesSampleRate <= 1.0
+        ), "Traces sample rate must be between 0 and 1."
 
         # INITIALIZATION
         sentry_sdk.init(
