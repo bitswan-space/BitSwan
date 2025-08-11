@@ -22,7 +22,7 @@ from .components import (
     Button,  # noqa: F401
     DateField,  # noqa: F401
     DateTimeField,  # noqa: F401
-    TableComponent, # noqa: F401
+    TableComponent,  # noqa: F401
 )
 
 
