@@ -20,6 +20,9 @@ from .components import (
     RawJSONField,  # noqa: F401
     FileField,  # noqa: F401
     Button,  # noqa: F401
+    DateField,  # noqa: F401
+    DateTimeField,  # noqa: F401
+    TableComponent,  # noqa: F401
 )
 
 

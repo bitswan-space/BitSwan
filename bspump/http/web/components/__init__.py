@@ -9,6 +9,9 @@ from .field_set import FieldSet
 from .file_field import FileField
 from .raw_json import RawJSONField
 from .button import Button
+from .date_field import DateField
+from .datetime_field import DateTimeField
+from .table import TableComponent
 
 __all__ = [
     "BaseField",
@@ -22,4 +25,7 @@ __all__ = [
     "RawJSONField",
     "FileField",
     "Button",
+    "DateField",
+    "DateTimeField",
+    "TableComponent",
 ]
