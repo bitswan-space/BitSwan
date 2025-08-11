@@ -355,9 +355,7 @@ class ProtectedWebFormSource(WebFormSource):
         async def response_fn():
             return await su.handle_request(request)
 
-        return await gate_response(
-            request, self.Config["secret"], response_fn
-        )
+        return await gate_response(request, self.Config["secret"], response_fn)
 
     async def handle_post(self, request: Request):
         su = super()
@@ -365,9 +363,7 @@ class ProtectedWebFormSource(WebFormSource):
         async def response_fn():
             return await su.handle_post(request)
 
-        return await gate_response(
-            request, self.Config["secret"], response_fn
-        )
+        return await gate_response(request, self.Config["secret"], response_fn)
 
 
 class JWTWebFormSource(ProtectedWebFormSource):
