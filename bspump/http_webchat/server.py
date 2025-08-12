@@ -2,6 +2,7 @@ import asyncio
 import inspect
 import re
 import logging
+import json
 
 import aiohttp.web
 import aiohttp_jinja2
@@ -17,7 +18,7 @@ from bspump.http_webchat.webchat import (
     WebChatPromptForm,
     WebChatTemplateEnv,
     WebChatResponse,
-    PromptFormBaseField,
+    PromptFormBaseField, WebChatWelcomeWindow,
 )
 
 load_dotenv()
@@ -202,11 +203,42 @@ class WebChatFlow:
             except Exception:
                 websockets.discard(ws)
 
+    async def set_welcome_message(self, welcome_text: str):
+        payload = jwt.decode(self.bearer_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        chat_id = payload["chat_id"]
+        chat_data = CHATS[chat_id]
+
+        await chat_data["ready_event"].wait()
+        welcome_html = WebChatWelcomeWindow(welcome_text).get_html(template_env=WebChatTemplateEnv().get_jinja_env())
+        chat_data["welcome_html"] = welcome_html
+
+        # Send the updated welcome message to all connected WebSockets
+        websockets = WEBSOCKETS.get(chat_id, set())
+        for ws in list(websockets):
+            try:
+                # Send a special message type for welcome message updates
+                update_message = {
+                    "type": "welcome_update",
+                    "welcome_html": welcome_html
+                }
+                await ws.send_str(json.dumps(update_message))
+            except Exception:
+                websockets.discard(ws)
+
+        # Add to chat history
+        chat_data["chat_history"].append({"welcome_update": welcome_text})
+
     async def redirect(self, flow_name: str):
         flow_func = WEBCHAT_FLOW_REGISTRY.get(flow_name)
         if not flow_func:
             raise ValueError(f"Flow '{flow_name}' not registered")
         await flow_func(self.event)
+
+async def redirect(flow_name: str, event):
+    flow_func = WEBCHAT_FLOW_REGISTRY.get(flow_name)
+    if not flow_func:
+        raise ValueError(f"Flow '{flow_name}' not registered")
+    await flow_func(event)
 
 def create_webchat_flow(name: str):
     def decorator(func):
@@ -362,7 +394,6 @@ class WebChatSource(WebChatRouteSource):
         self,
         app,
         pipeline,
-        welcome_text,
         connection="DefaultWebServerConnection",
         route="/",
         id=None,
@@ -379,15 +410,15 @@ class WebChatSource(WebChatRouteSource):
         )
 
         self.pipeline = pipeline
-        self.welcome_window = welcome_text
 
     async def serve_index(
         self, request: aiohttp.web.Request, bearer_token
     ) -> aiohttp.web.Response:
         template_env = WebChatTemplateEnv().get_jinja_env()
-        welcome_html = self.welcome_window.get_html(template_env)
-
+        
+        # Use dynamic welcome message if available, otherwise use the default
         chat_data = CHATS[decode_chat_token(bearer_token)]
+
         chat_history_html = ""
         for item in chat_data["chat_history"]:
             if "response" in item:
@@ -399,6 +430,10 @@ class WebChatSource(WebChatRouteSource):
                 html = WebChatResponse(
                     input_html=item["prompt_response"], user_response=True
                 ).get_html(template_env=template_env)
+            elif "welcome_message" in item:
+                html = WebChatWelcomeWindow(welcome_text=item["welcome_message"]).get_html(
+                    template_env=template_env
+                )
             else:
                 continue
             chat_history_html += html
@@ -406,7 +441,6 @@ class WebChatSource(WebChatRouteSource):
         current_prompt_html = chat_data.get("current_prompt", "")
 
         context = {
-            "welcome_html": welcome_html,
             "bearer_token": bearer_token,
             "current_prompt_html": current_prompt_html,
             "chat_history_html": chat_history_html,
