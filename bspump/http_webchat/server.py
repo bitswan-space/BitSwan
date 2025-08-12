@@ -289,18 +289,19 @@ async def set_prompt(fields: list[PromptFormBaseField], bearer_token) -> dict:
 
     return submitted_data
 
-def _create_webchat_flow(name: str):
+
+def create_webchat_flow(name: str):
     def decorator(func):
         async def wrapper(event):
-            chat = WebChatFlow(event)
+            chat = _create_webchat_flow()
             return await func(chat)
-        
+
         WEBCHAT_FLOW_REGISTRY[name] = wrapper
-        return func
+        return wrapper
 
     return decorator
 
-def create_webchat_flow():
+def _create_webchat_flow():
     frame = inspect.currentframe().f_back
     caller_locals = frame.f_locals
     
