@@ -200,10 +200,15 @@ class ProtectedWebRouteSource(WebRouteSource):
                 )
                 return await response_future
 
-            return await gate_response(request, self.Config["secret"], response_fn)
+            return await gate_response(
+                request, lambda secret: self.test_secret(secret), response_fn
+            )
         except Exception:
             L.exception("Exception in WebSource")
             return aiohttp.web.Response(status=500)
+
+    def test_secret(self, secret):
+        return secret == self.Config["secret"]
 
 
 class WebFormSource(WebRouteSource):
