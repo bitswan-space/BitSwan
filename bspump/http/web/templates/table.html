@@ -1,0 +1,578 @@
+<div class="flex justify-center mt-4 {% if hidden %}hidden{% endif %}">
+    <div class="sm:col-span-4 w-full max-w-6xl">
+        <label for="{{ field_name }}" class="block text-base font-bold text-cyan-950 mb-4">{{ display }}</label>
+        
+        <div class="bg-slate-50 border-2 border-slate-200 rounded-lg p-4">
+            <!-- Table Container -->
+            <div class="overflow-x-auto">
+                <table class="w-full border border-gray-300 rounded-lg" id="{{ field_name }}_table">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            {% for column in columns %}
+                            <th class="border border-gray-300 px-3 py-2 text-left font-semibold text-sm">
+                                {{ column.display or column.key }}
+                            </th>
+                            {% endfor %}
+                            {% if editable %}
+                            <th class="border border-gray-300 px-3 py-2 text-left font-semibold text-sm">
+                                Actions
+                            </th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody id="{{ field_name }}_tbody">
+                        {% if data %}
+                            {% for row in data %}
+                            <tr class="hover:bg-gray-50">
+                                {% for column in columns %}
+                                <td class="border border-gray-300 px-3 py-2 text-sm">
+                                    {% if editable %}
+                                        {% if column.input_type == 'date' %}
+                                            <input type="date" 
+                                                   class="w-full p-1 border border-gray-300 rounded text-sm" 
+                                                   value="{{ row.get(column.key, '') }}"
+                                                   data-column="{{ column.key }}"
+                                                   onchange="updateTableData('{{ field_name }}')"
+                                                   onblur="validateField(this)"
+                                                   oninput="clearFieldError(this)"
+                                                   {% if column.required %}required{% endif %}>
+                                            <div class="field-error text-red-500 text-xs hidden"></div>
+                                        {% elif column.input_type == 'datetime' %}
+                                            <input type="datetime-local" 
+                                                   class="w-full p-1 border border-gray-300 rounded text-sm" 
+                                                   value="{{ row.get(column.key, '') }}"
+                                                   data-column="{{ column.key }}"
+                                                   onchange="updateTableData('{{ field_name }}')"
+                                                   onblur="validateField(this)"
+                                                   oninput="clearFieldError(this)"
+                                                   {% if column.required %}required{% endif %}>
+                                            <div class="field-error text-red-500 text-xs hidden"></div>
+                                        {% elif column.input_type == 'number' %}
+                                            <input type="number" 
+                                                   class="w-full p-1 border border-gray-300 rounded text-sm" 
+                                                   value="{{ row.get(column.key, '') }}"
+                                                   data-column="{{ column.key }}"
+                                                   onchange="updateTableData('{{ field_name }}')"
+                                                   onblur="validateField(this)"
+                                                   oninput="clearFieldError(this)"
+                                                   {% if column.required %}required{% endif %}>
+                                            <div class="field-error text-red-500 text-xs hidden"></div>
+                                        {% elif column.input_type == 'email' %}
+                                            <input type="email" 
+                                                   class="w-full p-1 border border-gray-300 rounded text-sm email-input" 
+                                                   value="{{ row.get(column.key, '') }}"
+                                                   data-column="{{ column.key }}"
+                                                   onchange="updateTableData('{{ field_name }}')"
+                                                   onblur="validateField(this)"
+                                                   oninput="clearFieldError(this)"
+                                                   {% if column.required %}required{% endif %}>
+                                            <div class="field-error text-red-500 text-xs hidden"></div>
+                                        {% elif column.input_type == 'url' %}
+                                            <input type="url" 
+                                                   class="w-full p-1 border border-gray-300 rounded text-sm" 
+                                                   value="{{ row.get(column.key, '') }}"
+                                                   data-column="{{ column.key }}"
+                                                   onchange="updateTableData('{{ field_name }}')"
+                                                   onblur="validateField(this)"
+                                                   oninput="clearFieldError(this)"
+                                                   {% if column.required %}required{% endif %}>
+                                            <div class="field-error text-red-500 text-xs hidden"></div>
+                                        {% elif column.input_type == 'select' and column.choices %}
+                                            <select class="w-full p-1 border border-gray-300 rounded text-sm" 
+                                                    data-column="{{ column.key }}"
+                                                    onchange="updateTableData('{{ field_name }}')"
+                                                    onblur="validateField(this)"
+                                                    oninput="clearFieldError(this)"
+                                                    {% if column.required %}required{% endif %}>
+                                                <option value="">Select...</option>
+                                                {% for choice in column.choices %}
+                                                <option value="{{ choice }}" {% if row.get(column.key) == choice %}selected{% endif %}>
+                                                    {{ choice }}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                            <div class="field-error text-red-500 text-xs hidden"></div>
+                                        {% elif column.input_type == 'checkbox' %}
+                                            <input type="checkbox" 
+                                                   class="w-4 h-4 text-cyan-600 bg-gray-100 border-gray-300 rounded focus:ring-cyan-500" 
+                                                   {% if row.get(column.key) %}checked{% endif %}
+                                                   data-column="{{ column.key }}"
+                                                   onchange="updateTableData('{{ field_name }}')">
+                                        {% elif column.input_type == 'textarea' %}
+                                            <textarea class="w-full p-1 border border-gray-300 rounded text-sm resize-none" 
+                                                      rows="2"
+                                                      data-column="{{ column.key }}"
+                                                      onchange="updateTableData('{{ field_name }}')"
+                                                      onblur="validateField(this)"
+                                                      oninput="clearFieldError(this)"
+                                                      {% if column.required %}required{% endif %}>{{ row.get(column.key, '') }}</textarea>
+                                            <div class="field-error text-red-500 text-xs hidden"></div>
+                                        {% else %}
+                                            <input type="text" 
+                                                   class="w-full p-1 border border-gray-300 rounded text-sm" 
+                                                   value="{{ row.get(column.key, '') }}"
+                                                   data-column="{{ column.key }}"
+                                                   onchange="updateTableData('{{ field_name }}')"
+                                                   onblur="validateField(this)"
+                                                   oninput="clearFieldError(this)"
+                                                   {% if column.required %}required{% endif %}>
+                                            <div class="field-error text-red-500 text-xs hidden"></div>
+                                        {% endif %}
+                                    {% else %}
+                                        {% if column.key in row %}
+                                            {% if column.type == 'email' %}
+                                                <a href="mailto:{{ row[column.key] }}" class="text-blue-600 hover:text-blue-800">
+                                                    {{ row[column.key] }}
+                                                </a>
+                                            {% elif column.type == 'url' %}
+                                                <a href="{{ row[column.key] }}" target="_blank" class="text-blue-600 hover:text-blue-800">
+                                                    {{ row[column.key] }}
+                                                </a>
+                                            {% elif column.type == 'date' %}
+                                                {{ row[column.key] }}
+                                            {% elif column.type == 'boolean' %}
+                                                {% if row[column.key] %}
+                                                    <span class="text-green-600">✓</span>
+                                                {% else %}
+                                                    <span class="text-red-600">✗</span>
+                                                {% endif %}
+                                            {% else %}
+                                                {{ row[column.key] }}
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-gray-400">-</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                                {% if editable %}
+                                <td class="border border-gray-300 px-3 py-2 text-sm text-center">
+                                    <button type="button" 
+                                            onclick="removeTableRow(this, '{{ field_name }}')"
+                                            class="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded text-sm">
+                                        Remove
+                                    </button>
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="{{ columns|length }}{% if editable %}+1{% endif %}" class="border border-gray-300 px-3 py-4 text-center text-gray-500">
+                                    No data available
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Add Row Button (only if editable) -->
+            {% if editable %}
+            <div class="mt-4">
+                <button type="button" 
+                        onclick="addTableRow('{{ field_name }}')"
+                        class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg">
+                    Add Row
+                </button>
+            </div>
+            {% endif %}
+            
+            <!-- Data Summary -->
+            {% if data %}
+            <div class="mt-4 text-sm text-gray-600">
+                <span class="font-semibold">{{ data|length }}</span> records displayed
+            </div>
+            {% endif %}
+            
+            <!-- Hidden input to store the table data -->
+            <input type="hidden" 
+                   name="{{ field_name }}" 
+                   id="{{ field_name }}_data" 
+                   value="{{ default if default else '[]' }}">
+        </div>
+    </div>
+</div>
+
+<script>
+function addTableRow(tableName) {
+    const tbody = document.getElementById(tableName + '_tbody');
+    const columns = JSON.parse('{{ columns|tojson }}');
+    
+    // Remove "No data available" row if it exists
+    const noDataRow = tbody.querySelector('tr td[colspan]');
+    if (noDataRow) {
+        noDataRow.parentElement.remove();
+    }
+    
+    const row = document.createElement('tr');
+    
+    let rowHtml = '';
+    columns.forEach(column => {
+        let inputHtml = '';
+        
+        if (column.input_type === 'date') {
+            inputHtml = `<input type="date" class="w-full p-1 border border-gray-300 rounded text-sm" value="" data-column="${column.key}" onchange="updateTableData('${tableName}')" onblur="validateField(this)" oninput="clearFieldError(this)" ${column.required ? 'required' : ''}><div class="field-error text-red-500 text-xs hidden"></div>`;
+        } else if (column.input_type === 'datetime') {
+            inputHtml = `<input type="datetime-local" class="w-full p-1 border border-gray-300 rounded text-sm" value="" data-column="${column.key}" onchange="updateTableData('${tableName}')" onblur="validateField(this)" oninput="clearFieldError(this)" ${column.required ? 'required' : ''}><div class="field-error text-red-500 text-xs hidden"></div>`;
+        } else if (column.input_type === 'number') {
+            inputHtml = `<input type="number" class="w-full p-1 border border-gray-300 rounded text-sm" value="" data-column="${column.key}" onchange="updateTableData('${tableName}')" onblur="validateField(this)" oninput="clearFieldError(this)" ${column.required ? 'required' : ''}><div class="field-error text-red-500 text-xs hidden"></div>`;
+        } else if (column.input_type === 'email') {
+            inputHtml = `<input type="email" class="w-full p-1 border border-gray-300 rounded text-sm email-input" value="" data-column="${column.key}" onchange="updateTableData('${tableName}')" onblur="validateField(this)" oninput="clearFieldError(this)" ${column.required ? 'required' : ''}><div class="field-error text-red-500 text-xs hidden"></div>`;
+        } else if (column.input_type === 'url') {
+            inputHtml = `<input type="url" class="w-full p-1 border border-gray-300 rounded text-sm" value="" data-column="${column.key}" onchange="updateTableData('${tableName}')" onblur="validateField(this)" oninput="clearFieldError(this)" ${column.required ? 'required' : ''}><div class="field-error text-red-500 text-xs hidden"></div>`;
+        } else if (column.input_type === 'select' && column.choices) {
+            let optionsHtml = '<option value="">Select...</option>';
+            column.choices.forEach(choice => {
+                optionsHtml += `<option value="${choice}">${choice}</option>`;
+            });
+            inputHtml = `<select class="w-full p-1 border border-gray-300 rounded text-sm" data-column="${column.key}" onchange="updateTableData('${tableName}')" onblur="validateField(this)" oninput="clearFieldError(this)" ${column.required ? 'required' : ''}>${optionsHtml}</select><div class="field-error text-red-500 text-xs hidden"></div>`;
+        } else if (column.input_type === 'checkbox') {
+            inputHtml = `<input type="checkbox" class="w-4 h-4 text-cyan-600 bg-gray-100 border-gray-300 rounded focus:ring-cyan-500" data-column="${column.key}" onchange="updateTableData('${tableName}')" onblur="validateField(this)" oninput="clearFieldError(this)" ${column.required ? 'required' : ''}><div class="field-error text-red-500 text-xs hidden"></div>`;
+        } else if (column.input_type === 'textarea') {
+            inputHtml = `<textarea class="w-full p-1 border border-gray-300 rounded text-sm resize-none" rows="2" data-column="${column.key}" onchange="updateTableData('${tableName}')" onblur="validateField(this)" oninput="clearFieldError(this)" ${column.required ? 'required' : ''}></textarea><div class="field-error text-red-500 text-xs hidden"></div>`;
+        } else {
+            inputHtml = `<input type="text" class="w-full p-1 border border-gray-300 rounded text-sm" value="" data-column="${column.key}" onchange="updateTableData('${tableName}')" onblur="validateField(this)" oninput="clearFieldError(this)" ${column.required ? 'required' : ''}><div class="field-error text-red-500 text-xs hidden"></div>`;
+        }
+        
+        rowHtml += `<td class="border border-gray-300 px-3 py-2 text-sm">${inputHtml}</td>`;
+    });
+    
+    // Add actions column
+    rowHtml += `
+        <td class="border border-gray-300 px-3 py-2 text-sm text-center">
+            <button type="button" 
+                    onclick="removeTableRow(this, '${tableName}')"
+                    class="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded text-sm">
+                Remove
+            </button>
+        </td>
+    `;
+    
+    row.innerHTML = rowHtml;
+    tbody.appendChild(row);
+    updateTableData(tableName);
+}
+
+function removeTableRow(button, tableName) {
+    // Show confirmation dialog
+    if (!confirm('Are you sure you want to delete this row?')) {
+        return;
+    }
+    
+    const row = button.closest('tr');
+    row.remove();
+    updateTableData(tableName);
+    
+    // If no rows left, show "No data available"
+    const tbody = document.getElementById(tableName + '_tbody');
+    if (tbody.children.length === 0) {
+        const noDataRow = document.createElement('tr');
+        const columns = JSON.parse('{{ columns|tojson }}');
+        noDataRow.innerHTML = `
+            <td colspan="${columns.length + 1}" class="border border-gray-300 px-3 py-4 text-center text-gray-500">
+                No data available
+            </td>
+        `;
+        tbody.appendChild(noDataRow);
+    }
+}
+
+function updateTableData(tableName) {
+    const tbody = document.getElementById(tableName + '_tbody');
+    const dataInput = document.getElementById(tableName + '_data');
+    const rows = tbody.querySelectorAll('tr');
+    const columns = JSON.parse('{{ columns|tojson }}');
+    
+    const data = [];
+    
+    rows.forEach(row => {
+        const inputs = row.querySelectorAll('input[data-column], select[data-column], textarea[data-column]');
+        if (inputs.length > 0) {
+            const rowData = {};
+            inputs.forEach(input => {
+                const columnKey = input.getAttribute('data-column');
+                let value;
+                
+                if (input.type === 'checkbox') {
+                    value = input.checked;
+                } else if (input.tagName === 'TEXTAREA') {
+                    value = input.value.trim();
+                } else {
+                    value = input.value.trim();
+                }
+                
+                if (value !== '' && value !== false) {
+                    rowData[columnKey] = value;
+                }
+            });
+            if (Object.keys(rowData).length > 0) {
+                data.push(rowData);
+            }
+        }
+    });
+    
+    dataInput.value = JSON.stringify(data);
+}
+
+function initializeTable(tableName) {
+    const dataInput = document.getElementById(tableName + '_data');
+    if (dataInput) {
+        try {
+            const existingData = JSON.parse(dataInput.value || '[]');
+            if (existingData.length > 0 && JSON.parse('{{ editable|tojson }}')) {
+                // Clear existing rows and populate with data
+                const tbody = document.getElementById(tableName + '_tbody');
+                tbody.innerHTML = '';
+                
+                existingData.forEach(rowData => {
+                    addTableRow(tableName);
+                    const lastRow = tbody.lastElementChild;
+                    const inputs = lastRow.querySelectorAll('input[data-column], select[data-column], textarea[data-column]');
+                    inputs.forEach(input => {
+                        const columnKey = input.getAttribute('data-column');
+                        if (columnKey in rowData) {
+                            if (input.type === 'checkbox') {
+                                input.checked = Boolean(rowData[columnKey]);
+                            } else {
+                                input.value = rowData[columnKey];
+                            }
+                        }
+                    });
+                });
+                updateTableData(tableName);
+            }
+        } catch (e) {
+            console.error('Error parsing table data:', e);
+        }
+    }
+}
+
+// Initialize table when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    initializeTable('{{ field_name }}');
+    
+    if (!JSON.parse('{{ editable|tojson }}')) {
+        // Add sorting functionality for non-editable tables
+        const table = document.getElementById('{{ field_name }}_table');
+        if (table) {
+            const headers = table.querySelectorAll('th');
+            headers.forEach((header, index) => {
+                header.style.cursor = 'pointer';
+                header.addEventListener('click', function() {
+                    sortTable(table, index);
+                });
+            });
+        }
+    }
+});
+
+function sortTable(table, columnIndex) {
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    rows.sort((a, b) => {
+        const aValue = a.cells[columnIndex].textContent.trim();
+        const bValue = b.cells[columnIndex].textContent.trim();
+        
+        // Try to sort as numbers first
+        const aNum = parseFloat(aValue);
+        const bNum = parseFloat(bValue);
+        
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+            return aNum - bNum;
+        }
+        
+        // Sort as strings
+        return aValue.localeCompare(bValue);
+    });
+    
+    // Reorder rows
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+// Enhanced validation functions
+function validateField(input) {
+    const value = input.value.trim();
+    const columnKey = input.getAttribute('data-column');
+    const isRequired = input.hasAttribute('required');
+    const inputType = input.type;
+    
+    // Check if field is required and empty
+    if (isRequired && !value) {
+        showFieldError(input, 'This field is required');
+        return false;
+    }
+    
+    // If not required and empty, it's valid
+    if (!value) {
+        clearFieldError(input);
+        return true;
+    }
+    
+    // Email-specific validation
+    if (inputType === 'email') {
+        return validateEmailField(input);
+    }
+    
+    // URL validation
+    if (inputType === 'url' && value) {
+        try {
+            new URL(value);
+        } catch {
+            showFieldError(input, 'Please enter a valid URL');
+            return false;
+        }
+    }
+    
+    // Number validation
+    if (inputType === 'number' && value) {
+        if (isNaN(value) || value < input.min || value > input.max) {
+            showFieldError(input, 'Please enter a valid number');
+            return false;
+        }
+    }
+    
+    // Date validation
+    if (inputType === 'date' && value) {
+        const date = new Date(value);
+        if (isNaN(date.getTime())) {
+            showFieldError(input, 'Please enter a valid date');
+            return false;
+        }
+    }
+    
+    clearFieldError(input);
+    return true;
+}
+
+function validateEmailField(input) {
+    const email = input.value.trim();
+    
+    if (!email) {
+        showFieldError(input, 'This field is required');
+        return false;
+    }
+    
+    // Basic email regex pattern
+    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    
+    if (!emailPattern.test(email)) {
+        showFieldError(input, 'Invalid email format');
+        return false;
+    }
+    
+    // Additional checks
+    if (email.length > 254) {
+        showFieldError(input, 'Email is too long (max 254 characters)');
+        return false;
+    }
+    
+    if (email.split('@').length !== 2) {
+        showFieldError(input, 'Email must contain exactly one @ symbol');
+        return false;
+    }
+    
+    const [localPart, domainPart] = email.split('@');
+    
+    if (localPart.length > 64) {
+        showFieldError(input, 'Local part is too long (max 64 characters)');
+        return false;
+    }
+    
+    if (domainPart.length > 253) {
+        showFieldError(input, 'Domain part is too long (max 253 characters)');
+        return false;
+    }
+    
+    if (domainPart.startsWith('.') || domainPart.endsWith('.')) {
+        showFieldError(input, 'Domain cannot start or end with a dot');
+        return false;
+    }
+    
+    // Check for duplicate emails in the table
+    const tableName = input.closest('[id$="_table"]').id.replace('_table', '');
+    const tbody = document.getElementById(tableName + '_tbody');
+    const emailInputs = tbody.querySelectorAll('input[type="email"]');
+    let duplicateCount = 0;
+    
+    emailInputs.forEach(emailInput => {
+        if (emailInput !== input && emailInput.value.trim() === email) {
+            duplicateCount++;
+        }
+    });
+    
+    if (duplicateCount > 0) {
+        showFieldError(input, 'Duplicate email address');
+        return false;
+    }
+    
+    clearFieldError(input);
+    return true;
+}
+
+function showFieldError(input, message) {
+    // Find or create error div
+    let errorDiv = input.parentElement.querySelector('.field-error');
+    if (!errorDiv) {
+        errorDiv = document.createElement('div');
+        errorDiv.className = 'field-error text-red-500 text-xs hidden';
+        input.parentElement.appendChild(errorDiv);
+    }
+    
+    errorDiv.textContent = message;
+    errorDiv.classList.remove('hidden');
+    input.style.borderColor = '#ef4444'; // red-500
+}
+
+function clearFieldError(input) {
+    const errorDiv = input.parentElement.querySelector('.field-error');
+    if (errorDiv) {
+        errorDiv.classList.add('hidden');
+        input.style.borderColor = '#d1d5db'; // gray-300
+    }
+}
+
+// Table-specific form validation
+function validateTableForm() {
+    const tableName = '{{ field_name }}';
+    const tbody = document.getElementById(tableName + '_tbody');
+    const inputs = tbody.querySelectorAll('input[data-column], select[data-column], textarea[data-column]');
+    let isValid = true;
+    let errorMessages = [];
+    
+    inputs.forEach(input => {
+        if (!validateField(input)) {
+            isValid = false;
+            const errorDiv = input.parentElement.querySelector('.field-error');
+            if (errorDiv && !errorDiv.classList.contains('hidden')) {
+                errorMessages.push(errorDiv.textContent);
+            }
+        }
+    });
+    
+    if (!isValid) {
+        alert('Please fix the validation errors in the table before submitting:\n' + errorMessages.join('\n'));
+        return false;
+    }
+    
+    return true;
+}
+
+// Override the main form submission to include table validation
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('main-form');
+    if (form) {
+        const originalSubmitForm = window.submitForm;
+        window.submitForm = function() {
+            // First validate the table
+            if (!validateTableForm()) {
+                return false;
+            }
+            
+            // Then proceed with original form validation
+            return originalSubmitForm();
+        };
+    }
+});
+</script> 
