@@ -234,7 +234,22 @@ class WebChatFlow:
             raise ValueError(f"Flow '{flow_name}' not registered")
         await flow_func(self.event)
 
-async def redirect(flow_name: str, event):
+def get_event():
+    frame = inspect.currentframe().f_back
+    caller_locals = frame.f_locals
+
+    if 'event' in caller_locals:
+        event = caller_locals['event']
+    else:
+        parent_frame = frame.f_back
+        if parent_frame and 'event' in parent_frame.f_locals:
+            event = parent_frame.f_locals['event']
+        else:
+            raise RuntimeError("Could not find event parameter")
+    return event
+
+async def run_flow(flow_name: str):
+    event = get_event()
     flow_func = WEBCHAT_FLOW_REGISTRY.get(flow_name)
     if not flow_func:
         raise ValueError(f"Flow '{flow_name}' not registered")
@@ -252,18 +267,7 @@ def create_webchat_flow(name: str):
     return decorator
 
 def _create_webchat_flow():
-    frame = inspect.currentframe().f_back
-    caller_locals = frame.f_locals
-    
-    if 'event' in caller_locals:
-        event = caller_locals['event']
-    else:
-        parent_frame = frame.f_back
-        if parent_frame and 'event' in parent_frame.f_locals:
-            event = parent_frame.f_locals['event']
-        else:
-            raise RuntimeError("Could not find event parameter")
-    
+    event = get_event()
     chat = WebChatFlow(event)
     return chat
 
