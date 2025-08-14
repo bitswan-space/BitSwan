@@ -159,7 +159,7 @@ class NotebookCompiler:
                 if self._current_flow_name is not None or (self._in_autopipeline and self._in_webchat_context):
                     html_content = markdown.markdown(markdown_content, extensions=['fenced_code', 'tables', 'codehilite'])
                     escaped_html = html_content.replace('"', '\\"').replace("'", "\\'")
-                    response_code = f'    await {self._current_chat_name}.tell_user(f"""{escaped_html}""", event[\'bearer_token\'], is_html=True)\n'
+                    response_code = f'    await {self._current_chat_name}.tell_user(f"""{escaped_html}""", is_html=True)\n'
                     
                     if self._current_flow_name is not None:
                         self._webchat_flows[self._current_flow_name] += response_code
