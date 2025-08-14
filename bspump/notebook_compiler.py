@@ -55,6 +55,8 @@ class NotebookCompiler:
     _webchat_flows: dict[str, str] = {}
     _current_flow_name: str | None = None
     _current_chat_name: str | None = None
+    _webchat_detected = False
+    _auto_pipeline_added = False
 
     def parse_cell(self, cell, fout):
         if cell["cell_type"] == "code":
@@ -81,7 +83,25 @@ class NotebookCompiler:
                 if not clean_code.strip():
                     return
                 parsed_ast = ast.parse(clean_code)
+                
+                # Check if the cell contains create_webchat_flow
                 if contains_function_call(parsed_ast, "create_webchat_flow"):
+                    self._webchat_detected = True
+                    
+                    # Automatically add auto-pipeline
+                    if not self._auto_pipeline_added:
+                        pipeline_setup = """from bspump.http_webchat.server import *\nfrom bspump.http_webchat.webchat import *\nfrom bspump.jupyter import *\n\n# Auto-generated pipeline setup for webchat
+auto_pipeline(
+    source=lambda app, pipeline: WebChatSource(app, pipeline),
+    sink=lambda app, pipeline: WebchatSink(app, pipeline)
+)
+
+"""
+                        fout.write(pipeline_setup)
+                        self._auto_pipeline_added = True
+                        self._in_autopipeline = True
+                        self._in_webchat_context = True
+                    
                     for node in ast.walk(parsed_ast):
                         if isinstance(node, ast.Assign):
                             # Check if this is an assignment with create_webchat_flow
@@ -137,6 +157,7 @@ class NotebookCompiler:
                         )
                     return
 
+                # Handle regular code cells
                 if not self._in_autopipeline:
                     fout.write(clean_code + "\n\n")
                 else:
@@ -150,7 +171,7 @@ class NotebookCompiler:
                     if "WebChatSource":
                         self._in_webchat_context = True
 
-        elif cell["cell_type"] == "markdown":
+        elif cell["cell_type"] == "markdown" and self._webchat_detected:
             markdown_content = cell["source"]
             if isinstance(markdown_content, list):
                 markdown_content = "".join(markdown_content)
@@ -173,6 +194,8 @@ class NotebookCompiler:
         self._cell_processor_contents = {}
         self._current_flow_name = None
         self._current_chat_name = None
+        self._webchat_detected = False
+        self._auto_pipeline_added = False
 
         with open(out_path, "w") as f:
 
