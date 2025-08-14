@@ -101,7 +101,7 @@ class NotebookCompiler:
                                                 flow_name = str(self._cell_number)
                                             self._current_flow_name = flow_name
                                             self._current_chat_name = variable_name
-                                            self._webchat_flows[flow_name] = f"@create_webchat_flow('/{flow_name}')\nasync def {flow_name}({variable_name}):\n"
+                                            self._webchat_flows[flow_name] = f"@create_webchat_flow('{flow_name}')\nasync def {flow_name}({variable_name}):\n"
                                             return
                         # Check if the create_webchat_flow is called directly
                         elif isinstance(node, ast.Expr) and isinstance(node.value, ast.Call):
@@ -121,7 +121,7 @@ class NotebookCompiler:
                                 
                                 self._current_flow_name = flow_name
                                 self._current_chat_name = None
-                                self._webchat_flows[flow_name] = f"@create_webchat_flow('/{flow_name}')\nasync def {flow_name}():\n    chat = WebChatFlow()\n"
+                                self._webchat_flows[flow_name] = f"@create_webchat_flow('{flow_name}')\nasync def {flow_name}():\n    chat = WebChatFlow()\n"
                                 return
 
                 if self._current_flow_name is not None:
