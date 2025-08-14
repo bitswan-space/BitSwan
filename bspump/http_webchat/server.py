@@ -18,7 +18,8 @@ from bspump.http_webchat.webchat import (
     WebChatPromptForm,
     WebChatTemplateEnv,
     WebChatResponse,
-    PromptFormBaseField, WebChatWelcomeWindow,
+    PromptFormBaseField,
+    WebChatWelcomeWindow,
 )
 
 load_dotenv()
@@ -123,6 +124,7 @@ async def general_proxy(request):
     except Exception as e:
         return aiohttp.web.Response(status=500, text=f"Proxy error: {str(e)}")
 
+
 class WebChatFlow:
     def __init__(self, event):
         self.bearer_token = event["bearer_token"]
@@ -193,7 +195,9 @@ class WebChatFlow:
         await chat_data["ready_event"].wait()
 
         websockets = WEBSOCKETS.get(chat_id, set())
-        chat_data["chat_history"].append({"response": response_text, "is_html": is_html})
+        chat_data["chat_history"].append(
+            {"response": response_text, "is_html": is_html}
+        )
 
         for ws in list(websockets):
             try:
@@ -209,7 +213,9 @@ class WebChatFlow:
         chat_data = CHATS[chat_id]
 
         await chat_data["ready_event"].wait()
-        welcome_html = WebChatWelcomeWindow(welcome_text).get_html(template_env=WebChatTemplateEnv().get_jinja_env())
+        welcome_html = WebChatWelcomeWindow(welcome_text).get_html(
+            template_env=WebChatTemplateEnv().get_jinja_env()
+        )
         chat_data["welcome_html"] = welcome_html
 
         # Send the updated welcome message to all connected WebSockets
@@ -219,7 +225,7 @@ class WebChatFlow:
                 # Send a special message type for welcome message updates
                 update_message = {
                     "type": "welcome_update",
-                    "welcome_html": welcome_html
+                    "welcome_html": welcome_html,
                 }
                 await ws.send_str(json.dumps(update_message))
             except Exception:
@@ -234,19 +240,21 @@ class WebChatFlow:
             raise ValueError(f"Flow '{flow_name}' not registered")
         await flow_func(self.event)
 
+
 def get_event():
     frame = inspect.currentframe().f_back
     caller_locals = frame.f_locals
 
-    if 'event' in caller_locals:
-        event = caller_locals['event']
+    if "event" in caller_locals:
+        event = caller_locals["event"]
     else:
         parent_frame = frame.f_back
-        if parent_frame and 'event' in parent_frame.f_locals:
-            event = parent_frame.f_locals['event']
+        if parent_frame and "event" in parent_frame.f_locals:
+            event = parent_frame.f_locals["event"]
         else:
             raise RuntimeError("Could not find event parameter")
     return event
+
 
 async def run_flow(flow_name: str):
     event = get_event()
@@ -254,6 +262,7 @@ async def run_flow(flow_name: str):
     if not flow_func:
         raise ValueError(f"Flow '{flow_name}' not registered")
     await flow_func(event)
+
 
 def create_webchat_flow(name: str):
     def decorator(func):
@@ -266,10 +275,12 @@ def create_webchat_flow(name: str):
 
     return decorator
 
+
 def _create_webchat_flow():
     event = get_event()
     chat = WebChatFlow(event)
     return chat
+
 
 class WebChatServerConnection(Connection):
     ConfigDefaults = {
@@ -419,7 +430,7 @@ class WebChatSource(WebChatRouteSource):
         self, request: aiohttp.web.Request, bearer_token
     ) -> aiohttp.web.Response:
         template_env = WebChatTemplateEnv().get_jinja_env()
-        
+
         # Use dynamic welcome message if available, otherwise use the default
         chat_data = CHATS[decode_chat_token(bearer_token)]
 
@@ -427,17 +438,17 @@ class WebChatSource(WebChatRouteSource):
         for item in chat_data["chat_history"]:
             if "response" in item:
                 is_html = item.get("is_html", False)
-                html = WebChatResponse(input_html=item["response"], is_html=is_html).get_html(
-                    template_env=template_env
-                )
+                html = WebChatResponse(
+                    input_html=item["response"], is_html=is_html
+                ).get_html(template_env=template_env)
             elif "prompt_response" in item:
                 html = WebChatResponse(
                     input_html=item["prompt_response"], user_response=True
                 ).get_html(template_env=template_env)
             elif "welcome_message" in item:
-                html = WebChatWelcomeWindow(welcome_text=item["welcome_message"]).get_html(
-                    template_env=template_env
-                )
+                html = WebChatWelcomeWindow(
+                    welcome_text=item["welcome_message"]
+                ).get_html(template_env=template_env)
             else:
                 continue
             chat_history_html += html

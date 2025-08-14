@@ -310,7 +310,9 @@ class WebChatWelcomeWindow:
 
 
 class WebChatResponse:
-    def __init__(self, input_html: str, user_response: bool = False, is_html: bool = False):
+    def __init__(
+        self, input_html: str, user_response: bool = False, is_html: bool = False
+    ):
         self.input_html = input_html or ""
         self.user_response = user_response
         self.is_html = is_html
