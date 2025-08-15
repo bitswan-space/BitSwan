@@ -1,0 +1,30 @@
+<form id="prompt-form" class="flex flex-col md:flex-row gap-4 md:gap-0 items-center justify-center w-full text-sm text-primary dark:text-primary-dark" method="dialog" onsubmit="return false;">
+  <div class="flex-grow flex flex-col gap-2 xl:gap-4 pl-2 xl:pl-12">
+   {% if awaiting_text %}
+      <div class="flex items-center">
+        <label class="text-primary dark:text-primary-dark text-sm font-semibold w-[120px]">
+          {{ awaiting_text }}
+        </label>
+        <input
+          type="text"
+          disabled
+          value=""
+          class="text-primary border border-secondary text-sm px-4 py-1 rounded-md font-mono w-full max-w-[150px] mx-2 opacity-50 cursor-not-allowed"
+        />
+      </div>
+    {% else %}
+      {% for input_html in form_inputs %}
+          {{ input_html | safe }}
+      {% endfor %}
+    {% endif %}
+  </div>
+
+  {% if not awaiting_text %}
+    <button
+      type="submit"
+      class="bg-primary dark:bg-primary-dark hover:bg-secondary hover:dark:bg-secondary-dark hover:text-primary hover:dark:text-primary-dark text-secondary dark:text-secondary-dark px-3 py-1 rounded-full transition text-2xl ml-auto"
+    >
+      ↑
+    </button>
+  {% endif %}
+</form>
