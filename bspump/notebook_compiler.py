@@ -98,9 +98,33 @@ class NotebookCompiler:
                 # Check if the cell contains create_webchat_flow
                 if contains_function_call(parsed_ast, "create_webchat_flow"):
                     self._webchat_detected = True
-                    self.parse_webchat_cells(parsed_ast)
 
-                # If we're in a webchat flow context, add code to the flow instead of processor
+                    for node in ast.walk(parsed_ast):
+                        if isinstance(node, ast.Assign):
+                            for target in node.targets:
+                                if isinstance(target, ast.Name):
+                                    variable_name = target.id
+                                    if (
+                                            isinstance(node.value, ast.Call)
+                                            and isinstance(node.value.func, ast.Name)
+                                            and node.value.func.id == "create_webchat_flow"
+                                    ):
+                                        if node.value.args:
+                                            arg0 = node.value.args[0]
+
+                                            if isinstance(arg0, ast.Constant):
+                                                flow_name = arg0.value
+                                            elif isinstance(arg0, ast.Name):
+                                                flow_name = arg0.id
+                                            else:
+                                                flow_name = str(self._cell_number)
+                                            self._current_flow_name = flow_name
+                                            self._current_chat_name = variable_name
+                                            self._webchat_flows[
+                                                flow_name
+                                            ] = f"@create_webchat_flow('{flow_name}')\nasync def {flow_name}({variable_name}):\n"
+                                            return
+
                 if self._current_flow_name is not None:
                     cleaned_lines = [
                         line
@@ -114,71 +138,39 @@ class NotebookCompiler:
                         )
                     return
 
-                # Handle regular code cells - only add to processor if not in webchat context
+                # Handle regular code cells
                 if not self._in_autopipeline:
                     fout.write(clean_code + "\n\n")
                 else:
-                    # Only add to processor if we're not in a webchat flow context
-                    if not self._webchat_detected or self._current_flow_name is None:
-                        self._cell_processor_contents[self._cell_number] = (
-                            "\n".join(indent_code(clean_code.split("\n"))) + "\n\n"
-                        )
+                    self._cell_processor_contents[self._cell_number] = (
+                        "\n".join(indent_code(clean_code.split("\n"))) + "\n\n"
+                    )
                 if not self._in_autopipeline and contains_function_call(
-                    parsed_ast, "auto_pipeline"
+                        parsed_ast, "auto_pipeline"
                 ):
                     self._in_autopipeline = True
-
+                    if "WebChatSource":
+                        self._in_webchat_context = True
         elif cell["cell_type"] == "markdown" and self._webchat_detected and self._current_chat_name is not None:
-            self.parse_markdown_cell(cell)
-
-    def parse_webchat_cells(self, parsed_ast):
-        for node in ast.walk(parsed_ast):
-            if isinstance(node, ast.Assign):
-                for target in node.targets:
-                    if isinstance(target, ast.Name):
-                        variable_name = target.id
-                        if (
-                                isinstance(node.value, ast.Call)
-                                and isinstance(node.value.func, ast.Name)
-                                and node.value.func.id == "create_webchat_flow"
-                        ):
-                            if node.value.args:
-                                arg0 = node.value.args[0]
-
-                                if isinstance(arg0, ast.Constant):
-                                    flow_name = arg0.value
-                                elif isinstance(arg0, ast.Name):
-                                    flow_name = arg0.id
-                                else:
-                                    flow_name = str(self._cell_number)
-                                self._current_flow_name = flow_name
-                                self._current_chat_name = variable_name
-                                self._webchat_flows[
-                                    flow_name
-                                ] = f"@create_webchat_flow('{flow_name}')\nasync def {flow_name}({variable_name}):\n"
-                                return
-
-    # Only works in webchat flows, in regular pipelines is ignored
-    def parse_markdown_cell(self, cell):
-        markdown_content = cell["source"]
-        if isinstance(markdown_content, list):
-            markdown_content = "".join(markdown_content)
-        markdown_content = markdown_content.strip()
-        if markdown_content:
-            if self._current_flow_name is not None or (
+            markdown_content = cell["source"]
+            if isinstance(markdown_content, list):
+                markdown_content = "".join(markdown_content)
+            markdown_content = markdown_content.strip()
+            if markdown_content:
+                if self._current_flow_name is not None or (
                     self._in_autopipeline and self._in_webchat_context
-            ):
-                html_content = markdown.markdown(
-                    markdown_content,
-                    extensions=["fenced_code", "tables", "codehilite"],
-                )
-                escaped_html = html_content.replace('"', '\\"').replace("'", "\\'")
-                response_code = f'    await {self._current_chat_name}.tell_user(f"""{escaped_html}""", is_html=True)\n'
+                ):
+                    html_content = markdown.markdown(
+                        markdown_content,
+                        extensions=["fenced_code", "tables", "codehilite"],
+                    )
+                    escaped_html = html_content.replace('"', '\\"').replace("'", "\\'")
+                    response_code = f'    await {self._current_chat_name}.tell_user(f"""{escaped_html}""", is_html=True)\n'
 
-                if self._current_flow_name is not None:
-                    self._webchat_flows[self._current_flow_name] += response_code
-                elif self._in_autopipeline and self._in_webchat_context:
-                    self._cell_processor_contents[self._cell_number] = response_code
+                    if self._current_flow_name is not None:
+                        self._webchat_flows[self._current_flow_name] += response_code
+                    elif self._in_autopipeline and self._in_webchat_context:
+                        self._cell_processor_contents[self._cell_number] = response_code
 
     def compile_notebook(self, ntb, out_path="tmp.py"):
         self._cell_number = 0
@@ -189,7 +181,6 @@ class NotebookCompiler:
         self._current_chat_name = None
         self._auto_pipeline_added = False
         self._webchat_detected = detect_webchat(ntb)
-
 
         with open(out_path, "w") as f:
             if self._webchat_detected:
