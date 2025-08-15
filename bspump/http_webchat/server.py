@@ -234,11 +234,8 @@ class WebChatFlow:
         # Add to chat history
         chat_data["chat_history"].append({"welcome_update": welcome_text})
 
-    async def redirect(self, flow_name: str):
-        flow_func = WEBCHAT_FLOW_REGISTRY.get(flow_name)
-        if not flow_func:
-            raise ValueError(f"Flow '{flow_name}' not registered")
-        await flow_func(self.event)
+    async def run_flow(self, flow_name: str):
+        await run_flow(flow_name, self.event)
 
 
 def get_event():
@@ -256,8 +253,9 @@ def get_event():
     return event
 
 
-async def run_flow(flow_name: str):
-    event = get_event()
+async def run_flow(flow_name: str, event=None):
+    if event is None:
+        event = get_event()
     flow_func = WEBCHAT_FLOW_REGISTRY.get(flow_name)
     if not flow_func:
         raise ValueError(f"Flow '{flow_name}' not registered")
