@@ -115,7 +115,7 @@ class NotebookCompiler:
                     if "WebChatSource":
                         self._in_webchat_context = True
 
-        elif cell["cell_type"] == "markdown" and self._webchat_detected:
+        elif cell["cell_type"] == "markdown" and self._webchat_detected and self._current_chat_name is not None:
             self.parse_markdown_cell(cell)
 
     def parse_webchat_cells(self, parsed_ast, fout):
