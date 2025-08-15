@@ -295,12 +295,14 @@ class WebChatPromptForm:
 
 
 class WebChatWelcomeWindow:
-    def __init__(self, welcome_text: str):
+    def __init__(self, welcome_text: str, is_html: bool = False):
         self.welcome_text = welcome_text or ""
+        self.is_html = is_html
 
     def get_context(self) -> dict:
         context = {
             "welcome_text": self.welcome_text,
+            "is_html": self.is_html,
         }
         return context
 
