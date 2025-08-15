@@ -206,7 +206,3 @@ async def processor_internal(inject, event):
             f.write(step_func_code)
             for flow_name, steps in self._webchat_flows.items():
                 f.write(steps + "\n")
-
-        with open(out_path, "r") as f:
-            print(f"\n--- Contents of {out_path} ---\n")
-            print(f.read())
