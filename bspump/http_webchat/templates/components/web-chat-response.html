@@ -1,5 +1,5 @@
 <div id="{{ webchat_response }}"
-     class="webchat_response fade-in px-8 py-8 {% if is_html %}block{% else %}flex items-center{% endif %} text-primary dark:text-primary-dark border-b border-secondary-dark dark:border-secondary">
+     class="webchat_response fade-in px-8 py-8 {% if is_html %}block{% else %}flex items-center{% endif %} text-primary dark:text-primary-dark border-b border-secondary">
     {% if is_html %}
         <div class="html-content">
             {{ response_text | safe }}

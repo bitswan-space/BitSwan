@@ -6,9 +6,12 @@
   <title>WebChat</title>
 
   <script>
-    if (localStorage.getItem('theme') === 'dark') {
-      document.documentElement.classList.add('dark');
-    }
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+      }
+    })();
   </script>
 
   <script src="/static/htmx.js"></script>
@@ -134,8 +137,6 @@
   </script>
 
   <link rel="stylesheet" href="/static/tailwind.css">
-  <!-- Tailwind CSS CDN (Development) -->
-  <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body, .dark\:bg-neutral-dark {
       transition: background-color 0.3s ease;
@@ -187,13 +188,19 @@
   <button
     id="theme-toggle"
     onclick="
-      document.documentElement.classList.toggle('dark');
-      localStorage.setItem(
-        'theme',
-        document.documentElement.classList.contains('dark') ? 'dark' : 'light'
-      );
+      const html = document.documentElement;
+      const wasDark = html.classList.contains('dark');
+      
+      if (wasDark) {
+        html.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      } else {
+        html.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      }
+      const body = document.body;
     "
-    class="fixed bottom-4 right-4 text-primary dark:text-primary-dark px-3 py-1 text-xl"
+    class="fixed bottom-4 right-4 text-primary dark:text-primary-dark px-3 py-1 text-xl cursor-pointer hover:opacity-80"
   >
     <img src="/static/brightness_2.svg" class="dark:hidden">
     <img src="/static/wb_sunny.svg" class="hidden dark:block">
