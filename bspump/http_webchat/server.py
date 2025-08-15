@@ -207,23 +207,28 @@ class WebChatFlow:
                 websockets.discard(ws)
 
     async def set_welcome_message(self, welcome_text=None, is_html: bool = False):
-        welcome_window = WebChatWelcomeWindow(welcome_text=welcome_text, is_html=is_html)
+        welcome_window = WebChatWelcomeWindow(
+            welcome_text=welcome_text, is_html=is_html
+        )
         payload = jwt.decode(self.bearer_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         chat_id = payload["chat_id"]
         chat_data = CHATS[chat_id]
         await chat_data["ready_event"].wait()
 
         websockets = WEBSOCKETS.get(chat_id, set())
-        chat_data["welcome_window"] = welcome_window.get_html(template_env=WebChatTemplateEnv().get_jinja_env())
+        chat_data["welcome_window"] = welcome_window.get_html(
+            template_env=WebChatTemplateEnv().get_jinja_env()
+        )
 
         for ws in list(websockets):
             try:
                 await ws.send_str(
-                    welcome_window.get_html(template_env=WebChatTemplateEnv().get_jinja_env())
+                    welcome_window.get_html(
+                        template_env=WebChatTemplateEnv().get_jinja_env()
+                    )
                 )
             except Exception:
                 websockets.discard(ws)
-
 
     async def run_flow(self, flow_name: str):
         flow_func = WEBCHAT_FLOW_REGISTRY.get(flow_name)
@@ -231,19 +236,21 @@ class WebChatFlow:
             raise ValueError(f"Flow '{flow_name}' not registered")
         await flow_func(self.event)
 
+
 def get_event():
     frame = inspect.currentframe().f_back
     caller_locals = frame.f_locals
 
-    if 'event' in caller_locals:
-        event = caller_locals['event']
+    if "event" in caller_locals:
+        event = caller_locals["event"]
     else:
         parent_frame = frame.f_back
-        if parent_frame and 'event' in parent_frame.f_locals:
-            event = parent_frame.f_locals['event']
+        if parent_frame and "event" in parent_frame.f_locals:
+            event = parent_frame.f_locals["event"]
         else:
             raise RuntimeError("Could not find event parameter")
     return event
+
 
 async def run_flow(flow_name: str):
     event = get_event()
@@ -251,6 +258,7 @@ async def run_flow(flow_name: str):
     if not flow_func:
         raise ValueError(f"Flow '{flow_name}' not registered")
     await flow_func(event)
+
 
 def create_webchat_flow(name: str):
     def decorator(func):

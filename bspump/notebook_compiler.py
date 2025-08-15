@@ -14,6 +14,7 @@ def contains_function_call(ast_tree, function_name):
                 return True
     return False
 
+
 def indent_code(lines: list[str]) -> list[str]:
     multiline_quote_string = None
     indent_lines = []
@@ -105,9 +106,9 @@ class NotebookCompiler:
                                 if isinstance(target, ast.Name):
                                     variable_name = target.id
                                     if (
-                                            isinstance(node.value, ast.Call)
-                                            and isinstance(node.value.func, ast.Name)
-                                            and node.value.func.id == "create_webchat_flow"
+                                        isinstance(node.value, ast.Call)
+                                        and isinstance(node.value.func, ast.Name)
+                                        and node.value.func.id == "create_webchat_flow"
                                     ):
                                         if node.value.args:
                                             arg0 = node.value.args[0]
@@ -146,12 +147,16 @@ class NotebookCompiler:
                         "\n".join(indent_code(clean_code.split("\n"))) + "\n\n"
                     )
                 if not self._in_autopipeline and contains_function_call(
-                        parsed_ast, "auto_pipeline"
+                    parsed_ast, "auto_pipeline"
                 ):
                     self._in_autopipeline = True
                     if "WebChatSource":
                         self._in_webchat_context = True
-        elif cell["cell_type"] == "markdown" and self._webchat_detected and self._current_chat_name is not None:
+        elif (
+            cell["cell_type"] == "markdown"
+            and self._webchat_detected
+            and self._current_chat_name is not None
+        ):
             markdown_content = cell["source"]
             if isinstance(markdown_content, list):
                 markdown_content = "".join(markdown_content)
