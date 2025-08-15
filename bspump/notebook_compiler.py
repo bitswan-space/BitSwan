@@ -95,7 +95,7 @@ class NotebookCompiler:
                         "\n".join(indent_code(clean_code.split("\n"))) + "\n\n"
                     )
                 if not self._in_autopipeline and contains_function_call(
-                    ast.parse(clean_code), "auto_pipeline"
+                    parsed_ast, "auto_pipeline"
                 ):
                     self._in_autopipeline = True
                     if "WebChatSource":
