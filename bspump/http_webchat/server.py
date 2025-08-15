@@ -2,7 +2,6 @@ import asyncio
 import inspect
 import re
 import logging
-import json
 
 import aiohttp.web
 import aiohttp_jinja2
@@ -215,11 +214,8 @@ class WebChatFlow:
         await chat_data["ready_event"].wait()
 
         websockets = WEBSOCKETS.get(chat_id, set())
-        chat_data["chat_history"].append(
-            {"welcome_window": welcome_text, "is_html": is_html}
-        )
-        print(                    welcome_window.get_html(template_env=WebChatTemplateEnv().get_jinja_env())
-)
+        chat_data["welcome_window"] = welcome_window.get_html(template_env=WebChatTemplateEnv().get_jinja_env())
+
         for ws in list(websockets):
             try:
                 await ws.send_str(
@@ -392,6 +388,7 @@ async def new_chat_handler(request):
         "ready_event": asyncio.Event(),
         "started": False,
         "bearer_token": token,
+        "welcome_window": "",
     }
     raise aiohttp.web.HTTPFound(f"/?chat_id={token}")
 
@@ -405,6 +402,7 @@ class WebChatSource(WebChatRouteSource):
         route="/",
         id=None,
         config=None,
+        welcome_text=None,
     ):
         super().__init__(
             app,
@@ -417,6 +415,7 @@ class WebChatSource(WebChatRouteSource):
         )
 
         self.pipeline = pipeline
+        self.welcome_text = welcome_text
 
     async def serve_index(
         self, request: aiohttp.web.Request, bearer_token
@@ -437,37 +436,12 @@ class WebChatSource(WebChatRouteSource):
                 html = WebChatResponse(
                     input_html=item["prompt_response"], user_response=True
                 ).get_html(template_env=template_env)
-            elif "welcome_window" in item:
-                welcome_window_obj = item["welcome_window"]
-                is_html = item.get("is_html", False)
-                if isinstance(welcome_window_obj, WebChatWelcomeWindow):
-                    html = welcome_window_obj.get_html(template_env=template_env)
-                else:
-                    # Handle case where welcome_window might be stored differently
-                    html = WebChatWelcomeWindow(str(welcome_window_obj), is_html=is_html).get_html(template_env=template_env)
             else:
                 continue
             chat_history_html += html
 
         current_prompt_html = chat_data.get("current_prompt", "")
-        
-        # Look for welcome window in chat history
-        welcome_html = ""
-        for item in chat_data["chat_history"]:
-            if "welcome_window" in item:
-                welcome_window_obj = item["welcome_window"]
-                is_html = item.get("is_html", False)
-                if isinstance(welcome_window_obj, WebChatWelcomeWindow):
-                    welcome_html = welcome_window_obj.get_html(template_env=template_env)
-                else:
-                    # Handle case where welcome_window might be stored differently
-                    welcome_html = WebChatWelcomeWindow(str(welcome_window_obj), is_html=is_html).get_html(template_env=template_env)
-                break
-        
-        if not welcome_html:
-            default_welcome = WebChatWelcomeWindow("", is_html=False)
-            welcome_html = default_welcome.get_html(template_env=template_env)
-
+        welcome_html = chat_data.get("welcome_window", "")
         context = {
             "bearer_token": bearer_token,
             "current_prompt_html": current_prompt_html,
@@ -517,6 +491,7 @@ class WebChatSource(WebChatRouteSource):
                 "ready_event": asyncio.Event(),
                 "started": False,
                 "bearer_token": token,
+                "welcome_window": "",
             }
             print(f"Initialized chat store for chat_id={chat_id}")
         return await self.serve_index(request, bearer_token=token)
