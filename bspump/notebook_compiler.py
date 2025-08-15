@@ -14,11 +14,6 @@ def contains_function_call(ast_tree, function_name):
                 return True
     return False
 
-
-def clean_webchat_flow_code(steps) -> list[str]:
-    return [step.strip() for step in steps if step.strip()]
-
-
 def indent_code(lines: list[str]) -> list[str]:
     multiline_quote_string = None
     indent_lines = []
@@ -37,15 +32,6 @@ def indent_code(lines: list[str]) -> list[str]:
         _indent = "    " if i in indent_lines else ""
         lines_out.append(_indent + lines[i])
     return lines_out
-
-
-def sanitize_flow_name(flow_name: str) -> str:
-    sanitized = flow_name.lstrip("/")
-    sanitized = re.sub(r"\W+", "_", sanitized)
-    if not sanitized[0].isalpha() and sanitized[0] != "_":
-        sanitized = f"_{sanitized}"
-    return f"{sanitized}"
-
 
 class NotebookCompiler:
     _in_autopipeline = False
