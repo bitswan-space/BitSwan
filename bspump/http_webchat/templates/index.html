@@ -90,8 +90,6 @@
       const promptEl = document.getElementById("prompt");
       const responseBox = document.getElementById("response-box");
       attachPromptFormHandler(ws);
-
-
       const responseQueue = [];
       let processing = false;
 
@@ -121,6 +119,13 @@
       promptEl.innerHTML = "";
       promptEl.appendChild(incomingEl);
       attachPromptFormHandler(ws);
+    } else if (incomingEl.classList.contains("welcome-message-box")) {
+      const welcomeMessageEl = document.getElementById("welcome-message");
+      console.log(welcomeMessageEl);
+      if (welcomeMessageEl) {
+        welcomeMessageEl.innerHTML = "";
+        welcomeMessageEl.appendChild(incomingEl);
+      }
     } else {
       responseQueue.push(incomingEl);
       processResponseQueue();
