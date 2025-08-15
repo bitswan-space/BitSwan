@@ -207,32 +207,27 @@ class WebChatFlow:
             except Exception:
                 websockets.discard(ws)
 
-    async def set_welcome_message(self, welcome_text: str):
+    async def set_welcome_message(self, welcome_text=None, is_html: bool = False):
+        welcome_window = WebChatWelcomeWindow(welcome_text=welcome_text, is_html=is_html)
         payload = jwt.decode(self.bearer_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         chat_id = payload["chat_id"]
         chat_data = CHATS[chat_id]
-
         await chat_data["ready_event"].wait()
-        welcome_html = WebChatWelcomeWindow(welcome_text).get_html(
-            template_env=WebChatTemplateEnv().get_jinja_env()
-        )
-        chat_data["welcome_html"] = welcome_html
 
-        # Send the updated welcome message to all connected WebSockets
         websockets = WEBSOCKETS.get(chat_id, set())
+        chat_data["chat_history"].append(
+            {"welcome_window": welcome_text, "is_html": is_html}
+        )
+        print(                    welcome_window.get_html(template_env=WebChatTemplateEnv().get_jinja_env())
+)
         for ws in list(websockets):
             try:
-                # Send a special message type for welcome message updates
-                update_message = {
-                    "type": "welcome_update",
-                    "welcome_html": welcome_html,
-                }
-                await ws.send_str(json.dumps(update_message))
+                await ws.send_str(
+                    welcome_window.get_html(template_env=WebChatTemplateEnv().get_jinja_env())
+                )
             except Exception:
                 websockets.discard(ws)
 
-        # Add to chat history
-        chat_data["chat_history"].append({"welcome_update": welcome_text})
 
     async def run_flow(self, flow_name: str):
         flow_func = WEBCHAT_FLOW_REGISTRY.get(flow_name)
@@ -442,20 +437,42 @@ class WebChatSource(WebChatRouteSource):
                 html = WebChatResponse(
                     input_html=item["prompt_response"], user_response=True
                 ).get_html(template_env=template_env)
-            elif "welcome_message" in item:
-                html = WebChatWelcomeWindow(
-                    welcome_text=item["welcome_message"]
-                ).get_html(template_env=template_env)
+            elif "welcome_window" in item:
+                welcome_window_obj = item["welcome_window"]
+                is_html = item.get("is_html", False)
+                if isinstance(welcome_window_obj, WebChatWelcomeWindow):
+                    html = welcome_window_obj.get_html(template_env=template_env)
+                else:
+                    # Handle case where welcome_window might be stored differently
+                    html = WebChatWelcomeWindow(str(welcome_window_obj), is_html=is_html).get_html(template_env=template_env)
             else:
                 continue
             chat_history_html += html
 
         current_prompt_html = chat_data.get("current_prompt", "")
+        
+        # Look for welcome window in chat history
+        welcome_html = ""
+        for item in chat_data["chat_history"]:
+            if "welcome_window" in item:
+                welcome_window_obj = item["welcome_window"]
+                is_html = item.get("is_html", False)
+                if isinstance(welcome_window_obj, WebChatWelcomeWindow):
+                    welcome_html = welcome_window_obj.get_html(template_env=template_env)
+                else:
+                    # Handle case where welcome_window might be stored differently
+                    welcome_html = WebChatWelcomeWindow(str(welcome_window_obj), is_html=is_html).get_html(template_env=template_env)
+                break
+        
+        if not welcome_html:
+            default_welcome = WebChatWelcomeWindow("", is_html=False)
+            welcome_html = default_welcome.get_html(template_env=template_env)
 
         context = {
             "bearer_token": bearer_token,
             "current_prompt_html": current_prompt_html,
             "chat_history_html": chat_history_html,
+            "welcome_html": welcome_html,
             "chats": [
                 {"chat_id": chat_id, "token": CHATS[chat_id]["bearer_token"]}
                 for chat_id in CHATS.keys()
