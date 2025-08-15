@@ -235,32 +235,31 @@ class WebChatFlow:
         chat_data["chat_history"].append({"welcome_update": welcome_text})
 
     async def run_flow(self, flow_name: str):
-        await run_flow(flow_name, self.event)
-
+        flow_func = WEBCHAT_FLOW_REGISTRY.get(flow_name)
+        if not flow_func:
+            raise ValueError(f"Flow '{flow_name}' not registered")
+        await flow_func(self.event)
 
 def get_event():
     frame = inspect.currentframe().f_back
     caller_locals = frame.f_locals
 
-    if "event" in caller_locals:
-        event = caller_locals["event"]
+    if 'event' in caller_locals:
+        event = caller_locals['event']
     else:
         parent_frame = frame.f_back
-        if parent_frame and "event" in parent_frame.f_locals:
-            event = parent_frame.f_locals["event"]
+        if parent_frame and 'event' in parent_frame.f_locals:
+            event = parent_frame.f_locals['event']
         else:
             raise RuntimeError("Could not find event parameter")
     return event
 
-
-async def run_flow(flow_name: str, event=None):
-    if event is None:
-        event = get_event()
+async def run_flow(flow_name: str):
+    event = get_event()
     flow_func = WEBCHAT_FLOW_REGISTRY.get(flow_name)
     if not flow_func:
         raise ValueError(f"Flow '{flow_name}' not registered")
     await flow_func(event)
-
 
 def create_webchat_flow(name: str):
     def decorator(func):
