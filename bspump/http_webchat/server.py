@@ -22,39 +22,123 @@ from bspump.http_webchat.webchat import (
 )
 
 load_dotenv()
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
+
 L = logging.getLogger(__name__)
 CHATS = {}
 WEBSOCKETS = {}
 WEBCHAT_FLOW_REGISTRY: dict[str, callable] = {}
 _registered_endpoints = {}
 
+# JWT configuration - can be set via environment variables or configuration
 JWT_SECRET = os.getenv("JWT_SECRET")
-JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+JWT_ALGORITHM = "HS256"
 
+# This will be overridden by configuration if provided
 if not JWT_SECRET:
-    raise RuntimeError("JWT_SECRET is not set in the environment!")
+    L.warning("JWT_SECRET not set in environment. Will use configuration-based secret if provided.")
+
+def get_jwt_secret(config=None):
+    """Get JWT secret from config, environment variable, or global config system."""
+    # Config dict
+    if config and "JWT_SECRET" in config:
+        L.info("Loaded JWT secret from config")
+        return str(config["JWT_SECRET"])
+
+    # Module/global
+    if JWT_SECRET:
+        L.info("Loaded JWT secret from environment")
+        return str(JWT_SECRET)
+
+    # OS environment
+    env_secret = os.getenv("JWT_SECRET")
+    if env_secret:
+        L.info("Loaded JWT secret from environment")
+        return str(env_secret)
+
+    # Global config
+    try:
+        from bspump.asab import Config
+        for section in Config.sections():
+            if section.startswith("pipeline:") and "JWT_SECRET" in Config[section]:
+                secret = Config[section]["JWT_SECRET"]
+                L.info(f"Loaded JWT secret from global config section: {section}")
+                return str(secret)
+    except Exception as e:
+        L.debug(f"Could not access global config: {e}")
+
+    raise RuntimeError("JWT_SECRET not configured (no config, env, or global config found)")
+
+
+def recursive_merge(dict1, dict2):
+    """
+    Recursively merge two dictionaries, with values from dict2 taking precedence.
+    """
+    for key, value in dict2.items():
+        if key in dict1 and isinstance(dict1[key], dict) and isinstance(value, dict):
+            dict1[key] = recursive_merge(dict1[key], value)
+        else:
+            dict1[key] = value
+    return dict1
 
 
 def generate_session_id():
     return str(uuid.uuid4())
 
 
-def generate_bearer_token(chat_id: str) -> str:
+def generate_bearer_token(chat_id: str, config: dict = None) -> str:
+    secret = get_jwt_secret(config)
+    expiry_hours = 1
+    
     payload = {
         "chat_id": chat_id,
-        "exp": datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=1),
+        "exp": datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=expiry_hours),
     }
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    return jwt.encode(payload, secret, algorithm=JWT_ALGORITHM)
 
-
-def decode_chat_token(token: str) -> str:
+def decode_chat_token(token: str, config: dict = None) -> str:
+    """
+    Decode JWT token and extract chat_id with improved error handling.
+    """
+    secret = get_jwt_secret(config)
+    
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(token, secret, algorithms=[JWT_ALGORITHM])
         return payload["chat_id"]
-    except jwt.ExpiredSignatureError:
+    except jwt.ExpiredSignatureError as e:
+        L.warning(f"JWT token expired: {e}")
         raise
-    except jwt.InvalidTokenError:
+    except jwt.InvalidTokenError as e:
+        L.warning(f"Invalid JWT token: {e}")
         raise
+    except KeyError as e:
+        L.error(f"JWT payload missing required field 'chat_id': {e}")
+        raise ValueError("JWT payload missing required field 'chat_id'")
+
+def validate_jwt_token(token: str, config: dict = None) -> tuple[bool, str, dict]:
+    """
+    Validate JWT token and return validation status, error message, and payload.
+    This provides comprehensive validation similar to JWTWebFormSource.test_secret.
+    
+    Returns:
+        tuple: (is_valid, error_message, payload)
+        - is_valid: boolean indicating if token is valid
+        - error_message: error description if invalid, empty string if valid
+        - payload: decoded JWT payload if valid, empty dict if invalid
+    """
+    secret = get_jwt_secret(config)
+    try:
+        payload = jwt.decode(token, secret, algorithms=[JWT_ALGORITHM])
+        return True, "", payload
+    except jwt.ExpiredSignatureError as e:
+        return False, f"JWT Token expired: {e}", {}
+    except jwt.InvalidTokenError as e:
+        return False, f"Invalid JWT token: {e}", {}
+    except Exception as e:
+        return False, f"Unexpected error validating JWT: {e}", {}
 
 
 async def websocket_handler(request):
@@ -66,12 +150,14 @@ async def websocket_handler(request):
         await ws.close(message=b"No chat_id token")
         return ws
 
-    try:
-        decoded = jwt.decode(bearer_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        chat_id = decoded["chat_id"]
-    except Exception:
+    # For websocket, we'll use default config since we don't have access to pipeline config
+    is_valid, error_msg, decoded = validate_jwt_token(bearer_token)
+    if not is_valid:
+        L.warning(f"WebSocket connection rejected: {error_msg}")
         await ws.close(message=b"Invalid or expired token")
         return ws
+    
+    chat_id = decoded["chat_id"]
 
     WEBSOCKETS.setdefault(chat_id, set()).add(ws)
     try:
@@ -125,13 +211,17 @@ async def general_proxy(request):
 
 
 class WebChatFlow:
-    def __init__(self, event):
+    def __init__(self, event, config=None):
         self.bearer_token = event["bearer_token"]
         self.event = event
+        self.config = config
 
     async def set_prompt(self, fields: list[PromptFormBaseField]) -> dict:
-        payload = jwt.decode(self.bearer_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        chat_id = payload["chat_id"]
+        try:
+            chat_id = decode_chat_token(self.bearer_token, self.config)
+        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError, ValueError) as e:
+            L.error(f"Failed to decode JWT token in set_prompt: {e}")
+            raise
         chat_data = CHATS[chat_id]
 
         # Wait until the WebSocket is ready = someone sent the "ready" message
@@ -186,8 +276,11 @@ class WebChatFlow:
 
     async def tell_user(self, response_text, is_html: bool = False):
         response = WebChatResponse(input_html=response_text, is_html=is_html)
-        payload = jwt.decode(self.bearer_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        chat_id = payload["chat_id"]
+        try:
+            chat_id = decode_chat_token(self.bearer_token, self.config)
+        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError, ValueError) as e:
+            L.error(f"Failed to decode JWT token in tell_user: {e}")
+            raise
         chat_data = CHATS[chat_id]
 
         # Wait for WebSocket client to be ready
@@ -210,8 +303,11 @@ class WebChatFlow:
         welcome_window = WebChatWelcomeWindow(
             welcome_text=welcome_text, is_html=is_html
         )
-        payload = jwt.decode(self.bearer_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        chat_id = payload["chat_id"]
+        try:
+            chat_id = decode_chat_token(self.bearer_token, self.config)
+        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError, ValueError) as e:
+            L.error(f"Failed to decode JWT token in set_welcome_message: {e}")
+            raise
         chat_data = CHATS[chat_id]
         await chat_data["ready_event"].wait()
 
@@ -235,7 +331,6 @@ class WebChatFlow:
         if not flow_func:
             raise ValueError(f"Flow '{flow_name}' not registered")
         await flow_func(self.event)
-
 
 def get_event():
     frame = inspect.currentframe().f_back
@@ -274,8 +369,53 @@ def create_webchat_flow(name: str):
 
 def _create_webchat_flow():
     event = get_event()
-    chat = WebChatFlow(event)
+    # Try to get config from the pipeline context
+    config = None
+    try:
+        # Look for config in the event or try to get it from the pipeline
+        if "config" in event:
+            config = event["config"]
+        elif "pipeline" in event:
+            config = event["pipeline"].Config
+    except:
+        pass
+    
+    chat = WebChatFlow(event, config)
     return chat
+
+
+def refresh_jwt_token(chat_id: str, additional_claims: dict = None, config: dict = None) -> str:
+    """
+    Generate a new JWT token for an existing chat session.
+    This is useful for extending session duration or adding new claims.
+    """
+    token = generate_bearer_token(chat_id, additional_claims)
+    
+    # Update the stored token in CHATS if the chat exists
+    if chat_id in CHATS:
+        CHATS[chat_id]["bearer_token"] = token
+        L.info(f"Refreshed JWT token for chat_id={chat_id}")
+    
+    return token
+
+
+def get_chat_from_token(token: str, config: dict = None) -> tuple[str, dict]:
+    """
+    Get chat_id and chat data from a JWT token.
+    Returns (chat_id, chat_data) or raises an exception if invalid.
+    """
+    is_valid, error_msg, payload = validate_jwt_token(token, config)
+    if not is_valid:
+        raise ValueError(error_msg)
+    
+    chat_id = payload.get("chat_id")
+    if not chat_id:
+        raise ValueError("JWT payload missing required field 'chat_id'")
+    
+    if chat_id not in CHATS:
+        raise ValueError(f"Chat session {chat_id} not found")
+    
+    return chat_id, CHATS[chat_id]
 
 
 class WebChatServerConnection(Connection):
@@ -382,9 +522,14 @@ class WebChatRouteSource(Source):
                 }
             )
             return await response_future
-        except Exception:
-            L.exception("Exception in WebSource")
-            return aiohttp.web.Response(status=500)
+        except Exception as e:
+            L.exception(f"Exception in WebChatSource handle_request: {e}")
+            # Return a more informative error response
+            return aiohttp.web.Response(
+                text=f"Internal Server Error: {str(e)}", 
+                status=500,
+                content_type="text/plain"
+            )
 
 
 async def new_chat_handler(request):
@@ -479,7 +624,8 @@ class WebChatSource(WebChatRouteSource):
             raise aiohttp.web.HTTPFound(location)
 
         try:
-            payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+            secret = get_jwt_secret(self.pipeline.Config if hasattr(self, "pipeline") else None)
+            payload = jwt.decode(token, secret, algorithms=[JWT_ALGORITHM])
             chat_id = payload.get("chat_id")
         except (jwt.ExpiredSignatureError, jwt.InvalidTokenError) as e:
             print(f"Invalid or expired token: {e}")

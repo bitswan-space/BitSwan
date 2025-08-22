@@ -194,7 +194,8 @@ class NotebookCompiler:
                     pipeline_setup = """from bspump.http_webchat.server import *\nfrom bspump.http_webchat.webchat import *\nfrom bspump.jupyter import *\n\n# Auto-generated pipeline setup for webchat
 auto_pipeline(
     source=lambda app, pipeline: WebChatSource(app, pipeline),
-    sink=lambda app, pipeline: WebchatSink(app, pipeline)
+    sink=lambda app, pipeline: WebchatSink(app, pipeline),
+    name="WebChatPipeline"
 )
 """
                     f.write(pipeline_setup)
@@ -211,3 +212,9 @@ async def processor_internal(inject, event):
             f.write(step_func_code)
             for flow_name, steps in self._webchat_flows.items():
                 f.write(steps + "\n")
+
+        # 👇 Print out the generated tmp.py content for debugging
+        print("======= GENERATED PIPELINE FILE =======")
+        with open(out_path, "r") as debug_f:
+            print(debug_f.read())
+        print("======================================")
