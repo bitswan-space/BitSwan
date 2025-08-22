@@ -1,0 +1,66 @@
+<aside id="sidebar" class="fixed top-0 left-0 h-screen w-64 bg-[#E6E6E6] dark:bg-[#2D2D2D] shadow-lg overflow-y-auto z-20 transition-transform duration-300 -translate-x-full">
+    <div class="mt-4 ml-4 flex flex-col items-start space-y-4">
+         <div class="flex items-center justify-between w-full">
+              <div>
+                <img src="/static/Bitswan logo.svg" class="dark:hidden h-6">
+                <img src="/static/Bitswan logo white.svg" class="hidden dark:block h-6">
+              </div>
+
+              <button id="close-sidebar" class="text-xl text-primary dark:text-primary-dark hover:opacity-80 pr-2 text-bold">
+                <img src="/static/close dark.svg" class="dark:hidden">
+                <img src="/static/close white.svg" class="hidden dark:block">
+              </button>
+        </div>
+
+         <div class="flex flex-col space-y-4">
+                 <a href="/new-chat" class="flex items-center">
+                    <img src="/static/forum.svg" class="h-6 dark:hidden cursor-pointer hover:opacity-80">
+                    <img src="/static/forum white.svg" class="h-6 hidden dark:block cursor-pointer hover:opacity-80">
+                    <span class="text-sm text-primary dark:text-primary-dark ml-2">New chat</span>
+                  </a>
+
+                  <div class="flex items-center">
+                      <img src="/static/Vector.svg" class="h-6 dark:hidden cursor-pointer hover:opacity-80">
+                      <img src="/static/Vector white.svg" class="h-6 hidden dark:block cursor-pointer hover:opacity-80">
+                      <input
+                          id="chat-search"
+                          type="text"
+                          placeholder="Search chats"
+                          class="ml-2 w-4/5 p-1 rounded border bg-[#E6E6E6] dark:bg-[#2D2D2D] border-primary dark:border-primary-dark text-sm text-primary dark:text-primary-dark placeholder-primary dark:placeholder-primary-dark focus:outline-none focus:ring-1 focus:ring-primary dark:focus:ring-primary-dark"
+                      >
+                </div>
+            </div>
+        </div>
+    <nav id="chat-list" class="flex flex-col p-4 space-y-2 text-primary dark:text-primary-dark">
+      {% for chat in chats %}
+        <a href="/?chat_id={{ chat.token }}" data-chat-id="{{ chat.token }}" class="hover:bg-secondary dark:hover:bg-secondary-dark px-4 py-2 rounded">
+            {{ chat.chat_id }}
+        </a>
+      {% endfor %}
+    </nav>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+          const sidebar = document.getElementById('sidebar');
+          const closeBtn = document.getElementById('close-sidebar');
+          const searchInput = document.getElementById('chat-search');
+          const chatLinks = document.querySelectorAll('#chat-list a');
+
+          // Close sidebar
+          closeBtn.addEventListener('click', () => {
+            sidebar.classList.add('-translate-x-full');
+          });
+
+          // Existing search filtering
+          searchInput.addEventListener('input', () => {
+            const term = searchInput.value.toLowerCase();
+            chatLinks.forEach(link => {
+              const text = link.textContent.toLowerCase();
+              link.style.display = text.includes(term) ? '' : 'none';
+            });
+          });
+        });
+    </script>
+
+</aside>
+

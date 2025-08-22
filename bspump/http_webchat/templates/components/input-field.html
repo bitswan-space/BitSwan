@@ -1,0 +1,9 @@
+<input type="{{ field_type }}"
+       id="{{ field_name }}"
+       name="{{ field_name }}"
+       class="{{ default_classes }}"
+       value="{{ default }}"
+       {% if default == true or (default and default.lower() in ["true", "t"]) %}checked{% endif %}
+      {{ default_input_props|safe }}
+      {{ readonly_attr|safe }}
+>
