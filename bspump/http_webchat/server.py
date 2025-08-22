@@ -410,7 +410,6 @@ class WebChatSource(WebChatRouteSource):
         route="/",
         id=None,
         config=None,
-        welcome_text=None,
     ):
         super().__init__(
             app,
@@ -423,14 +422,12 @@ class WebChatSource(WebChatRouteSource):
         )
 
         self.pipeline = pipeline
-        self.welcome_text = welcome_text
 
     async def serve_index(
         self, request: aiohttp.web.Request, bearer_token
     ) -> aiohttp.web.Response:
         template_env = WebChatTemplateEnv().get_jinja_env()
 
-        # Use dynamic welcome message if available, otherwise use the default
         chat_data = CHATS[decode_chat_token(bearer_token)]
 
         chat_history_html = ""
