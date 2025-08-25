@@ -7,7 +7,7 @@ from bspump.http.web.template_env import env
 
 class RawJSONField(Field):
     def inner_html(self, default="", readonly=False):
-        template = env.get_template("raw-json_field.html")
+        template = env.get_template("raw-json-field.html")
         return template.render(
             default=default,
             default_input_props=self.default_input_props,
