@@ -1,10 +1,10 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    './bspump/**/*.py',
-    './bspump/**/*.js',
-    './bspump/**/*.html',
+    "./templates/**/*.html",
+    "./static/**/*.js",
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
@@ -14,9 +14,9 @@ module.exports = {
           light: '#1c1917',
         },
         secondary: {
-          DEFAULT: '#E6E6E6',
+          DEFAULT: '#CBCACA',
           dark: '#2D2D2D',
-          light: '#E6E6E6',
+          light: '#CBCACA',
         },
         neutral: {
           DEFAULT: '#FAFAF9',
@@ -26,10 +26,5 @@ module.exports = {
       },
     },
   },
-  plugins: [
-    require('tailwindcss'),
-    require('autoprefixer'),
-  ]
-};
-
-
+  plugins: [],
+}
